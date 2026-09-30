@@ -290,7 +290,7 @@ class QueueScanOverlay extends StatelessWidget {
                             )
                           : tr(
                               context,
-                              'Держите QR-код в кадре — оставшиеся аккаунты попробуют ещё раз.',
+                              'Держите QR-код в кадре — мы повторим попытку отметить остальных.',
                               'Keep the QR in view; pending accounts will retry.',
                             ),
                       maxLines: 2,

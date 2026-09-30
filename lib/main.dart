@@ -128,6 +128,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  static const _widgetChannel = MethodChannel('antiattendance/launcher_widget');
   late final AccountStore _store = widget.store ?? AccountStore();
   late final PulseApi _api = widget.api ?? PulseApi();
   late final ScheduleApi _scheduleApi = widget.scheduleApi ?? ScheduleApi();
@@ -146,17 +147,72 @@ class _HomePageState extends State<HomePage> {
   bool _loadError = false;
   bool _scanning = false;
   bool _submitting = false;
+  bool _widgetScanPending = false;
+  bool _widgetScanScheduled = false;
 
   bool get _busy => _scanning || _submitting;
 
   @override
   void initState() {
     super.initState();
+    if (Platform.isAndroid) {
+      _widgetChannel.setMethodCallHandler(_onWidgetCall);
+      unawaited(_takeInitialWidgetRequest());
+    }
     _load();
+  }
+
+  Future<void> _onWidgetCall(MethodCall call) async {
+    if (call.method == 'scanAll') _requestWidgetScan();
+  }
+
+  Future<void> _takeInitialWidgetRequest() async {
+    try {
+      if (await _widgetChannel.invokeMethod<bool>('takeScanAllRequest') ==
+          true) {
+        _requestWidgetScan();
+      }
+    } catch (_) {
+      // Normal app launches continue if the native widget bridge is unavailable.
+    }
+  }
+
+  void _requestWidgetScan() {
+    if (!mounted) return;
+    _widgetScanPending = true;
+    _openPendingWidgetScan();
+  }
+
+  void _openPendingWidgetScan() {
+    if (!_widgetScanPending ||
+        _widgetScanScheduled ||
+        _loading ||
+        _loadError ||
+        _busy ||
+        !mounted) {
+      return;
+    }
+    _widgetScanScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _widgetScanScheduled = false;
+      if (!_widgetScanPending || _loading || _loadError || _busy || !mounted) {
+        return;
+      }
+      _widgetScanPending = false;
+      if (_accounts.isEmpty) {
+        _message(
+          tr(context, 'Сначала добавьте аккаунты.', 'Add accounts first.'),
+        );
+        return;
+      }
+      setState(() => _tab = 0);
+      unawaited(_scanQueue(overrideAccounts: List.of(_accounts)));
+    });
   }
 
   @override
   void dispose() {
+    if (Platform.isAndroid) _widgetChannel.setMethodCallHandler(null);
     if (widget.api == null) _api.close();
     if (widget.scheduleApi == null) _scheduleApi.close();
     super.dispose();
@@ -173,6 +229,7 @@ class _HomePageState extends State<HomePage> {
         _loading = false;
         _loadError = false;
       });
+      _openPendingWidgetScan();
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -379,7 +436,10 @@ class _HomePageState extends State<HomePage> {
         );
       }
     } finally {
-      if (mounted) setState(() => _scanning = false);
+      if (mounted) {
+        setState(() => _scanning = false);
+        _openPendingWidgetScan();
+      }
     }
     if (mounted && raw != null) await _submitLink(raw);
   }
@@ -453,7 +513,10 @@ class _HomePageState extends State<HomePage> {
         );
       }
     } finally {
-      if (mounted) setState(() => _scanning = false);
+      if (mounted) {
+        setState(() => _scanning = false);
+        _openPendingWidgetScan();
+      }
     }
   }
 
@@ -682,7 +745,10 @@ class _HomePageState extends State<HomePage> {
       }),
     );
     await _logStore.flush();
-    if (mounted) setState(() => _submitting = false);
+    if (mounted) {
+      setState(() => _submitting = false);
+      _openPendingWidgetScan();
+    }
   }
 
   Future<void> _recordApproval(

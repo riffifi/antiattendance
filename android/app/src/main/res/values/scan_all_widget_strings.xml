@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="scan_all_widget_title">Scan QR</string>
+    <string name="scan_all_widget_subtitle">All saved accounts</string>
+    <string name="scan_all_widget_description">Scan lecture QR for all saved accounts</string>
+</resources>

@@ -2,6 +2,7 @@ package com.example.antiattendance
 
 import android.content.ClipData
 import android.content.Intent
+import android.os.Bundle
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.nfc.tech.IsoDep
@@ -13,12 +14,34 @@ import io.flutter.plugin.common.MethodChannel
 import java.io.File
 
 class MainActivity : FlutterActivity() {
+    companion object {
+        const val ACTION_SCAN_ALL = "com.example.antiattendance.SCAN_ALL"
+    }
+
+    private var widgetChannel: MethodChannel? = null
+    private var pendingWidgetScan = false
     private var nfcChannel: MethodChannel? = null
     private var readerRequested = false
     private var readerActive = false
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        pendingWidgetScan = intent?.action == ACTION_SCAN_ALL
+        super.onCreate(savedInstanceState)
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        widgetChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "antiattendance/launcher_widget")
+        widgetChannel?.setMethodCallHandler { call, result ->
+            if (call.method == "takeScanAllRequest") {
+                val requested = pendingWidgetScan || intent?.action == ACTION_SCAN_ALL
+                pendingWidgetScan = false
+                if (requested) intent?.action = Intent.ACTION_MAIN
+                result.success(requested)
+            } else {
+                result.notImplemented()
+            }
+        }
         nfcChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "antiattendance/nfc_diagnostics")
         nfcChannel?.setMethodCallHandler { call, result ->
             when (call.method) {
@@ -78,6 +101,22 @@ class MainActivity : FlutterActivity() {
                     result.error("INSTALLER_UNAVAILABLE", error.message, null)
                 }
             }
+    }
+
+    override fun onNewIntent(newIntent: Intent) {
+        super.onNewIntent(newIntent)
+        setIntent(newIntent)
+        if (newIntent.action != ACTION_SCAN_ALL) return
+        pendingWidgetScan = true
+        widgetChannel?.invokeMethod("scanAll", null, object : MethodChannel.Result {
+            override fun success(result: Any?) {
+                pendingWidgetScan = false
+                newIntent.action = Intent.ACTION_MAIN
+            }
+
+            override fun error(code: String, message: String?, details: Any?) = Unit
+            override fun notImplemented() = Unit
+        })
     }
 
     private fun enableDiagnosticsReader(adapter: NfcAdapter) {

@@ -1,6 +1,11 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  'Add accounts first.': (
+    'Ajoutez d’abord des comptes.',
+    'Adicione contas primeiro.',
+    '请先添加账号。',
+  ),
   'Testing': ('Tests', 'Testes', '测试'),
   'NFC diagnostics': ('Diagnostic NFC', 'Diagnóstico NFC', 'NFC 检测'),
   'View detected NFC connection details': (

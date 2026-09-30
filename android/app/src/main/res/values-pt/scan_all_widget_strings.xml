@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="scan_all_widget_title">Ler QR</string>
+    <string name="scan_all_widget_subtitle">Todas as contas</string>
+    <string name="scan_all_widget_description">Ler o QR da aula para todas as contas</string>
+</resources>

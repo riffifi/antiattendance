@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:antiattendance/accounts.dart';
@@ -67,11 +68,72 @@ class FakeSchedule extends ScheduleApi {
   }) async => [lesson];
 }
 
+class DelayedRefreshSchedule extends ScheduleApi {
+  final refreshDone = Completer<List<ScheduleLesson>>();
+
+  @override
+  Future<List<ScheduleLesson>> lessonsForWeek(
+    int groupId,
+    DateTime weekStart, {
+    bool refresh = false,
+  }) async => refresh ? refreshDone.future : <ScheduleLesson>[];
+}
+
 void main() {
   DateTime todayAt(int hour, int minute) {
     final moscow = DateTime.now().toUtc().add(const Duration(hours: 3));
     return DateTime.utc(moscow.year, moscow.month, moscow.day, hour, minute);
   }
+
+  testWidgets('schedule refresh spins until loading finishes', (tester) async {
+    final api = DelayedRefreshSchedule();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SchedulePage(
+            accounts: const [
+              SavedAccount(
+                id: 'a',
+                label: 'Anya',
+                cookie: 'one',
+                groupId: 769,
+                groupName: 'ИНБО-10-23',
+              ),
+            ],
+            api: api,
+            log: FakeLog([]),
+            onScanLesson: (_, _) async {},
+            onPasteLesson: (_, _) async {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final rotation = find.descendant(
+      of: find.byTooltip('Refresh'),
+      matching: find.byType(RotationTransition),
+    );
+    await tester.tap(find.byTooltip('Refresh'));
+    await tester.pump();
+    final before = tester.widget<RotationTransition>(rotation).turns.value;
+    expect(
+      tester.widget<RotationTransition>(rotation).turns.isAnimating,
+      isTrue,
+    );
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(
+      tester.widget<RotationTransition>(rotation).turns.value,
+      greaterThan(before),
+    );
+    api.refreshDone.complete([]);
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<RotationTransition>(rotation).turns.isAnimating,
+      isFalse,
+    );
+    expect(tester.widget<RotationTransition>(rotation).turns.value, 0);
+    api.close();
+  });
 
   test('searches only groups and reads the public calendar endpoint', () async {
     final paths = <String>[];

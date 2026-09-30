@@ -179,7 +179,7 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ),
-                      IconButton.filledTonal(
+                      IconButton.filled(
                         onPressed:
                             _zooming ||
                                 !_pageReady ||
@@ -198,7 +198,7 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                       ),
-                      IconButton.filledTonal(
+                      IconButton.filled(
                         onPressed:
                             _zooming ||
                                 !_pageReady ||

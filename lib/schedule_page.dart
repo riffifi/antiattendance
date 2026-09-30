@@ -37,7 +37,8 @@ class SchedulePage extends StatefulWidget {
   State<SchedulePage> createState() => _SchedulePageState();
 }
 
-class _SchedulePageState extends State<SchedulePage> {
+class _SchedulePageState extends State<SchedulePage>
+    with SingleTickerProviderStateMixin {
   int? _groupId;
   late DateTime _day = widget.initialDay ?? _today();
   List<ScheduleLesson> _lessons = [];
@@ -46,6 +47,10 @@ class _SchedulePageState extends State<SchedulePage> {
   String? _error;
   int _generation = 0;
   Timer? _clock;
+  late final AnimationController _refreshRotation = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 850),
+  );
 
   static DateTime _moscowNow() {
     final moscow = DateTime.now().toUtc().add(const Duration(hours: 3));
@@ -97,6 +102,7 @@ class _SchedulePageState extends State<SchedulePage> {
   @override
   void dispose() {
     _clock?.cancel();
+    _refreshRotation.dispose();
     super.dispose();
   }
 
@@ -113,6 +119,7 @@ class _SchedulePageState extends State<SchedulePage> {
   Future<void> _refresh({bool force = false}) async {
     final generation = ++_generation;
     final groupId = _groupId;
+    _refreshRotation.repeat();
     setState(() {
       _loading = true;
       _error = null;
@@ -146,6 +153,8 @@ class _SchedulePageState extends State<SchedulePage> {
       }
     } finally {
       if (mounted && generation == _generation) {
+        _refreshRotation.stop();
+        _refreshRotation.reset();
         setState(() => _loading = false);
       }
     }
@@ -345,9 +354,22 @@ class _SchedulePageState extends State<SchedulePage> {
                   ),
                 ),
               ),
-              IconButton.filledTonal(
-                onPressed: groups.isEmpty ? null : () => _refresh(force: true),
-                icon: const Icon(Icons.refresh_rounded),
+              IconButton.filled(
+                onPressed: groups.isEmpty || _loading
+                    ? null
+                    : () => _refresh(force: true),
+                style: IconButton.styleFrom(
+                  disabledBackgroundColor: _loading
+                      ? AppColors.blue
+                      : AppColors.line,
+                  disabledForegroundColor: _loading
+                      ? Colors.white
+                      : AppColors.muted,
+                ),
+                icon: RotationTransition(
+                  turns: _refreshRotation,
+                  child: const Icon(Icons.refresh_rounded),
+                ),
                 tooltip: tr(context, 'Обновить', 'Refresh'),
               ),
             ],

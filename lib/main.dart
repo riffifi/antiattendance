@@ -1,13 +1,17 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'accounts.dart';
 import 'app_theme.dart';
+import 'l10n.dart';
 import 'pulse_api.dart';
 import 'pulse_login.dart';
 import 'qr_scan_page.dart';
 import 'queue_scan_page.dart';
+import 'session_import_page.dart';
+import 'session_share_page.dart';
 
 void main() => runApp(const AntiattendanceApp());
 
@@ -16,9 +20,15 @@ class AntiattendanceApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-    title: 'Пульс — посещаемость',
+    title: 'Pulse attendance',
     debugShowCheckedModeBanner: false,
     theme: AppTheme.light,
+    supportedLocales: const [Locale('ru'), Locale('en')],
+    localizationsDelegates: const [
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
     home: const HomePage(),
   );
 }
@@ -83,7 +93,7 @@ class _HomePageState extends State<HomePage> {
 
   void _message(String message) {
     ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+        .showSnackBar(SnackBar(content: Text(trMessage(context, message))));
   }
 
   Future<String?> _askText({
@@ -106,7 +116,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _login({SavedAccount? replace}) async {
     if (_busy) return;
     if (!Platform.isAndroid && !Platform.isIOS) {
-      _message('Вход через МИРЭА доступен на Android и iOS.');
+      _message(tr(context, 'Вход через МИРЭА доступен на Android и iOS.', 'MIREA sign-in is available on Android and iOS.'));
       return;
     }
     final cookie = await Navigator.of(
@@ -114,9 +124,9 @@ class _HomePageState extends State<HomePage> {
     ).push<String>(MaterialPageRoute(builder: (_) => const PulseLoginPage()));
     if (!mounted || cookie == null) return;
     final label = await _askText(
-      title: 'Имя аккаунта',
-      hint: 'Например, имя друга',
-      action: 'Сохранить',
+      title: tr(context, 'Имя аккаунта', 'Account name'),
+      hint: tr(context, 'Например, имя друга', 'For example, a friend’s name'),
+      action: tr(context, 'Сохранить', 'Save'),
       initial: replace?.label,
       maxLength: 60,
     );
@@ -124,7 +134,7 @@ class _HomePageState extends State<HomePage> {
     if (_accounts.any(
       (item) => item.id != replace?.id && item.cookie == cookie,
     )) {
-      _message('Этот аккаунт уже добавлен.');
+      _message(tr(context, 'Этот аккаунт уже добавлен.', 'This account is already added.'));
       return;
     }
     final id = replace?.id ?? DateTime.now().microsecondsSinceEpoch.toString();
@@ -143,7 +153,7 @@ class _HomePageState extends State<HomePage> {
         });
       }
     } catch (_) {
-      if (mounted) _message('Не удалось сохранить аккаунт.');
+      if (mounted) _message(tr(context, 'Не удалось сохранить аккаунт.', 'Could not save the account.'));
     }
   }
 
@@ -152,16 +162,16 @@ class _HomePageState extends State<HomePage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Удалить ${account.label}?'),
-        content: const Text('Сохранённая сессия будет удалена с устройства.'),
+        title: Text(tr(context, 'Удалить ${account.label}?', 'Delete ${account.label}?')),
+        content: Text(tr(context, 'Сохранённая сессия будет удалена с устройства.', 'The saved session will be removed from this device.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Отмена'),
+            child: Text(tr(context, 'Отмена', 'Cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Удалить'),
+            child: Text(tr(context, 'Удалить', 'Delete')),
           ),
         ],
       ),
@@ -179,20 +189,18 @@ class _HomePageState extends State<HomePage> {
         });
       }
     } catch (_) {
-      if (mounted) _message('Не удалось удалить аккаунт.');
+      if (mounted) _message(tr(context, 'Не удалось удалить аккаунт.', 'Could not delete the account.'));
     }
   }
 
   Future<void> _scan() async {
     if (_busy) return;
     if (_selected.isEmpty) {
-      _message('Сначала выберите аккаунты.');
+      _message(tr(context, 'Сначала выберите аккаунты.', 'Select accounts first.'));
       return;
     }
     if (widget.scanQr == null && !Platform.isAndroid && !Platform.isIOS) {
-      _message(
-        'Камера доступна на Android и iOS. Для проверки вставьте ссылку.',
-      );
+      _message(tr(context, 'Камера доступна на Android и iOS. Для проверки вставьте ссылку.', 'The camera is available on Android and iOS. Paste a link to test here.'));
       return;
     }
     setState(() => _scanning = true);
@@ -204,7 +212,7 @@ class _HomePageState extends State<HomePage> {
             )
           : await widget.scanQr!(context);
     } catch (_) {
-      if (mounted) _message('Не удалось открыть камеру.');
+      if (mounted) _message(tr(context, 'Не удалось открыть камеру.', 'Could not open the camera.'));
     } finally {
       if (mounted) setState(() => _scanning = false);
     }
@@ -217,11 +225,11 @@ class _HomePageState extends State<HomePage> {
         .where((account) => _selected.contains(account.id))
         .toList();
     if (accounts.isEmpty) {
-      _message('Сначала выберите аккаунты.');
+      _message(tr(context, 'Сначала выберите аккаунты.', 'Select accounts first.'));
       return;
     }
     if (!Platform.isAndroid && !Platform.isIOS) {
-      _message('Камера доступна на Android и iOS.');
+      _message(tr(context, 'Камера доступна на Android и iOS.', 'The camera is available on Android and iOS.'));
       return;
     }
     setState(() {
@@ -250,22 +258,73 @@ class _HomePageState extends State<HomePage> {
         ),
       );
     } catch (_) {
-      if (mounted) _message('Не удалось открыть камеру.');
+      if (mounted) _message(tr(context, 'Не удалось открыть камеру.', 'Could not open the camera.'));
     } finally {
       if (mounted) setState(() => _scanning = false);
+    }
+  }
+
+  Future<void> _shareSessions() async {
+    if (_busy) return;
+    final accounts = _accounts.where((a) => _selected.contains(a.id)).toList();
+    if (accounts.isEmpty) {
+      _message(tr(context, 'Сначала выберите аккаунты.', 'Select accounts first.'));
+      return;
+    }
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => SessionSharePage(accounts: accounts)),
+    );
+  }
+
+  Future<void> _importSessions() async {
+    if (_busy) return;
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      _message(tr(context, 'Импорт через камеру доступен на Android и iOS.', 'Camera import is available on Android and iOS.'));
+      return;
+    }
+    final imported = await Navigator.of(context).push<List<SavedAccount>>(
+      MaterialPageRoute(builder: (_) => const SessionImportPage()),
+    );
+    if (!mounted || imported == null) return;
+    final known = _accounts.map((a) => a.cookie).toSet();
+    final added = <SavedAccount>[];
+    final base = DateTime.now().microsecondsSinceEpoch;
+    for (final account in imported) {
+      if (!known.add(account.cookie)) continue;
+      added.add(SavedAccount(
+        id: '${base}_${added.length}',
+        label: account.label,
+        cookie: account.cookie,
+      ));
+    }
+    if (added.isEmpty) {
+      _message(tr(context, 'Все эти аккаунты уже сохранены.', 'All these accounts are already saved.'));
+      return;
+    }
+    final next = [..._accounts, ...added];
+    try {
+      await _store.save(next);
+      if (!mounted) return;
+      setState(() {
+        _accounts = next;
+        _selected.addAll(added.map((a) => a.id));
+      });
+      _message(tr(context, 'Импортировано: ${added.length}', 'Imported: ${added.length}'));
+    } catch (_) {
+      if (mounted) _message(tr(context, 'Не удалось сохранить аккаунты.', 'Could not save accounts.'));
     }
   }
 
   Future<void> _pasteLink() async {
     if (_busy) return;
     if (_selected.isEmpty) {
-      _message('Сначала выберите аккаунты.');
+      _message(tr(context, 'Сначала выберите аккаунты.', 'Select accounts first.'));
       return;
     }
     final raw = await _askText(
-      title: 'Ссылка QR-кода',
+      title: tr(context, 'Ссылка QR-кода', 'QR code link'),
       hint: 'https://pulse.mirea.ru/...?token=...',
-      action: 'Отправить',
+      action: tr(context, 'Отправить', 'Submit'),
     );
     if (mounted && raw != null) await _submitLink(raw);
   }
@@ -283,7 +342,7 @@ class _HomePageState extends State<HomePage> {
         .where((account) => _selected.contains(account.id))
         .toList();
     if (accounts.isEmpty) {
-      _message('Сначала выберите аккаунты.');
+      _message(tr(context, 'Сначала выберите аккаунты.', 'Select accounts first.'));
       return;
     }
     setState(() {
@@ -394,6 +453,25 @@ class _HomePageState extends State<HomePage> {
                       style: TextStyle(color: AppColors.muted, fontSize: 12),
                     ),
                   ],
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton.icon(
+                          onPressed: _busy ? null : _shareSessions,
+                          icon: const Icon(Icons.ios_share_rounded, size: 18),
+                          label: Text(tr(context, 'Передать сессии', 'Share sessions')),
+                        ),
+                      ),
+                      Expanded(
+                        child: TextButton.icon(
+                          onPressed: _busy ? null : _importSessions,
+                          icon: const Icon(Icons.download_rounded, size: 18),
+                          label: Text(tr(context, 'Импорт сессий', 'Import sessions')),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 32),
                   Row(
                     children: [

@@ -712,16 +712,29 @@ class _LessonRow extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: Material(
-            color: isCurrent ? const Color(0xFFEDF4FF) : Colors.white,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(16),
+            clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: onTap,
               borderRadius: BorderRadius.circular(16),
-              child: Container(
+              child: Ink(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  border: Border(left: BorderSide(color: accent, width: 4)),
                   borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: accent.withValues(alpha: isCurrent ? .18 : .08),
+                  ),
+                  gradient: RadialGradient(
+                    center: Alignment.topLeft,
+                    radius: 1.5,
+                    colors: [
+                      accent.withValues(alpha: isCurrent ? .23 : .16),
+                      accent.withValues(alpha: isCurrent ? .07 : .04),
+                      Colors.white,
+                    ],
+                    stops: const [0, .55, 1],
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

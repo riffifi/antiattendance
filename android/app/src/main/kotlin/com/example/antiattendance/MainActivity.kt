@@ -2,6 +2,10 @@ package com.example.antiattendance
 
 import android.content.ClipData
 import android.content.Intent
+import android.nfc.NfcAdapter
+import android.nfc.Tag
+import android.nfc.tech.IsoDep
+import android.nfc.tech.NfcA
 import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -9,8 +13,40 @@ import io.flutter.plugin.common.MethodChannel
 import java.io.File
 
 class MainActivity : FlutterActivity() {
+    private var nfcChannel: MethodChannel? = null
+    private var readerRequested = false
+    private var readerActive = false
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        nfcChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "antiattendance/nfc_diagnostics")
+        nfcChannel?.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "start" -> {
+                    val adapter = NfcAdapter.getDefaultAdapter(this)
+                    when {
+                        adapter == null -> result.error("NFC_UNAVAILABLE", "This device has no NFC reader", null)
+                        !adapter.isEnabled -> result.error("NFC_DISABLED", "NFC is turned off", null)
+                        else -> {
+                            readerRequested = true
+                            try {
+                                enableDiagnosticsReader(adapter)
+                                result.success(null)
+                            } catch (error: Exception) {
+                                readerRequested = false
+                                result.error("NFC_ERROR", error.message, null)
+                            }
+                        }
+                    }
+                }
+                "stop" -> {
+                    readerRequested = false
+                    disableDiagnosticsReader()
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "antiattendance/installer")
             .setMethodCallHandler { call, result ->
                 if (call.method != "installApk") {
@@ -42,5 +78,56 @@ class MainActivity : FlutterActivity() {
                     result.error("INSTALLER_UNAVAILABLE", error.message, null)
                 }
             }
+    }
+
+    private fun enableDiagnosticsReader(adapter: NfcAdapter) {
+        if (readerActive) return
+        val flags = NfcAdapter.FLAG_READER_NFC_A or
+            NfcAdapter.FLAG_READER_NFC_B or
+            NfcAdapter.FLAG_READER_NFC_F or
+            NfcAdapter.FLAG_READER_NFC_V or
+            NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK
+        adapter.enableReaderMode(this, { tag -> reportTag(tag) }, flags, null)
+        readerActive = true
+    }
+
+    private fun disableDiagnosticsReader() {
+        if (!readerActive) return
+        NfcAdapter.getDefaultAdapter(this)?.disableReaderMode(this)
+        readerActive = false
+    }
+
+    private fun reportTag(tag: Tag) {
+        // Only cached protocol metadata is exposed. No identifier, APDU, or pass data is read.
+        val data = mutableMapOf<String, Any>(
+            "technologies" to tag.techList.map { it.substringAfterLast('.') },
+        )
+        NfcA.get(tag)?.let { nfcA ->
+            data["atqa"] = nfcA.atqa.joinToString("") { "%02X".format(it.toInt() and 0xFF) }
+            data["sak"] = "%02X".format(nfcA.sak)
+        }
+        IsoDep.get(tag)?.let { isoDep ->
+            data["historicalBytesLength"] = isoDep.historicalBytes?.size ?: 0
+            data["hiLayerResponseLength"] = isoDep.hiLayerResponse?.size ?: 0
+            data["maxTransceiveLength"] = isoDep.maxTransceiveLength
+            data["extendedApduSupported"] = isoDep.isExtendedLengthApduSupported
+        }
+        runOnUiThread {
+            if (readerRequested) nfcChannel?.invokeMethod("tagDetected", data)
+        }
+    }
+
+    override fun onPause() {
+        disableDiagnosticsReader()
+        super.onPause()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (readerRequested) {
+            NfcAdapter.getDefaultAdapter(this)?.takeIf { it.isEnabled }?.let {
+                enableDiagnosticsReader(it)
+            }
+        }
     }
 }

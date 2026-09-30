@@ -9,6 +9,7 @@ import 'app_settings.dart';
 import 'app_theme.dart';
 import 'external_links.dart';
 import 'l10n.dart';
+import 'nfc_diagnostics_page.dart';
 import 'update_service.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -73,8 +74,7 @@ class _SettingsPageState extends State<SettingsPage> {
         if (next == null && _downloadProgress == null ||
             next != null &&
                 _downloadProgress != null &&
-                (next * 100).floor() ==
-                    (_downloadProgress! * 100).floor()) {
+                (next * 100).floor() == (_downloadProgress! * 100).floor()) {
           return;
         }
         setState(() {
@@ -402,6 +402,34 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               const SizedBox(height: 28),
             ],
+            Text(
+              tr(context, 'Тестирование', 'Testing'),
+              style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 12),
+            Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              child: ListTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                leading: const Icon(Icons.nfc_rounded, color: AppColors.blue),
+                title: Text(tr(context, 'Проверка NFC', 'NFC diagnostics')),
+                subtitle: Text(
+                  tr(
+                    context,
+                    'Посмотреть сведения о найденном NFC-устройстве',
+                    'View detected NFC connection details',
+                  ),
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute(builder: (_) => const NfcDiagnosticsPage()),
+                ),
+              ),
+            ),
+            const SizedBox(height: 28),
             Text(
               tr(context, 'Приложение', 'App'),
               style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700),

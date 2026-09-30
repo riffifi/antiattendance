@@ -187,7 +187,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(chosen, 'ru');
     expect(settings.language, 'ru');
-    await tester.scrollUntilVisible(find.text('About AntiAttendance'), 200);
+    await tester.scrollUntilVisible(find.text('NFC diagnostics'), 300);
+    await tester.ensureVisible(find.text('NFC diagnostics'));
+    await tester.tap(find.text('NFC diagnostics'));
+    await tester.pumpAndSettle();
+    expect(find.text('Available on Android only.'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('About AntiAttendance'), 300);
+    await tester.ensureVisible(find.text('About AntiAttendance'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('About AntiAttendance'));
     await tester.pumpAndSettle();
     expect(find.text('AntiAttendance'), findsOneWidget);

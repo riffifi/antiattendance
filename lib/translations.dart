@@ -1,6 +1,58 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  'Testing': ('Tests', 'Testes', '测试'),
+  'NFC diagnostics': ('Diagnostic NFC', 'Diagnóstico NFC', 'NFC 检测'),
+  'View detected NFC connection details': (
+    'Voir les détails de la connexion NFC détectée',
+    'Ver os detalhes da ligação NFC detetada',
+    '查看检测到的 NFC 连接详情',
+  ),
+  'Available on Android only.': (
+    'Disponible uniquement sur Android.',
+    'Disponível apenas no Android.',
+    '仅适用于 Android。',
+  ),
+  'This phone has no NFC reader.': (
+    'Ce téléphone ne possède pas de lecteur NFC.',
+    'Este telemóvel não tem leitor NFC.',
+    '此手机没有 NFC 读取器。',
+  ),
+  'Turn on NFC in phone settings, then reopen this screen.': (
+    'Activez le NFC dans les réglages, puis rouvrez cet écran.',
+    'Ative o NFC nas definições e volte a abrir este ecrã.',
+    '请在手机设置中开启 NFC，然后重新打开此页面。',
+  ),
+  'NFC device detected.': (
+    'Appareil NFC détecté.',
+    'Dispositivo NFC detetado.',
+    '检测到 NFC 设备。',
+  ),
+  'Hold the phone with its pass open against the back of this phone.': (
+    'Approchez le téléphone avec le badge ouvert du dos de ce téléphone.',
+    'Aproxime o telemóvel com o passe aberto da parte de trás deste telemóvel.',
+    '将已打开通行证的手机贴近此手机背面。',
+  ),
+  'Starting NFC…': ('Démarrage du NFC…', 'A iniciar NFC…', '正在启动 NFC…'),
+  'Could not start NFC.': (
+    'Impossible de démarrer le NFC.',
+    'Não foi possível iniciar o NFC.',
+    '无法启动 NFC。',
+  ),
+  'What this phone detected': (
+    'Ce que ce téléphone a détecté',
+    'O que este telemóvel detetou',
+    '此手机检测到的信息',
+  ),
+  'Technologies': ('Technologies', 'Tecnologias', '技术类型'),
+  'Yes': ('Oui', 'Sim', '是'),
+  'No': ('Non', 'Não', '否'),
+  'These are NFC connection details. They do not confirm that the device is Pulse; pass data is neither read nor saved.':
+      (
+        'Ces informations décrivent la connexion NFC. Elles ne prouvent pas qu’il s’agit de Pulse ; les données du badge ne sont ni lues ni enregistrées.',
+        'Estes dados descrevem a ligação NFC. Não confirmam que é o Pulse; os dados do passe não são lidos nem guardados.',
+        '这些只是 NFC 连接信息，无法确认设备运行的是 Pulse；不会读取或保存通行证数据。',
+      ),
   'About': ('À propos', 'Sobre', '关于'),
   'Pulse and your schedule in one place.': (
     'Pulse et votre emploi du temps au même endroit.',

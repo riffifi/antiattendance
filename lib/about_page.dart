@@ -1,12 +1,47 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'app_theme.dart';
+import 'external_links.dart';
 import 'l10n.dart';
 
-class AboutPage extends StatelessWidget {
-  const AboutPage({super.key});
+class AboutPage extends StatefulWidget {
+  const AboutPage({super.key, this.openGitHub = openWebPage});
+
+  final Future<bool> Function(Uri) openGitHub;
+
+  @override
+  State<AboutPage> createState() => _AboutPageState();
+}
+
+class _AboutPageState extends State<AboutPage> {
+  static final _repository = Uri.parse(
+    'https://github.com/riffifi/antiattendance',
+  );
+
+  Future<void> _openRepository() async {
+    if (await widget.openGitHub(_repository)) return;
+    if (!mounted) return;
+    unawaited(
+      Clipboard.setData(
+        ClipboardData(text: _repository.toString()),
+      ).catchError((Object _) {}),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          tr(
+            context,
+            'Не удалось открыть GitHub. Ссылка скопирована.',
+            'Could not open GitHub. Link copied.',
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -106,10 +141,7 @@ class AboutPage extends StatelessWidget {
             const SizedBox(height: 14),
             Center(
               child: TextButton.icon(
-                onPressed: () => launchUrl(
-                  Uri.parse('https://github.com/riffifi/antiattendance'),
-                  mode: LaunchMode.externalApplication,
-                ),
+                onPressed: _openRepository,
                 icon: const Icon(Icons.open_in_new_rounded, size: 18),
                 label: const Text('GitHub'),
               ),

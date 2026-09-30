@@ -2,11 +2,12 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'about_page.dart';
+import 'apk_update.dart';
 import 'app_settings.dart';
 import 'app_theme.dart';
+import 'external_links.dart';
 import 'l10n.dart';
 import 'update_service.dart';
 
@@ -17,12 +18,20 @@ class SettingsPage extends StatefulWidget {
     required this.language,
     required this.onLanguageChanged,
     this.updates,
+    this.downloadApk,
+    this.installApk,
   });
 
   final AppSettingsStore store;
   final String? language;
   final ValueChanged<String?> onLanguageChanged;
   final UpdateController? updates;
+  final Future<File> Function(
+    AppRelease release,
+    void Function(int received, int? total) onProgress,
+  )?
+  downloadApk;
+  final Future<void> Function(File apk)? installApk;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -31,13 +40,86 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   late String? _language = widget.language;
   bool _saving = false;
+  bool _downloading = false;
+  double? _downloadProgress;
+
+  Future<File> _downloadApk(
+    AppRelease release,
+    void Function(int received, int? total) onProgress,
+  ) async {
+    final downloader = ApkUpdateDownloader();
+    try {
+      return await downloader.download(release, onProgress: onProgress);
+    } finally {
+      downloader.close();
+    }
+  }
+
+  Future<void> _downloadAndInstall(AppRelease release) async {
+    if (_downloading) return;
+    setState(() {
+      _downloading = true;
+      _downloadProgress = null;
+    });
+    try {
+      final apk = await (widget.downloadApk ?? _downloadApk)(release, (
+        received,
+        total,
+      ) {
+        if (!mounted) return;
+        final next = total == null || total == 0
+            ? null
+            : (received / total).clamp(0.0, 1.0);
+        if (next == null && _downloadProgress == null ||
+            next != null &&
+                _downloadProgress != null &&
+                (next * 100).floor() ==
+                    (_downloadProgress! * 100).floor()) {
+          return;
+        }
+        setState(() {
+          _downloadProgress = next;
+        });
+      });
+      if (!mounted) return;
+      await (widget.installApk ?? openAndroidInstaller)(apk);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            tr(
+              context,
+              'Подтвердите установку в Android.',
+              'Confirm installation in Android.',
+            ),
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            tr(
+              context,
+              'Не удалось скачать или установить обновление.',
+              'Could not download or install the update.',
+            ),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _downloading = false;
+          _downloadProgress = null;
+        });
+      }
+    }
+  }
 
   Future<void> _openRelease(Uri uri) async {
-    try {
-      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        throw StateError('Could not open URL');
-      }
-    } catch (_) {
+    if (!await openWebPage(uri)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -236,21 +318,55 @@ class _SettingsPageState extends State<SettingsPage> {
                             ),
                             if (updates.updateAvailable && release != null)
                               FilledButton.icon(
-                                onPressed: () => _openRelease(
-                                  Platform.isAndroid && release.apk != null
-                                      ? release.apk!
-                                      : release.page,
+                                onPressed: _downloading
+                                    ? null
+                                    : Platform.isAndroid && release.apk != null
+                                    ? () => _downloadAndInstall(release)
+                                    : () => _openRelease(release.page),
+                                style: FilledButton.styleFrom(
+                                  disabledBackgroundColor: AppColors.blue,
+                                  disabledForegroundColor: Colors.white,
                                 ),
-                                icon: const Icon(
-                                  Icons.open_in_new_rounded,
-                                  size: 18,
-                                ),
+                                icon: _downloading
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : Icon(
+                                        Platform.isAndroid &&
+                                                release.apk != null
+                                            ? Icons.system_update_rounded
+                                            : Icons.open_in_new_rounded,
+                                        size: 18,
+                                      ),
                                 label: Text(
-                                  Platform.isAndroid && release.apk != null
+                                  _downloading
+                                      ? _downloadProgress == null
+                                            ? tr(
+                                                context,
+                                                'Скачиваем…',
+                                                'Downloading…',
+                                              )
+                                            : trf(
+                                                context,
+                                                'Скачиваем: {percent}%',
+                                                'Downloading {percent}%',
+                                                {
+                                                  'percent':
+                                                      (_downloadProgress! * 100)
+                                                          .round(),
+                                                },
+                                              )
+                                      : Platform.isAndroid &&
+                                            release.apk != null
                                       ? tr(
                                           context,
-                                          'Скачать APK',
-                                          'Download APK',
+                                          'Установить обновление',
+                                          'Install update',
                                         )
                                       : tr(
                                           context,
@@ -259,8 +375,26 @@ class _SettingsPageState extends State<SettingsPage> {
                                         ),
                                 ),
                               ),
+                            if (updates.updateAvailable &&
+                                release != null &&
+                                Platform.isAndroid &&
+                                release.apk != null)
+                              TextButton(
+                                onPressed: () => _openRelease(release.page),
+                                child: Text(
+                                  tr(
+                                    context,
+                                    'Страница релиза',
+                                    'Release page',
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
+                        if (_downloading) ...[
+                          const SizedBox(height: 8),
+                          LinearProgressIndicator(value: _downloadProgress),
+                        ],
                       ],
                     ),
                   );

@@ -9,10 +9,18 @@ const _latestApi =
     'https://api.github.com/repos/riffifi/antiattendance/releases/latest';
 
 class AppRelease {
-  const AppRelease({required this.tag, required this.page, this.apk});
+  const AppRelease({
+    required this.tag,
+    required this.page,
+    this.apk,
+    this.apkSha256,
+    this.apkSize,
+  });
   final String tag;
   final Uri page;
   final Uri? apk;
+  final String? apkSha256;
+  final int? apkSize;
 }
 
 class GitHubUpdateService {
@@ -48,7 +56,7 @@ class GitHubUpdateService {
       '/riffifi/antiattendance/releases/tag/',
     );
     if (page == null) throw const FormatException('Invalid release URL.');
-    final apks = <Uri>[];
+    final apks = <({Uri url, String? sha256, int? size})>[];
     final assets = data['assets'];
     if (assets is List) {
       for (final asset in assets) {
@@ -59,22 +67,40 @@ class GitHubUpdateService {
           asset['browser_download_url'],
           '/riffifi/antiattendance/releases/download/',
         );
-        if (uri != null) apks.add(uri);
+        if (uri != null) {
+          final digest = asset['digest'];
+          final size = asset['size'];
+          apks.add((
+            url: uri,
+            sha256:
+                digest is String &&
+                    RegExp(r'^sha256:[a-fA-F0-9]{64}$').hasMatch(digest)
+                ? digest.substring(7).toLowerCase()
+                : null,
+            size: size is int && size > 0 ? size : null,
+          ));
+        }
       }
     }
-    Uri? apk;
+    ({Uri url, String? sha256, int? size})? apk;
     if (apks.length == 1) {
       apk = apks.single;
     } else if (apks.length > 1) {
       for (final item in apks) {
-        final name = item.pathSegments.last.toLowerCase();
+        final name = item.url.pathSegments.last.toLowerCase();
         if (name.contains('universal') || name == 'app-release.apk') {
           apk = item;
           break;
         }
       }
     }
-    return AppRelease(tag: tag, page: page, apk: apk);
+    return AppRelease(
+      tag: tag,
+      page: page,
+      apk: apk?.url,
+      apkSha256: apk?.sha256,
+      apkSize: apk?.size,
+    );
   }
 
   void close() => _client.close();

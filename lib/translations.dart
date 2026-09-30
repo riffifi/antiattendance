@@ -411,6 +411,33 @@ const translations = <String, (String, String, String)>{
     'Não foi possível abrir o GitHub.',
     '无法打开 GitHub。',
   ),
+  'Could not open GitHub. Link copied.': (
+    'Impossible d’ouvrir GitHub. Lien copié.',
+    'Não foi possível abrir o GitHub. Ligação copiada.',
+    '无法打开 GitHub，链接已复制。',
+  ),
+  'Confirm installation in Android.': (
+    'Confirmez l’installation dans Android.',
+    'Confirme a instalação no Android.',
+    '请在 Android 中确认安装。',
+  ),
+  'Could not download or install the update.': (
+    'Impossible de télécharger ou d’installer la mise à jour.',
+    'Não foi possível descarregar ou instalar a atualização.',
+    '无法下载或安装更新。',
+  ),
+  'Downloading…': ('Téléchargement…', 'A descarregar…', '正在下载…'),
+  'Downloading {percent}%': (
+    'Téléchargement : {percent} %',
+    'A descarregar: {percent}%',
+    '正在下载：{percent}%',
+  ),
+  'Install update': (
+    'Installer la mise à jour',
+    'Instalar atualização',
+    '安装更新',
+  ),
+  'Release page': ('Page de la version', 'Página da versão', '发布页面'),
   'Checking for updates…': (
     'Recherche de mises à jour…',
     'A procurar atualizações…',

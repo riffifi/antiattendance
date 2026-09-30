@@ -7,17 +7,29 @@ class SavedAccount {
     required this.id,
     required this.label,
     required this.cookie,
+    this.groupId,
+    this.groupName,
   });
   final String id;
   final String label;
   final String cookie;
+  final int? groupId;
+  final String? groupName;
 
-  Map<String, String> toJson() => {'id': id, 'label': label, 'cookie': cookie};
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'label': label,
+    'cookie': cookie,
+    if (groupId != null) 'groupId': groupId,
+    if (groupName != null) 'groupName': groupName,
+  };
 
   factory SavedAccount.fromJson(Map<String, dynamic> json) => SavedAccount(
     id: json['id'] as String,
     label: json['label'] as String,
     cookie: json['cookie'] as String,
+    groupId: json['groupId'] as int?,
+    groupName: json['groupName'] as String?,
   );
 }
 

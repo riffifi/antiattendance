@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import 'l10n.dart';
 import 'pulse_api.dart';
 
 class QrScanPage extends StatefulWidget {
@@ -43,7 +44,13 @@ class _QrScanPageState extends State<QrScanPage> {
                   attendanceTokenFromQr(value);
                 } on FormatException {
                   if (mounted) {
-                    setState(() => _error = 'Это не QR-код занятия Пульса');
+                    setState(
+                      () => _error = tr(
+                        context,
+                        'Это не QR-код занятия Пульса',
+                        'This is not a Pulse class QR code',
+                      ),
+                    );
                   }
                   continue;
                 }
@@ -53,10 +60,10 @@ class _QrScanPageState extends State<QrScanPage> {
               }
             }
           },
-          errorBuilder: (context, error) => const Center(
+          errorBuilder: (context, error) => Center(
             child: Text(
-              'Камера недоступна',
-              style: TextStyle(color: Colors.white),
+              tr(context, 'Камера недоступна', 'Camera unavailable'),
+              style: const TextStyle(color: Colors.white),
             ),
           ),
         ),
@@ -78,19 +85,19 @@ class _QrScanPageState extends State<QrScanPage> {
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.close, color: Colors.white),
-                    tooltip: 'Закрыть',
+                    tooltip: tr(context, 'Закрыть', 'Close'),
                   ),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Сканировать QR занятия',
+                      tr(context, 'Сканировать QR занятия', 'Scan class QR'),
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white, fontSize: 18),
+                      style: const TextStyle(color: Colors.white, fontSize: 18),
                     ),
                   ),
                   IconButton(
                     onPressed: () => unawaited(_controller.toggleTorch()),
                     icon: const Icon(Icons.flashlight_on, color: Colors.white),
-                    tooltip: 'Фонарик',
+                    tooltip: tr(context, 'Фонарик', 'Flashlight'),
                   ),
                 ],
               ),
@@ -98,7 +105,12 @@ class _QrScanPageState extends State<QrScanPage> {
               Padding(
                 padding: const EdgeInsets.all(28),
                 child: Text(
-                  _error ?? 'Наведите камеру на QR-код Пульса',
+                  _error ??
+                      tr(
+                        context,
+                        'Наведите камеру на QR-код Пульса',
+                        'Point the camera at a Pulse QR code',
+                      ),
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.white),
                 ),

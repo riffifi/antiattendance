@@ -44,7 +44,13 @@ class _SessionImportPageState extends State<SessionImportPage> {
       if (mounted) setState(() => _accounts = accounts);
     } catch (_) {
       if (mounted) {
-        setState(() => _error = tr(context, 'Неверный код, повреждённые данные или срок передачи истёк.', 'Wrong code, damaged data, or expired transfer.'));
+        setState(
+          () => _error = tr(
+            context,
+            'Неверный код, повреждённые данные или срок передачи истёк.',
+            'Wrong code, damaged data, or expired transfer.',
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _decrypting = false);
@@ -53,7 +59,9 @@ class _SessionImportPageState extends State<SessionImportPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(tr(context, 'Импорт сессий', 'Import sessions'))),
+    appBar: AppBar(
+      title: Text(tr(context, 'Импорт сессий', 'Import sessions')),
+    ),
     body: _accounts != null
         ? _preview(context)
         : _collector.complete
@@ -79,7 +87,10 @@ class _SessionImportPageState extends State<SessionImportPage> {
           }
         },
         errorBuilder: (context, error) => Center(
-          child: Text(tr(context, 'Камера недоступна', 'Camera unavailable')),
+          child: Text(
+            tr(context, 'Камера недоступна', 'Camera unavailable'),
+            style: const TextStyle(color: Colors.white),
+          ),
         ),
       ),
       Center(
@@ -101,8 +112,16 @@ class _SessionImportPageState extends State<SessionImportPage> {
             color: const Color(0xE6181B24),
             child: Text(
               _collector.total == 0
-                  ? tr(context, 'Наведите камеру на QR с другого телефона', 'Point the camera at the QR on the other phone')
-                  : tr(context, 'Получено ${_collector.received} из ${_collector.total} кадров. Держите камеру на экране.', 'Received ${_collector.received} of ${_collector.total} frames. Keep the camera pointed at the screen.'),
+                  ? tr(
+                      context,
+                      'Наведите камеру на QR с другого телефона',
+                      'Point the camera at the QR on the other phone',
+                    )
+                  : tr(
+                      context,
+                      'Получено ${_collector.received} из ${_collector.total} кадров. Держите камеру на экране.',
+                      'Received ${_collector.received} of ${_collector.total} frames. Keep the camera pointed at the screen.',
+                    ),
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white),
             ),
@@ -119,25 +138,43 @@ class _SessionImportPageState extends State<SessionImportPage> {
         shrinkWrap: true,
         padding: const EdgeInsets.all(20),
         children: [
-          Text(tr(context, 'QR получен', 'QR received'), style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w700)),
+          Text(
+            tr(context, 'QR получен', 'QR received'),
+            style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: 8),
-          Text(tr(context, 'Попросите отправителя открыть «Показать код» и введите его здесь.', 'Ask the sender to tap “Show code” and enter it here.')),
+          Text(
+            tr(
+              context,
+              'Попросите отправителя открыть «Показать код» и введите его здесь.',
+              'Ask the sender to tap “Show code” and enter it here.',
+            ),
+          ),
           const SizedBox(height: 20),
           TextField(
             controller: _code,
             autocorrect: false,
             textCapitalization: TextCapitalization.characters,
-            decoration: InputDecoration(labelText: tr(context, 'Код передачи', 'Transfer code')),
+            decoration: InputDecoration(
+              labelText: tr(context, 'Код передачи', 'Transfer code'),
+            ),
             onSubmitted: (_) => _decrypt(),
           ),
           if (_error != null) ...[
             const SizedBox(height: 8),
-            Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            Text(
+              _error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
           ],
           const SizedBox(height: 16),
           FilledButton(
             onPressed: _decrypting ? null : _decrypt,
-            child: Text(_decrypting ? tr(context, 'Проверяем…', 'Checking…') : tr(context, 'Продолжить', 'Continue')),
+            child: Text(
+              _decrypting
+                  ? tr(context, 'Проверяем…', 'Checking…')
+                  : tr(context, 'Продолжить', 'Continue'),
+            ),
           ),
         ],
       ),
@@ -150,12 +187,24 @@ class _SessionImportPageState extends State<SessionImportPage> {
       child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          Text(tr(context, 'Импортировать аккаунты?', 'Import these accounts?'), style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w700)),
+          Text(
+            tr(context, 'Импортировать аккаунты?', 'Import these accounts?'),
+            style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: 8),
-          Text(tr(context, 'Сессии будут сохранены на этом устройстве.', 'Sessions will be saved on this device.')),
+          Text(
+            tr(
+              context,
+              'Сессии будут сохранены на этом устройстве.',
+              'Sessions will be saved on this device.',
+            ),
+          ),
           const SizedBox(height: 16),
           for (final account in _accounts!)
-            ListTile(leading: const Icon(Icons.person_outline), title: Text(account.label)),
+            ListTile(
+              leading: const Icon(Icons.person_outline),
+              title: Text(account.label),
+            ),
           const SizedBox(height: 16),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(_accounts),

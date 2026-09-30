@@ -5,6 +5,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import 'accounts.dart';
 import 'attendance_queue.dart';
+import 'l10n.dart';
 import 'pulse_api.dart';
 
 class QueueScanPage extends StatefulWidget {
@@ -58,10 +59,10 @@ class _QueueScanPageState extends State<QueueScanPage> {
               if (value != null) _queue.accept(value);
             }
           },
-          errorBuilder: (context, error) => const Center(
+          errorBuilder: (context, error) => Center(
             child: Text(
-              'Камера недоступна',
-              style: TextStyle(color: Colors.white),
+              tr(context, 'Камера недоступна', 'Camera unavailable'),
+              style: const TextStyle(color: Colors.white),
             ),
           ),
         ),
@@ -83,19 +84,19 @@ class _QueueScanPageState extends State<QueueScanPage> {
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.close, color: Colors.white),
-                    tooltip: 'Закрыть',
+                    tooltip: tr(context, 'Закрыть', 'Close'),
                   ),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Очередь посещаемости',
+                      tr(context, 'Очередь посещаемости', 'Attendance queue'),
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white, fontSize: 18),
+                      style: const TextStyle(color: Colors.white, fontSize: 18),
                     ),
                   ),
                   IconButton(
                     onPressed: () => unawaited(_camera.toggleTorch()),
                     icon: const Icon(Icons.flashlight_on, color: Colors.white),
-                    tooltip: 'Фонарик',
+                    tooltip: tr(context, 'Фонарик', 'Flashlight'),
                   ),
                 ],
               ),
@@ -116,8 +117,16 @@ class _QueueScanPageState extends State<QueueScanPage> {
                     children: [
                       Text(
                         _queue.remaining == 0
-                            ? 'Все аккаунты подтверждены'
-                            : 'Осталось: ${_queue.remaining} из ${widget.accounts.length}',
+                            ? tr(
+                                context,
+                                'Все аккаунты подтверждены',
+                                'All accounts confirmed',
+                              )
+                            : tr(
+                                context,
+                                'Осталось: ${_queue.remaining} из ${widget.accounts.length}',
+                                '${_queue.remaining} of ${widget.accounts.length} remaining',
+                              ),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
@@ -127,10 +136,22 @@ class _QueueScanPageState extends State<QueueScanPage> {
                       const SizedBox(height: 6),
                       Text(
                         _queue.remaining == 0
-                            ? 'Можно закрыть камеру.'
+                            ? tr(
+                                context,
+                                'Можно закрыть камеру.',
+                                'You can close the camera.',
+                              )
                             : _queue.processing
-                            ? 'Отправляем отметки… Держите QR в кадре.'
-                            : 'Держите QR в кадре. Неподтверждённые аккаунты будут повторены.',
+                            ? tr(
+                                context,
+                                'Отправляем отметки… Держите QR в кадре.',
+                                'Submitting… Keep the QR in view.',
+                              )
+                            : tr(
+                                context,
+                                'Держите QR в кадре. Неподтверждённые аккаунты будут повторены.',
+                                'Keep the QR in view. Unconfirmed accounts will be retried.',
+                              ),
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 13,
@@ -150,7 +171,7 @@ class _QueueScanPageState extends State<QueueScanPage> {
                               child: Text(
                                 '${_queue.confirmed.contains(account.id) ? '✓' : '○'} '
                                 '${account.label}: '
-                                '${_queue.errors[account.id] ?? _queue.results[account.id]?.message ?? 'В очереди'}',
+                                '${trMessage(context, _queue.errors[account.id] ?? _queue.results[account.id]?.message ?? tr(context, 'В очереди', 'Queued'))}',
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(

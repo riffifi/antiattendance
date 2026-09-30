@@ -17,8 +17,10 @@ class SessionTransfer {
   final String code;
 }
 
-Future<SessionTransfer> createSessionTransfer(List<SavedAccount> accounts) async {
-  if (accounts.isEmpty) {
+Future<SessionTransfer> createSessionTransfer(
+  List<SavedAccount> accounts,
+) async {
+  if (accounts.isEmpty || accounts.length > 200) {
     throw const FormatException('No accounts selected.');
   }
   final random = Random.secure();
@@ -27,19 +29,33 @@ Future<SessionTransfer> createSessionTransfer(List<SavedAccount> accounts) async
   final id = base64Url.encode(List.generate(6, (_) => random.nextInt(256)));
   final json = jsonEncode({
     'created': DateTime.now().toUtc().millisecondsSinceEpoch,
-    'accounts': accounts.map((a) => {'label': a.label, 'cookie': a.cookie}).toList(),
+    'accounts': accounts
+        .map(
+          (a) => {
+            'label': a.label,
+            'cookie': a.cookie,
+            'groupId': a.groupId,
+            'groupName': a.groupName,
+          },
+        )
+        .toList(),
   });
-  final plain = ZLibEncoder().convert(utf8.encode(json));
-  if (plain.length > 120000) {
+  final jsonBytes = utf8.encode(json);
+  if (jsonBytes.length > 120000) {
     throw const FormatException('Too many sessions for QR transfer.');
   }
+  final plain = ZLibEncoder().convert(jsonBytes);
   final key = await _key(code);
   final box = await AesGcm.with256bits().encrypt(
     plain,
     secretKey: key,
     nonce: nonce,
   );
-  final encoded = base64Url.encode([...nonce, ...box.mac.bytes, ...box.cipherText]);
+  final encoded = base64Url.encode([
+    ...nonce,
+    ...box.mac.bytes,
+    ...box.cipherText,
+  ]);
   final count = (encoded.length / _chunkSize).ceil();
   if (count > _maxFrames) {
     throw const FormatException('Too many sessions for QR transfer.');
@@ -78,8 +94,13 @@ class SessionTransferCollector {
     final index = int.tryParse(match.group(2)!);
     final total = int.tryParse(match.group(3)!);
     final part = match.group(4)!;
-    if (index == null || total == null || total > _maxFrames ||
-        index > total || part.length > _chunkSize) return false;
+    if (index == null ||
+        total == null ||
+        total > _maxFrames ||
+        index > total ||
+        part.length > _chunkSize) {
+      return false;
+    }
     if (_id != null && (_id != id || _total != total)) return false;
     _id = id;
     _total = total;
@@ -100,18 +121,31 @@ class SessionTransferCollector {
         nonce: bytes.sublist(0, 12),
         mac: Mac(bytes.sublist(12, 28)),
       );
-      final plain = await AesGcm.with256bits().decrypt(box, secretKey: await _key(code));
-      final decoded = jsonDecode(utf8.decode(ZLibDecoder().convert(plain)));
-      if (decoded is! Map<String, dynamic>) throw const FormatException('Invalid transfer.');
+      final plain = await AesGcm.with256bits().decrypt(
+        box,
+        secretKey: await _key(code),
+      );
+      final unpacked = ZLibDecoder().convert(plain);
+      if (unpacked.length > 120000) {
+        throw const FormatException('Transfer too large.');
+      }
+      final decoded = jsonDecode(utf8.decode(unpacked));
+      if (decoded is! Map<String, dynamic>) {
+        throw const FormatException('Invalid transfer.');
+      }
       final created = decoded['created'];
       final entries = decoded['accounts'];
-      if (created is! int || entries is! List || entries.isEmpty || entries.length > 200) {
+      if (created is! int ||
+          entries is! List ||
+          entries.isEmpty ||
+          entries.length > 200) {
         throw const FormatException('Invalid transfer.');
       }
       final age = DateTime.now().toUtc().difference(
         DateTime.fromMillisecondsSinceEpoch(created, isUtc: true),
       );
-      if (age > const Duration(minutes: 30) || age < const Duration(minutes: -5)) {
+      if (age > const Duration(minutes: 30) ||
+          age < const Duration(minutes: -5)) {
         throw const FormatException('Transfer expired.');
       }
       final accounts = <SavedAccount>[];
@@ -124,12 +158,23 @@ class SessionTransferCollector {
         }
         final label = entry['label'] as String;
         final cookie = entry['cookie'] as String;
-        if (label.trim().isEmpty || label.length > 60 ||
-            cookie.length > 32000 ||
+        if (label.trim().isEmpty ||
+            label.length > 60 ||
+            cookie.length > 120000 ||
             !cookie.startsWith('.AspNetCore.Cookies=')) {
           throw const FormatException('Invalid transfer.');
         }
-        accounts.add(SavedAccount(id: '$i', label: label, cookie: cookie));
+        accounts.add(
+          SavedAccount(
+            id: '$i',
+            label: label,
+            cookie: cookie,
+            groupId: entry['groupId'] is int ? entry['groupId'] as int : null,
+            groupName: entry['groupName'] is String
+                ? entry['groupName'] as String
+                : null,
+          ),
+        );
       }
       return accounts;
     } on FormatException {

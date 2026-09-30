@@ -1,43 +1,96 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import 'accounts.dart';
+import 'app_settings.dart';
 import 'app_theme.dart';
+import 'attendance_log.dart';
+import 'group_picker_page.dart';
 import 'l10n.dart';
+import 'nearby_receive_page.dart';
+import 'nearby_share_page.dart';
 import 'pulse_api.dart';
 import 'pulse_login.dart';
 import 'qr_scan_page.dart';
 import 'queue_scan_page.dart';
+import 'schedule_api.dart';
+import 'schedule_page.dart';
 import 'session_import_page.dart';
 import 'session_share_page.dart';
+import 'settings_page.dart';
 
 void main() => runApp(const AntiattendanceApp());
 
-class AntiattendanceApp extends StatelessWidget {
+class AntiattendanceApp extends StatefulWidget {
   const AntiattendanceApp({super.key});
 
   @override
+  State<AntiattendanceApp> createState() => _AntiattendanceAppState();
+}
+
+class _AntiattendanceAppState extends State<AntiattendanceApp> {
+  final AppSettingsStore _settingsStore = AppSettingsStore();
+  String? _language;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLanguage();
+  }
+
+  Future<void> _loadLanguage() async {
+    try {
+      final language = await _settingsStore.loadLanguage();
+      if (mounted) setState(() => _language = language);
+    } catch (_) {
+      // A fresh install uses the phone language if settings are unavailable.
+    }
+  }
+
+  @override
   Widget build(BuildContext context) => MaterialApp(
-    title: 'Pulse attendance',
+    title: 'AntiAttendance',
     debugShowCheckedModeBanner: false,
     theme: AppTheme.light,
-    supportedLocales: const [Locale('ru'), Locale('en')],
+    locale: _language == null ? null : Locale(_language!),
+    supportedLocales: const [Locale('en'), Locale('ru')],
     localizationsDelegates: const [
       GlobalMaterialLocalizations.delegate,
       GlobalWidgetsLocalizations.delegate,
       GlobalCupertinoLocalizations.delegate,
     ],
-    home: const HomePage(),
+    home: HomePage(
+      settingsStore: _settingsStore,
+      language: _language,
+      onLanguageChanged: (language) => setState(() => _language = language),
+    ),
   );
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, this.store, this.api, this.scanQr});
+  const HomePage({
+    super.key,
+    this.store,
+    this.api,
+    this.scanQr,
+    this.scheduleApi,
+    this.logStore,
+    this.settingsStore,
+    this.language,
+    this.onLanguageChanged,
+  });
 
   final AccountStore? store;
   final PulseApi? api;
+  final ScheduleApi? scheduleApi;
+  final AttendanceLogStore? logStore;
+  final AppSettingsStore? settingsStore;
+  final String? language;
+  final ValueChanged<String?>? onLanguageChanged;
   final Future<String?> Function(BuildContext context)? scanQr;
 
   @override
@@ -47,6 +100,12 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   late final AccountStore _store = widget.store ?? AccountStore();
   late final PulseApi _api = widget.api ?? PulseApi();
+  late final ScheduleApi _scheduleApi = widget.scheduleApi ?? ScheduleApi();
+  late final AttendanceLogStore _logStore =
+      widget.logStore ?? AttendanceLogStore();
+  late final AppSettingsStore _settingsStore =
+      widget.settingsStore ?? AppSettingsStore();
+  int _tab = 0;
   final _selected = <String>{};
   final _results = <String, ApprovalResult>{};
   final _errors = <String, String>{};
@@ -67,6 +126,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     if (widget.api == null) _api.close();
+    if (widget.scheduleApi == null) _scheduleApi.close();
     super.dispose();
   }
 
@@ -96,6 +156,18 @@ class _HomePageState extends State<HomePage> {
         .showSnackBar(SnackBar(content: Text(trMessage(context, message))));
   }
 
+  Future<void> _openSettings() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => SettingsPage(
+          store: _settingsStore,
+          language: widget.language,
+          onLanguageChanged: widget.onLanguageChanged ?? (_) {},
+        ),
+      ),
+    );
+  }
+
   Future<String?> _askText({
     required String title,
     required String hint,
@@ -116,7 +188,13 @@ class _HomePageState extends State<HomePage> {
   Future<void> _login({SavedAccount? replace}) async {
     if (_busy) return;
     if (!Platform.isAndroid && !Platform.isIOS) {
-      _message(tr(context, 'Вход через МИРЭА доступен на Android и iOS.', 'MIREA sign-in is available on Android and iOS.'));
+      _message(
+        tr(
+          context,
+          'Вход через МИРЭА доступен на Android и iOS.',
+          'MIREA sign-in is available on Android and iOS.',
+        ),
+      );
       return;
     }
     final cookie = await Navigator.of(
@@ -134,13 +212,25 @@ class _HomePageState extends State<HomePage> {
     if (_accounts.any(
       (item) => item.id != replace?.id && item.cookie == cookie,
     )) {
-      _message(tr(context, 'Этот аккаунт уже добавлен.', 'This account is already added.'));
+      _message(
+        tr(
+          context,
+          'Этот аккаунт уже добавлен.',
+          'This account is already added.',
+        ),
+      );
       return;
     }
     final id = replace?.id ?? DateTime.now().microsecondsSinceEpoch.toString();
     final next = [
       ..._accounts.where((item) => item.id != id),
-      SavedAccount(id: id, label: label, cookie: cookie),
+      SavedAccount(
+        id: id,
+        label: label,
+        cookie: cookie,
+        groupId: replace?.groupId,
+        groupName: replace?.groupName,
+      ),
     ];
     try {
       await _store.save(next);
@@ -153,7 +243,15 @@ class _HomePageState extends State<HomePage> {
         });
       }
     } catch (_) {
-      if (mounted) _message(tr(context, 'Не удалось сохранить аккаунт.', 'Could not save the account.'));
+      if (mounted) {
+        _message(
+          tr(
+            context,
+            'Не удалось сохранить аккаунт.',
+            'Could not save the account.',
+          ),
+        );
+      }
     }
   }
 
@@ -162,8 +260,16 @@ class _HomePageState extends State<HomePage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(tr(context, 'Удалить ${account.label}?', 'Delete ${account.label}?')),
-        content: Text(tr(context, 'Сохранённая сессия будет удалена с устройства.', 'The saved session will be removed from this device.')),
+        title: Text(
+          tr(context, 'Удалить ${account.label}?', 'Delete ${account.label}?'),
+        ),
+        content: Text(
+          tr(
+            context,
+            'Сохранённая сессия будет удалена с устройства.',
+            'The saved session will be removed from this device.',
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -189,18 +295,34 @@ class _HomePageState extends State<HomePage> {
         });
       }
     } catch (_) {
-      if (mounted) _message(tr(context, 'Не удалось удалить аккаунт.', 'Could not delete the account.'));
+      if (mounted) {
+        _message(
+          tr(
+            context,
+            'Не удалось удалить аккаунт.',
+            'Could not delete the account.',
+          ),
+        );
+      }
     }
   }
 
   Future<void> _scan() async {
     if (_busy) return;
     if (_selected.isEmpty) {
-      _message(tr(context, 'Сначала выберите аккаунты.', 'Select accounts first.'));
+      _message(
+        tr(context, 'Сначала выберите аккаунты.', 'Select accounts first.'),
+      );
       return;
     }
     if (widget.scanQr == null && !Platform.isAndroid && !Platform.isIOS) {
-      _message(tr(context, 'Камера доступна на Android и iOS. Для проверки вставьте ссылку.', 'The camera is available on Android and iOS. Paste a link to test here.'));
+      _message(
+        tr(
+          context,
+          'Камера доступна на Android и iOS. Для проверки вставьте ссылку.',
+          'The camera is available on Android and iOS. Paste a link to test here.',
+        ),
+      );
       return;
     }
     setState(() => _scanning = true);
@@ -212,24 +334,43 @@ class _HomePageState extends State<HomePage> {
             )
           : await widget.scanQr!(context);
     } catch (_) {
-      if (mounted) _message(tr(context, 'Не удалось открыть камеру.', 'Could not open the camera.'));
+      if (mounted) {
+        _message(
+          tr(
+            context,
+            'Не удалось открыть камеру.',
+            'Could not open the camera.',
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _scanning = false);
     }
     if (mounted && raw != null) await _submitLink(raw);
   }
 
-  Future<void> _scanQueue() async {
+  Future<void> _scanQueue({
+    ScheduleLesson? lesson,
+    List<SavedAccount>? overrideAccounts,
+  }) async {
     if (_busy) return;
-    final accounts = _accounts
-        .where((account) => _selected.contains(account.id))
-        .toList();
+    final accounts =
+        overrideAccounts ??
+        _accounts.where((account) => _selected.contains(account.id)).toList();
     if (accounts.isEmpty) {
-      _message(tr(context, 'Сначала выберите аккаунты.', 'Select accounts first.'));
+      _message(
+        tr(context, 'Сначала выберите аккаунты.', 'Select accounts first.'),
+      );
       return;
     }
     if (!Platform.isAndroid && !Platform.isIOS) {
-      _message(tr(context, 'Камера доступна на Android и iOS.', 'The camera is available on Android and iOS.'));
+      _message(
+        tr(
+          context,
+          'Камера доступна на Android и iOS.',
+          'The camera is available on Android and iOS.',
+        ),
+      );
       return;
     }
     setState(() {
@@ -237,6 +378,7 @@ class _HomePageState extends State<HomePage> {
       _results.clear();
       _errors.clear();
     });
+    final recorded = <String>{};
     try {
       await Navigator.of(context).push<void>(
         MaterialPageRoute(
@@ -244,6 +386,13 @@ class _HomePageState extends State<HomePage> {
             accounts: accounts,
             api: _api,
             onUpdate: (queue) {
+              for (final account in accounts) {
+                final result = queue.results[account.id];
+                if (result?.state == ApprovalState.approved &&
+                    recorded.add(account.id)) {
+                  unawaited(_recordApproval(account, result!, lesson: lesson));
+                }
+              }
               if (!mounted) return;
               setState(() {
                 _results
@@ -257,8 +406,17 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       );
+      await _logStore.flush();
     } catch (_) {
-      if (mounted) _message(tr(context, 'Не удалось открыть камеру.', 'Could not open the camera.'));
+      if (mounted) {
+        _message(
+          tr(
+            context,
+            'Не удалось открыть камеру.',
+            'Could not open the camera.',
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _scanning = false);
     }
@@ -268,22 +426,96 @@ class _HomePageState extends State<HomePage> {
     if (_busy) return;
     final accounts = _accounts.where((a) => _selected.contains(a.id)).toList();
     if (accounts.isEmpty) {
-      _message(tr(context, 'Сначала выберите аккаунты.', 'Select accounts first.'));
+      _message(
+        tr(context, 'Сначала выберите аккаунты.', 'Select accounts first.'),
+      );
       return;
     }
+    final method = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.wifi_tethering_rounded),
+              title: Text(tr(context, 'Передать рядом', 'Share nearby')),
+              subtitle: Text(
+                tr(
+                  context,
+                  'Несколько телефонов в одной Wi‑Fi сети',
+                  'Multiple phones on the same Wi‑Fi',
+                ),
+              ),
+              onTap: () => Navigator.pop(context, 'nearby'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.qr_code_rounded),
+              title: Text(tr(context, 'Передать через QR', 'Share by QR')),
+              onTap: () => Navigator.pop(context, 'qr'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || method == null) return;
     await Navigator.of(context).push<void>(
-      MaterialPageRoute(builder: (_) => SessionSharePage(accounts: accounts)),
+      MaterialPageRoute(
+        builder: (_) => method == 'nearby'
+            ? NearbySharePage(accounts: accounts)
+            : SessionSharePage(accounts: accounts),
+      ),
     );
   }
 
   Future<void> _importSessions() async {
     if (_busy) return;
-    if (!Platform.isAndroid && !Platform.isIOS) {
-      _message(tr(context, 'Импорт через камеру доступен на Android и iOS.', 'Camera import is available on Android and iOS.'));
+    final method = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.wifi_tethering_rounded),
+              title: Text(tr(context, 'Получить рядом', 'Receive nearby')),
+              subtitle: Text(
+                tr(
+                  context,
+                  'Откройте этот экран на каждом получателе',
+                  'Open this on each receiving phone',
+                ),
+              ),
+              onTap: () => Navigator.pop(context, 'nearby'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.qr_code_scanner_rounded),
+              title: Text(
+                tr(context, 'Сканировать QR передачи', 'Scan transfer QR'),
+              ),
+              onTap: () => Navigator.pop(context, 'qr'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || method == null) return;
+    if (method == 'qr' && !Platform.isAndroid && !Platform.isIOS) {
+      _message(
+        tr(
+          context,
+          'Импорт через камеру доступен на Android и iOS.',
+          'Camera import is available on Android and iOS.',
+        ),
+      );
       return;
     }
     final imported = await Navigator.of(context).push<List<SavedAccount>>(
-      MaterialPageRoute(builder: (_) => const SessionImportPage()),
+      MaterialPageRoute(
+        builder: (_) => method == 'nearby'
+            ? const NearbyReceivePage()
+            : const SessionImportPage(),
+      ),
     );
     if (!mounted || imported == null) return;
     final known = _accounts.map((a) => a.cookie).toSet();
@@ -291,14 +523,24 @@ class _HomePageState extends State<HomePage> {
     final base = DateTime.now().microsecondsSinceEpoch;
     for (final account in imported) {
       if (!known.add(account.cookie)) continue;
-      added.add(SavedAccount(
-        id: '${base}_${added.length}',
-        label: account.label,
-        cookie: account.cookie,
-      ));
+      added.add(
+        SavedAccount(
+          id: '${base}_${added.length}',
+          label: account.label,
+          cookie: account.cookie,
+          groupId: account.groupId,
+          groupName: account.groupName,
+        ),
+      );
     }
     if (added.isEmpty) {
-      _message(tr(context, 'Все эти аккаунты уже сохранены.', 'All these accounts are already saved.'));
+      _message(
+        tr(
+          context,
+          'Все эти аккаунты уже сохранены.',
+          'All these accounts are already saved.',
+        ),
+      );
       return;
     }
     final next = [..._accounts, ...added];
@@ -309,16 +551,32 @@ class _HomePageState extends State<HomePage> {
         _accounts = next;
         _selected.addAll(added.map((a) => a.id));
       });
-      _message(tr(context, 'Импортировано: ${added.length}', 'Imported: ${added.length}'));
+      _message(
+        tr(
+          context,
+          'Импортировано: ${added.length}',
+          'Imported: ${added.length}',
+        ),
+      );
     } catch (_) {
-      if (mounted) _message(tr(context, 'Не удалось сохранить аккаунты.', 'Could not save accounts.'));
+      if (mounted) {
+        _message(
+          tr(
+            context,
+            'Не удалось сохранить аккаунты.',
+            'Could not save accounts.',
+          ),
+        );
+      }
     }
   }
 
   Future<void> _pasteLink() async {
     if (_busy) return;
     if (_selected.isEmpty) {
-      _message(tr(context, 'Сначала выберите аккаунты.', 'Select accounts first.'));
+      _message(
+        tr(context, 'Сначала выберите аккаунты.', 'Select accounts first.'),
+      );
       return;
     }
     final raw = await _askText(
@@ -329,7 +587,25 @@ class _HomePageState extends State<HomePage> {
     if (mounted && raw != null) await _submitLink(raw);
   }
 
-  Future<void> _submitLink(String raw) async {
+  Future<void> _pasteLesson(
+    ScheduleLesson lesson,
+    List<SavedAccount> accounts,
+  ) async {
+    final raw = await _askText(
+      title: tr(context, 'Ссылка QR-кода', 'QR code link'),
+      hint: 'https://pulse.mirea.ru/...?token=...',
+      action: tr(context, 'Отправить', 'Submit'),
+    );
+    if (mounted && raw != null) {
+      await _submitLink(raw, lesson: lesson, overrideAccounts: accounts);
+    }
+  }
+
+  Future<void> _submitLink(
+    String raw, {
+    ScheduleLesson? lesson,
+    List<SavedAccount>? overrideAccounts,
+  }) async {
     if (_submitting) return;
     final String token;
     try {
@@ -338,11 +614,13 @@ class _HomePageState extends State<HomePage> {
       _message(error.message);
       return;
     }
-    final accounts = _accounts
-        .where((account) => _selected.contains(account.id))
-        .toList();
+    final accounts =
+        overrideAccounts ??
+        _accounts.where((account) => _selected.contains(account.id)).toList();
     if (accounts.isEmpty) {
-      _message(tr(context, 'Сначала выберите аккаунты.', 'Select accounts first.'));
+      _message(
+        tr(context, 'Сначала выберите аккаунты.', 'Select accounts first.'),
+      );
       return;
     }
     setState(() {
@@ -355,6 +633,9 @@ class _HomePageState extends State<HomePage> {
       accounts.map((account) async {
         try {
           final result = await _api.approve(token, account.cookie);
+          if (result.state == ApprovalState.approved) {
+            unawaited(_recordApproval(account, result, lesson: lesson));
+          }
           if (mounted) setState(() => _results[account.id] = result);
         } catch (error) {
           if (mounted) {
@@ -367,22 +648,111 @@ class _HomePageState extends State<HomePage> {
         }
       }),
     );
+    await _logStore.flush();
     if (mounted) setState(() => _submitting = false);
+  }
+
+  Future<void> _recordApproval(
+    SavedAccount account,
+    ApprovalResult result, {
+    ScheduleLesson? lesson,
+  }) async {
+    try {
+      await _logStore.add(
+        AttendanceMark(
+          accountId: account.id,
+          accountLabel: account.label,
+          at: DateTime.now(),
+          groupId: account.groupId,
+          lessonKey: lesson?.key,
+          pulseLessonId: result.lessonId,
+        ),
+      );
+    } catch (_) {
+      if (mounted) {
+        _message(
+          tr(
+            context,
+            'Отметка подтверждена, но история не сохранилась.',
+            'Attendance confirmed, but history could not be saved.',
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _chooseGroup(SavedAccount account) async {
+    final group = await Navigator.of(context).push<ScheduleGroup>(
+      MaterialPageRoute(builder: (_) => GroupPickerPage(api: _scheduleApi)),
+    );
+    if (!mounted || group == null) return;
+    final next = _accounts
+        .map(
+          (item) => item.id == account.id
+              ? SavedAccount(
+                  id: item.id,
+                  label: item.label,
+                  cookie: item.cookie,
+                  groupId: group.id,
+                  groupName: group.name,
+                )
+              : item,
+        )
+        .toList();
+    try {
+      await _store.save(next);
+      if (mounted) setState(() => _accounts = next);
+    } catch (_) {
+      if (mounted) {
+        _message(
+          tr(context, 'Не удалось сохранить группу.', 'Could not save group.'),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('Пульс', style: TextStyle(fontWeight: FontWeight.w700)),
-      actions: [
-        Padding(
-          padding: const EdgeInsets.only(right: 20),
-          child: Center(
+      title: Row(
+        children: [
+          SvgPicture.asset(
+            'icon/brand.svg',
+            width: 28,
+            height: 28,
+            semanticsLabel: tr(context, 'Логотип приложения', 'App logo'),
+          ),
+          const SizedBox(width: 6),
+          const Flexible(
             child: Text(
-              '${_selected.length} выбрано',
-              style: const TextStyle(color: AppColors.muted, fontSize: 13),
+              'AntiAttendance',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
+        ],
+      ),
+      actions: [
+        IconButton(
+          onPressed: _openSettings,
+          tooltip: tr(context, 'Настройки', 'Settings'),
+          icon: const Icon(Icons.settings_outlined),
+        ),
+        const SizedBox(width: 8),
+      ],
+    ),
+    bottomNavigationBar: NavigationBar(
+      selectedIndex: _tab,
+      onDestinationSelected: (index) => setState(() => _tab = index),
+      destinations: [
+        NavigationDestination(
+          icon: const Icon(Icons.qr_code_scanner_rounded),
+          label: tr(context, 'Посещаемость', 'Attendance'),
+        ),
+        NavigationDestination(
+          icon: const Icon(Icons.calendar_month_rounded),
+          label: tr(context, 'Расписание', 'Schedule'),
         ),
       ],
     ),
@@ -396,26 +766,51 @@ class _HomePageState extends State<HomePage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('Не удалось открыть сохранённые аккаунты.'),
+                    Text(
+                      tr(
+                        context,
+                        'Не удалось открыть сохранённые аккаунты.',
+                        'Could not load saved accounts.',
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     FilledButton(
                       onPressed: _load,
-                      child: const Text('Повторить'),
+                      child: Text(tr(context, 'Повторить', 'Retry')),
                     ),
                   ],
                 ),
               )
+            : _tab == 1
+            ? SchedulePage(
+                accounts: _accounts,
+                api: _scheduleApi,
+                log: _logStore,
+                onScanLesson: (lesson, accounts) =>
+                    _scanQueue(lesson: lesson, overrideAccounts: accounts),
+                onPasteLesson: _pasteLesson,
+              )
             : ListView(
                 padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
                 children: [
-                  const Text(
-                    'Посещаемость',
-                    style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700),
+                  Text(
+                    tr(context, 'Посещаемость', 'Attendance'),
+                    style: const TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
-                    'Сканируйте QR — отметки отправятся сразу.',
-                    style: TextStyle(color: AppColors.muted, fontSize: 14),
+                  Text(
+                    tr(
+                      context,
+                      'Сканируйте QR — отметки отправятся сразу.',
+                      'Scan a QR and submit attendance immediately.',
+                    ),
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 14,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   SizedBox(
@@ -423,7 +818,7 @@ class _HomePageState extends State<HomePage> {
                     child: FilledButton.icon(
                       onPressed: _busy ? null : _scan,
                       icon: const Icon(Icons.qr_code_scanner_rounded),
-                      label: const Text('Сканировать QR'),
+                      label: Text(tr(context, 'Сканировать QR', 'Scan QR')),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -432,7 +827,7 @@ class _HomePageState extends State<HomePage> {
                     child: OutlinedButton.icon(
                       onPressed: _busy ? null : _scanQueue,
                       icon: const Icon(Icons.repeat_rounded, size: 20),
-                      label: const Text('Режим очереди'),
+                      label: Text(tr(context, 'Режим очереди', 'Queue mode')),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -441,16 +836,23 @@ class _HomePageState extends State<HomePage> {
                     child: OutlinedButton.icon(
                       onPressed: _busy ? null : _pasteLink,
                       icon: const Icon(Icons.link_rounded, size: 20),
-                      label: const Text('Вставить ссылку'),
+                      label: Text(tr(context, 'Вставить ссылку', 'Paste link')),
                     ),
                   ),
                   if (_submitting) ...[
                     const SizedBox(height: 12),
                     const LinearProgressIndicator(),
                     const SizedBox(height: 6),
-                    const Text(
-                      'Отправляем отметки…',
-                      style: TextStyle(color: AppColors.muted, fontSize: 12),
+                    Text(
+                      tr(
+                        context,
+                        'Отправляем отметки…',
+                        'Submitting attendance…',
+                      ),
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                   const SizedBox(height: 8),
@@ -460,14 +862,14 @@ class _HomePageState extends State<HomePage> {
                         child: TextButton.icon(
                           onPressed: _busy ? null : _shareSessions,
                           icon: const Icon(Icons.ios_share_rounded, size: 18),
-                          label: Text(tr(context, 'Передать сессии', 'Share sessions')),
+                          label: Text(tr(context, 'Передать', 'Share')),
                         ),
                       ),
                       Expanded(
                         child: TextButton.icon(
                           onPressed: _busy ? null : _importSessions,
                           icon: const Icon(Icons.download_rounded, size: 18),
-                          label: Text(tr(context, 'Импорт сессий', 'Import sessions')),
+                          label: Text(tr(context, 'Получить', 'Receive')),
                         ),
                       ),
                     ],
@@ -475,10 +877,10 @@ class _HomePageState extends State<HomePage> {
                   const SizedBox(height: 32),
                   Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          'Аккаунты',
-                          style: TextStyle(
+                          tr(context, 'Аккаунты', 'Accounts'),
+                          style: const TextStyle(
                             fontSize: 21,
                             fontWeight: FontWeight.w700,
                           ),
@@ -487,17 +889,21 @@ class _HomePageState extends State<HomePage> {
                       TextButton.icon(
                         onPressed: _busy ? null : () => _login(),
                         icon: const Icon(Icons.add_rounded, size: 19),
-                        label: const Text('Добавить'),
+                        label: Text(tr(context, 'Добавить', 'Add')),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   if (_accounts.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 30),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 30),
                       child: Text(
-                        'Добавьте первый аккаунт через МИРЭА.',
-                        style: TextStyle(color: AppColors.muted),
+                        tr(
+                          context,
+                          'Добавьте первый аккаунт через МИРЭА.',
+                          'Add your first account through MIREA.',
+                        ),
+                        style: const TextStyle(color: AppColors.muted),
                       ),
                     ),
                   for (final account in _accounts)
@@ -513,6 +919,7 @@ class _HomePageState extends State<HomePage> {
                         }
                       }),
                       onReauth: () => _login(replace: account),
+                      onGroup: () => _chooseGroup(account),
                       onRemove: () => _remove(account),
                     ),
                 ],
@@ -531,6 +938,7 @@ class _AccountRow extends StatelessWidget {
     required this.error,
     required this.onTap,
     required this.onReauth,
+    required this.onGroup,
     required this.onRemove,
   });
 
@@ -541,6 +949,7 @@ class _AccountRow extends StatelessWidget {
   final String? error;
   final VoidCallback onTap;
   final VoidCallback onReauth;
+  final VoidCallback onGroup;
   final VoidCallback onRemove;
 
   @override
@@ -585,8 +994,16 @@ class _AccountRow extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
+                      if (account.groupName != null)
+                        Text(
+                          account.groupName!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.muted,
+                          ),
+                        ),
                       Text(
-                        status,
+                        trMessage(context, status),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontSize: 12, color: color),
@@ -596,18 +1013,35 @@ class _AccountRow extends StatelessWidget {
                 ),
                 PopupMenuButton<String>(
                   enabled: !busy,
-                  tooltip: 'Действия с аккаунтом',
+                  tooltip: tr(
+                    context,
+                    'Действия с аккаунтом',
+                    'Account actions',
+                  ),
                   icon: const Icon(
                     Icons.more_vert_rounded,
                     color: AppColors.muted,
                   ),
                   onSelected: (value) {
                     if (value == 'login') onReauth();
+                    if (value == 'group') onGroup();
                     if (value == 'remove') onRemove();
                   },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'login', child: Text('Войти снова')),
-                    PopupMenuItem(value: 'remove', child: Text('Удалить')),
+                  itemBuilder: (_) => [
+                    PopupMenuItem(
+                      value: 'login',
+                      child: Text(tr(context, 'Войти снова', 'Sign in again')),
+                    ),
+                    PopupMenuItem(
+                      value: 'group',
+                      child: Text(
+                        tr(context, 'Выбрать группу', 'Choose group'),
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'remove',
+                      child: Text(tr(context, 'Удалить', 'Delete')),
+                    ),
                   ],
                 ),
               ],
@@ -660,7 +1094,7 @@ class _TextInputDialogState extends State<_TextInputDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Отмена'),
+        child: Text(tr(context, 'Отмена', 'Cancel')),
       ),
       FilledButton(
         onPressed: () {

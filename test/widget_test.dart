@@ -1,8 +1,17 @@
 import 'package:antiattendance/accounts.dart';
+import 'package:antiattendance/app_settings.dart';
+import 'package:antiattendance/attendance_log.dart';
 import 'package:antiattendance/main.dart';
 import 'package:antiattendance/pulse_api.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+const delegates = [
+  GlobalMaterialLocalizations.delegate,
+  GlobalWidgetsLocalizations.delegate,
+  GlobalCupertinoLocalizations.delegate,
+];
 
 const qr =
     'https://pulse.mirea.ru/lessons/visiting-logs/self-approve?token=abc';
@@ -22,6 +31,21 @@ class MemoryAccountStore extends AccountStore {
   }
 }
 
+class MemoryLogStore extends AttendanceLogStore {
+  final marks = <AttendanceMark>[];
+  @override
+  Future<List<AttendanceMark>> load() async => List.of(marks);
+  @override
+  Future<void> add(AttendanceMark mark) async => marks.add(mark);
+}
+
+class MemorySettingsStore extends AppSettingsStore {
+  String? language;
+
+  @override
+  Future<void> saveLanguage(String? value) async => language = value;
+}
+
 class RecordingApi extends PulseApi {
   final calls = <String>[];
 
@@ -38,10 +62,15 @@ class RecordingApi extends PulseApi {
 void main() {
   testWidgets('shows a simple scan and account list', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(home: HomePage(store: MemoryAccountStore([]))),
+      MaterialApp(
+        locale: const Locale('ru'),
+        supportedLocales: const [Locale('ru'), Locale('en')],
+        localizationsDelegates: delegates,
+        home: HomePage(store: MemoryAccountStore([])),
+      ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Посещаемость'), findsOneWidget);
+    expect(find.text('Посещаемость'), findsNWidgets(2));
     expect(find.text('Сканировать QR'), findsOneWidget);
     expect(find.text('Аккаунты'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -57,14 +86,22 @@ void main() {
     ]);
     await tester.pumpWidget(
       MaterialApp(
-        home: HomePage(store: store, api: api, scanQr: (_) async => qr),
+        locale: const Locale('ru'),
+        supportedLocales: const [Locale('ru'), Locale('en')],
+        localizationsDelegates: delegates,
+        home: HomePage(
+          store: store,
+          api: api,
+          logStore: MemoryLogStore(),
+          scanQr: (_) async => qr,
+        ),
       ),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Сканировать QR'));
     await tester.pumpAndSettle();
     expect(api.calls, containsAll(['abc:one', 'abc:two']));
-    expect(find.text('Присутствие подтверждено'), findsNWidgets(2));
+    expect(find.text('Присутствие подтверждено'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 
@@ -74,6 +111,9 @@ void main() {
     final api = RecordingApi();
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('ru'),
+        supportedLocales: const [Locale('ru'), Locale('en')],
+        localizationsDelegates: delegates,
         home: HomePage(
           store: MemoryAccountStore([
             const SavedAccount(id: '1', label: 'Аня', cookie: 'one'),
@@ -93,5 +133,62 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.calls, isEmpty);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('shows English text for an English phone locale', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        home: HomePage(store: MemoryAccountStore([])),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Attendance'), findsNWidgets(2));
+    expect(find.text('Share'), findsOneWidget);
+    expect(find.text('Receive'), findsOneWidget);
+  });
+
+  testWidgets('session actions fit on a narrow phone', (tester) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ru'),
+        supportedLocales: const [Locale('ru'), Locale('en')],
+        localizationsDelegates: delegates,
+        home: HomePage(store: MemoryAccountStore([])),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('settings changes language and opens About', (tester) async {
+    final settings = MemorySettingsStore();
+    String? chosen;
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        home: HomePage(
+          store: MemoryAccountStore([]),
+          settingsStore: settings,
+          onLanguageChanged: (language) => chosen = language,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('AntiAttendance'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Русский'));
+    await tester.pumpAndSettle();
+    expect(chosen, 'ru');
+    expect(settings.language, 'ru');
+    await tester.tap(find.text('About AntiAttendance'));
+    await tester.pumpAndSettle();
+    expect(find.text('AntiAttendance'), findsOneWidget);
+    expect(find.textContaining('One simple place'), findsOneWidget);
   });
 }

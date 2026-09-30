@@ -1,5 +1,5 @@
 name: antiattendance
-description: "A new Flutter project."
+description: "AntiAttendance for MIREA Pulse sessions, attendance, and schedules."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -40,8 +40,11 @@ dependencies:
   http: ^1.6.0
   qr_flutter: ^4.1.0
   cryptography: ^2.9.0
+  bonsoir: ^7.1.5
   flutter_localizations:
     sdk: flutter
+  flutter_svg: ^2.3.0
+  rrule: ^0.2.18
 
 dependency_overrides:
   flutter_inappwebview_platform_interface: 1.3.0+1
@@ -54,6 +57,7 @@ dependency_overrides:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.14.4
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -72,10 +76,22 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  assets:
+    - icon/brand.svg
   fonts:
     - family: Geist
       fonts:
         - asset: font/Geist[wght].ttf
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: icon/app_icon.png
+  adaptive_icon_background: '#FFFFFF'
+  adaptive_icon_foreground: icon/app_icon.png
+  adaptive_icon_foreground_inset: 16
+  remove_alpha_ios: true
+  background_color_ios: '#FFFFFF'
 
   # To add assets to your application, add an assets section, like this:
   # assets:

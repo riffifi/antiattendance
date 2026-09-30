@@ -230,7 +230,7 @@ class _SchedulePageState extends State<SchedulePage>
                   ],
                   const SizedBox(height: 22),
                   Text(
-                    tr(context, 'Пульс подтвердил', 'Confirmed by Pulse'),
+                    tr(context, 'Подтверждённые Пульсом', 'Confirmed by Pulse'),
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 8),

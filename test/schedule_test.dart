@@ -68,6 +68,11 @@ class FakeSchedule extends ScheduleApi {
 }
 
 void main() {
+  DateTime todayAt(int hour, int minute) {
+    final moscow = DateTime.now().toUtc().add(const Duration(hours: 3));
+    return DateTime.utc(moscow.year, moscow.month, moscow.day, hour, minute);
+  }
+
   test('searches only groups and reads the public calendar endpoint', () async {
     final paths = <String>[];
     final api = ScheduleApi(
@@ -123,8 +128,8 @@ void main() {
     final lesson = ScheduleLesson(
       key: '769:class-1:today',
       groupId: 769,
-      start: DateTime.utc(2026, 9, 30, 9),
-      end: DateTime.utc(2026, 9, 30, 10, 30),
+      start: todayAt(9, 0),
+      end: todayAt(10, 30),
       subject: 'Mathematics',
       type: 'Lecture',
       location: 'Room 1',
@@ -171,6 +176,12 @@ void main() {
     expect(find.text('Mathematics'), findsOneWidget);
     expect(find.text('Anya'), findsOneWidget);
     expect(find.text('Boris'), findsNothing);
+    await tester.tap(find.byTooltip('Next week'));
+    await tester.pumpAndSettle();
+    expect(find.text('A free day'), findsOneWidget);
+    await tester.tap(find.text('Today').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Mathematics'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -180,8 +191,8 @@ void main() {
     final lesson = ScheduleLesson(
       key: '769:class-1:today',
       groupId: 769,
-      start: DateTime.utc(2026, 9, 30, 9),
-      end: DateTime.utc(2026, 9, 30, 10, 30),
+      start: todayAt(9, 0),
+      end: todayAt(10, 30),
       subject: 'Mathematics',
       type: '',
       location: '',
@@ -201,6 +212,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.calendar_month_rounded));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Mathematics'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Paste link'));
     await tester.pumpAndSettle();
     await tester.enterText(
@@ -212,5 +225,61 @@ void main() {
     expect(log.marks.single.lessonKey, lesson.key);
     expect(log.marks.single.pulseLessonId, 'pulse-42');
     expect(find.text('Anya'), findsOneWidget);
+  });
+
+  testWidgets('day schedule fits a narrow phone with larger text', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final lesson = ScheduleLesson(
+      key: 'lesson',
+      groupId: 769,
+      start: todayAt(9, 0),
+      end: todayAt(10, 30),
+      subject: 'A very long class title for a narrow screen',
+      type: 'Lecture',
+      location: 'Room 321',
+      teachers: 'Teacher',
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MediaQuery(
+            data: const MediaQueryData(
+              size: Size(320, 568),
+              textScaler: TextScaler.linear(1.3),
+            ),
+            child: SchedulePage(
+              accounts: const [
+                SavedAccount(
+                  id: 'a',
+                  label: 'Anya',
+                  cookie: 'one',
+                  groupId: 769,
+                  groupName: 'A long university group name',
+                ),
+              ],
+              api: FakeSchedule(lesson),
+              log: FakeLog([]),
+              onScanLesson: (_, _) async {},
+              onPasteLesson: (_, _) async {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('A very long class title for a narrow screen'),
+      120,
+    );
+    expect(
+      find.text('A very long class title for a narrow screen'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
   });
 }

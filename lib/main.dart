@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import 'accounts.dart';
@@ -22,8 +23,20 @@ import 'schedule_page.dart';
 import 'session_import_page.dart';
 import 'session_share_page.dart';
 import 'settings_page.dart';
+import 'update_service.dart';
 
-void main() => runApp(const AntiattendanceApp());
+void main() {
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: AppColors.paper,
+      systemNavigationBarIconBrightness: Brightness.dark,
+      systemNavigationBarDividerColor: AppColors.paper,
+    ),
+  );
+  runApp(const AntiattendanceApp());
+}
 
 class AntiattendanceApp extends StatefulWidget {
   const AntiattendanceApp({super.key});
@@ -34,12 +47,20 @@ class AntiattendanceApp extends StatefulWidget {
 
 class _AntiattendanceAppState extends State<AntiattendanceApp> {
   final AppSettingsStore _settingsStore = AppSettingsStore();
+  final UpdateController _updates = UpdateController();
   String? _language;
 
   @override
   void initState() {
     super.initState();
     _loadLanguage();
+    unawaited(_updates.check());
+  }
+
+  @override
+  void dispose() {
+    _updates.dispose();
+    super.dispose();
   }
 
   Future<void> _loadLanguage() async {
@@ -67,6 +88,7 @@ class _AntiattendanceAppState extends State<AntiattendanceApp> {
       settingsStore: _settingsStore,
       language: _language,
       onLanguageChanged: (language) => setState(() => _language = language),
+      updates: _updates,
     ),
   );
 }
@@ -82,6 +104,7 @@ class HomePage extends StatefulWidget {
     this.settingsStore,
     this.language,
     this.onLanguageChanged,
+    this.updates,
   });
 
   final AccountStore? store;
@@ -91,6 +114,7 @@ class HomePage extends StatefulWidget {
   final AppSettingsStore? settingsStore;
   final String? language;
   final ValueChanged<String?>? onLanguageChanged;
+  final UpdateController? updates;
   final Future<String?> Function(BuildContext context)? scanQr;
 
   @override
@@ -106,6 +130,8 @@ class _HomePageState extends State<HomePage> {
   late final AppSettingsStore _settingsStore =
       widget.settingsStore ?? AppSettingsStore();
   int _tab = 0;
+  DateTime? _scheduleDay;
+  int? _scheduleGroupId;
   final _selected = <String>{};
   final _results = <String, ApprovalResult>{};
   final _errors = <String, String>{};
@@ -163,6 +189,7 @@ class _HomePageState extends State<HomePage> {
           store: _settingsStore,
           language: widget.language,
           onLanguageChanged: widget.onLanguageChanged ?? (_) {},
+          updates: widget.updates,
         ),
       ),
     );
@@ -711,6 +738,24 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Widget _settingsButton(BuildContext context) {
+    final updates = widget.updates;
+    Widget button(bool available) => IconButton(
+      onPressed: _openSettings,
+      tooltip: tr(context, 'Настройки', 'Settings'),
+      icon: Badge(
+        isLabelVisible: available,
+        backgroundColor: AppColors.blue,
+        child: const Icon(Icons.settings_outlined),
+      ),
+    );
+    if (updates == null) return button(false);
+    return AnimatedBuilder(
+      animation: updates,
+      builder: (context, _) => button(updates.updateAvailable),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
@@ -733,16 +778,10 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      actions: [
-        IconButton(
-          onPressed: _openSettings,
-          tooltip: tr(context, 'Настройки', 'Settings'),
-          icon: const Icon(Icons.settings_outlined),
-        ),
-        const SizedBox(width: 8),
-      ],
+      actions: [_settingsButton(context), const SizedBox(width: 8)],
     ),
     bottomNavigationBar: NavigationBar(
+      backgroundColor: AppColors.paper,
       selectedIndex: _tab,
       onDestinationSelected: (index) => setState(() => _tab = index),
       destinations: [
@@ -789,6 +828,10 @@ class _HomePageState extends State<HomePage> {
                 onScanLesson: (lesson, accounts) =>
                     _scanQueue(lesson: lesson, overrideAccounts: accounts),
                 onPasteLesson: _pasteLesson,
+                initialDay: _scheduleDay,
+                initialGroupId: _scheduleGroupId,
+                onDayChanged: (day) => _scheduleDay = day,
+                onGroupChanged: (id) => _scheduleGroupId = id,
               )
             : ListView(
                 padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),

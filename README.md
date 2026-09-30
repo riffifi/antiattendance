@@ -11,11 +11,17 @@ Flutter app for Android and iOS. It stores several independently signed-in Пу�
 
 The sign-in screen has **− / +** controls below the WebView to shrink or enlarge the MIREA page when a form is cut off on a phone. Open the gear icon for language settings and the About screen.
 
+## Updates
+
+The app checks the [latest GitHub release](https://github.com/riffifi/antiattendance/releases) when it starts. A dot on Settings means a newer version is available. Settings can check again manually. On Android, **Download APK** opens the release APK in the browser so the user can install it; on iOS, **Open release** opens the release page. The app never installs an update silently. Until the first release is published, Settings shows **No releases yet**.
+
+To publish an Android update, increase `version:` in `pubspec.yaml`, set the GitHub Actions secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`, then push a tag matching the version, such as `v1.2.0` for `version: 1.2.0+3`. The [release workflow](.github/workflows/release-android.yml) runs analysis and tests, builds one signed APK, and attaches it to a GitHub release. Keep the same keystore for every release; Android requires the same signing key to upgrade an installed release. A locally installed debug build has a different signing key and must be removed before installing a signed release.
+
 ## Groups and schedule
 
-Open an account's **⋮ → Выбрать группу** menu, search for its МИРЭА group, and choose it. The **Расписание** tab shows that group's timetable from the university schedule service. Switch groups or weeks at the top, and pull down to refresh.
+Open an account's **⋮ → Выбрать группу** menu, search for its МИРЭА group, and choose it. The **Расписание** tab opens on today's classes from the university schedule service. Tap a day in the week strip, use the arrows for other weeks, or tap **Today** to return. Pull down to refresh.
 
-For a scheduled class, tap **Отметить эту пару** to scan its QR in queue mode, or **Вставить ссылку** to paste a QR link (useful for the Linux UI preview). All saved accounts assigned to that group are submitted. Only Пульс responses that confirm attendance appear under that class. These are local confirmation records on this device, linked to the class you opened; the schedule service does not provide an authoritative attendance roster or a mapping from its calendar event IDs to Пульс lesson IDs. Scans started on the attendance tab appear as other confirmations for that week, without being attributed to a particular class. Group assignments transfer with sessions; attendance history stays on the device.
+Tap a scheduled class to scan its QR in queue mode or paste a QR link (useful for the Linux UI preview). All saved accounts assigned to that group are submitted. Only Пульс responses that confirm attendance appear under that class. These are local confirmation records on this device, linked to the class you opened; the schedule service does not provide an authoritative attendance roster or a mapping from its calendar event IDs to Пульс lesson IDs. Scans started on the attendance tab appear as other confirmations for that day, without being attributed to a particular class. Group assignments transfer with sessions; attendance history stays on the device.
 
 ## Transfer sessions
 

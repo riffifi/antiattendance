@@ -1,9 +1,14 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'about_page.dart';
 import 'app_settings.dart';
 import 'app_theme.dart';
 import 'l10n.dart';
+import 'update_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({
@@ -11,11 +16,13 @@ class SettingsPage extends StatefulWidget {
     required this.store,
     required this.language,
     required this.onLanguageChanged,
+    this.updates,
   });
 
   final AppSettingsStore store;
   final String? language;
   final ValueChanged<String?> onLanguageChanged;
+  final UpdateController? updates;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -24,6 +31,59 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   late String? _language = widget.language;
   bool _saving = false;
+
+  Future<void> _openRelease(Uri uri) async {
+    try {
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        throw StateError('Could not open URL');
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              tr(
+                context,
+                'Не удалось открыть GitHub.',
+                'Could not open GitHub.',
+              ),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  String _updateStatus(UpdateController updates) {
+    if (updates.checking) {
+      return tr(context, 'Проверяем обновления…', 'Checking for updates…');
+    }
+    if (updates.error != null) {
+      return tr(
+        context,
+        'Не удалось проверить обновления.',
+        'Could not check for updates.',
+      );
+    }
+    if (!updates.checked) {
+      return tr(context, 'Проверка не выполнена', 'Not checked yet');
+    }
+    if (updates.release == null) {
+      return tr(context, 'Релизов пока нет', 'No releases yet');
+    }
+    if (updates.updateAvailable) {
+      return tr(
+        context,
+        'Доступна версия ${updates.release!.tag}',
+        'Version ${updates.release!.tag} is available',
+      );
+    }
+    return tr(
+      context,
+      'Установлена последняя версия',
+      'You have the latest version',
+    );
+  }
 
   Future<void> _choose(String? language) async {
     if (_saving || language == _language) return;
@@ -91,6 +151,110 @@ class _SettingsPageState extends State<SettingsPage> {
               onTap: _saving ? null : () => _choose('en'),
             ),
             const SizedBox(height: 28),
+            if (widget.updates != null) ...[
+              Text(
+                tr(context, 'Обновления', 'Updates'),
+                style: const TextStyle(
+                  fontSize: 21,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 12),
+              AnimatedBuilder(
+                animation: widget.updates!,
+                builder: (context, _) {
+                  final updates = widget.updates!;
+                  final release = updates.release;
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              updates.updateAvailable
+                                  ? Icons.system_update_rounded
+                                  : Icons.check_circle_outline_rounded,
+                              color: AppColors.blue,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                _updateStatus(updates),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (updates.installedVersion != null) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            tr(
+                              context,
+                              'Сейчас: ${updates.installedVersion}',
+                              'Installed: ${updates.installedVersion}',
+                            ),
+                            style: const TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: [
+                            TextButton.icon(
+                              onPressed: updates.checking
+                                  ? null
+                                  : () => unawaited(updates.check()),
+                              icon: const Icon(Icons.refresh_rounded, size: 18),
+                              label: Text(
+                                tr(context, 'Проверить', 'Check now'),
+                              ),
+                            ),
+                            if (updates.updateAvailable && release != null)
+                              FilledButton.icon(
+                                onPressed: () => _openRelease(
+                                  Platform.isAndroid && release.apk != null
+                                      ? release.apk!
+                                      : release.page,
+                                ),
+                                icon: const Icon(
+                                  Icons.open_in_new_rounded,
+                                  size: 18,
+                                ),
+                                label: Text(
+                                  Platform.isAndroid && release.apk != null
+                                      ? tr(
+                                          context,
+                                          'Скачать APK',
+                                          'Download APK',
+                                        )
+                                      : tr(
+                                          context,
+                                          'Открыть релиз',
+                                          'Open release',
+                                        ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 28),
+            ],
             Text(
               tr(context, 'Приложение', 'App'),
               style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700),

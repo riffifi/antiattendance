@@ -17,6 +17,7 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
   bool _ready = false;
   bool _finished = false;
   bool _zooming = false;
+  bool _pageReady = false;
   double _zoom = 1.0;
   InAppWebViewController? _webView;
   String? _error;
@@ -62,14 +63,41 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
     }
   }
 
+  Future<void> _applyZoom(
+    InAppWebViewController controller,
+    double scale,
+  ) async {
+    final value = scale.toStringAsFixed(2);
+    await controller.evaluateJavascript(
+      source:
+          '''
+      (function () {
+        var body = document.body;
+        if (!body) return;
+        if (window.CSS && CSS.supports && CSS.supports('zoom', '$value')) {
+          body.style.setProperty('zoom', '$value', 'important');
+          body.style.removeProperty('transform');
+          body.style.removeProperty('transform-origin');
+          body.style.removeProperty('width');
+        } else {
+          body.style.removeProperty('zoom');
+          body.style.setProperty('transform-origin', 'top left', 'important');
+          body.style.setProperty('transform', 'scale($value)', 'important');
+          body.style.setProperty('width', '${(100 / scale).toStringAsFixed(2)}%', 'important');
+        }
+      })();
+    ''',
+    );
+  }
+
   Future<void> _changeZoom(double next) async {
     final controller = _webView;
-    if (controller == null || _zooming) return;
+    if (controller == null || _zooming || !_pageReady) return;
     final target = next.clamp(0.5, 2.0);
     if (target == _zoom) return;
     setState(() => _zooming = true);
     try {
-      await controller.zoomBy(zoomFactor: target / _zoom, animated: true);
+      await _applyZoom(controller, target);
       if (mounted) setState(() => _zoom = target);
     } catch (_) {
       if (mounted) {
@@ -112,10 +140,17 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
                   onWebViewCreated: (controller) {
                     if (mounted) setState(() => _webView = controller);
                   },
-                  onLoadStart: (controller, url) =>
-                      unawaited(_checkSession(url)),
-                  onLoadStop: (controller, url) =>
-                      unawaited(_checkSession(url)),
+                  onLoadStart: (controller, url) {
+                    if (mounted) setState(() => _pageReady = false);
+                    unawaited(_checkSession(url));
+                  },
+                  onLoadStop: (controller, url) {
+                    if (mounted) setState(() => _pageReady = true);
+                    unawaited(
+                      _applyZoom(controller, _zoom).catchError((Object _) {}),
+                    );
+                    unawaited(_checkSession(url));
+                  },
                   onReceivedError: (controller, request, error) {
                     if (request.isForMainFrame == true && mounted) {
                       setState(
@@ -145,7 +180,11 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
                         ),
                       ),
                       IconButton.filledTonal(
-                        onPressed: _zooming || _webView == null || _zoom <= 0.5
+                        onPressed:
+                            _zooming ||
+                                !_pageReady ||
+                                _webView == null ||
+                                _zoom <= 0.5
                             ? null
                             : () => _changeZoom(_zoom - 0.15),
                         icon: const Icon(Icons.remove_rounded),
@@ -160,7 +199,11 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
                         ),
                       ),
                       IconButton.filledTonal(
-                        onPressed: _zooming || _webView == null || _zoom >= 2.0
+                        onPressed:
+                            _zooming ||
+                                !_pageReady ||
+                                _webView == null ||
+                                _zoom >= 2.0
                             ? null
                             : () => _changeZoom(_zoom + 0.15),
                         icon: const Icon(Icons.add_rounded),

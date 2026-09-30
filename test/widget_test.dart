@@ -1,5 +1,6 @@
 import 'package:antiattendance/accounts.dart';
 import 'package:antiattendance/app_settings.dart';
+import 'package:antiattendance/app_theme.dart';
 import 'package:antiattendance/attendance_log.dart';
 import 'package:antiattendance/main.dart';
 import 'package:antiattendance/pulse_api.dart';
@@ -189,6 +190,24 @@ void main() {
     await tester.tap(find.text('About AntiAttendance'));
     await tester.pumpAndSettle();
     expect(find.text('AntiAttendance'), findsOneWidget);
-    expect(find.textContaining('One simple place'), findsOneWidget);
+    expect(find.textContaining('Pulse and your schedule'), findsOneWidget);
+  });
+
+  testWidgets('navigation bar uses the app palette', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: HomePage(store: MemoryAccountStore([])),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final bar = tester.widget<NavigationBar>(find.byType(NavigationBar));
+    expect(bar.backgroundColor, AppColors.paper);
+    final theme = AppTheme.light.navigationBarTheme;
+    expect(theme.indicatorColor, AppColors.blue);
+    expect(
+      theme.iconTheme!.resolve({WidgetState.selected})!.color,
+      Colors.white,
+    );
   });
 }

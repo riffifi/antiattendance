@@ -60,7 +60,7 @@ class _SessionImportPageState extends State<SessionImportPage> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(tr(context, 'Импорт сессий', 'Import sessions')),
+      title: Text(tr(context, 'Получить аккаунты', 'Import sessions')),
     ),
     body: _accounts != null
         ? _preview(context)
@@ -117,10 +117,14 @@ class _SessionImportPageState extends State<SessionImportPage> {
                       'Наведите камеру на QR с другого телефона',
                       'Point the camera at the QR on the other phone',
                     )
-                  : tr(
+                  : trf(
                       context,
-                      'Получено ${_collector.received} из ${_collector.total} кадров. Держите камеру на экране.',
-                      'Received ${_collector.received} of ${_collector.total} frames. Keep the camera pointed at the screen.',
+                      'Получено {received} из {total} QR-кодов. Не убирайте камеру от экрана.',
+                      'Received {received} of {total} frames. Keep the camera pointed at the screen.',
+                      {
+                        'received': _collector.received,
+                        'total': _collector.total,
+                      },
                     ),
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white),
@@ -139,7 +143,7 @@ class _SessionImportPageState extends State<SessionImportPage> {
         padding: const EdgeInsets.all(20),
         children: [
           Text(
-            tr(context, 'QR получен', 'QR received'),
+            tr(context, 'QR-коды считаны', 'QR received'),
             style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
@@ -195,7 +199,7 @@ class _SessionImportPageState extends State<SessionImportPage> {
           Text(
             tr(
               context,
-              'Сессии будут сохранены на этом устройстве.',
+              'Аккаунты сохранятся на этом устройстве.',
               'Sessions will be saved on this device.',
             ),
           ),

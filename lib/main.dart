@@ -78,7 +78,13 @@ class _AntiattendanceAppState extends State<AntiattendanceApp> {
     debugShowCheckedModeBanner: false,
     theme: AppTheme.light,
     locale: _language == null ? null : Locale(_language!),
-    supportedLocales: const [Locale('en'), Locale('ru')],
+    supportedLocales: const [
+      Locale('en'),
+      Locale('ru'),
+      Locale('fr'),
+      Locale('pt'),
+      Locale('zh'),
+    ],
     localizationsDelegates: const [
       GlobalMaterialLocalizations.delegate,
       GlobalWidgetsLocalizations.delegate,
@@ -288,12 +294,14 @@ class _HomePageState extends State<HomePage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
-          tr(context, 'Удалить ${account.label}?', 'Delete ${account.label}?'),
+          trf(context, 'Удалить {name}?', 'Delete {name}?', {
+            'name': account.label,
+          }),
         ),
         content: Text(
           tr(
             context,
-            'Сохранённая сессия будет удалена с устройства.',
+            'Сохранённый вход будет удалён с устройства.',
             'The saved session will be removed from this device.',
           ),
         ),
@@ -579,11 +587,9 @@ class _HomePageState extends State<HomePage> {
         _selected.addAll(added.map((a) => a.id));
       });
       _message(
-        tr(
-          context,
-          'Импортировано: ${added.length}',
-          'Imported: ${added.length}',
-        ),
+        trf(context, 'Импортировано: {count}', 'Imported: {count}', {
+          'count': added.length,
+        }),
       );
     } catch (_) {
       if (mounted) {
@@ -808,7 +814,7 @@ class _HomePageState extends State<HomePage> {
                     Text(
                       tr(
                         context,
-                        'Не удалось открыть сохранённые аккаунты.',
+                        'Не удалось загрузить сохранённые аккаунты.',
                         'Could not load saved accounts.',
                       ),
                     ),
@@ -847,7 +853,7 @@ class _HomePageState extends State<HomePage> {
                   Text(
                     tr(
                       context,
-                      'Сканируйте QR — отметки отправятся сразу.',
+                      'Наведите камеру на QR-код — отметки отправятся сразу.',
                       'Scan a QR and submit attendance immediately.',
                     ),
                     style: const TextStyle(

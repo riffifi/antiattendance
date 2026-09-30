@@ -102,7 +102,7 @@ void main() {
     await tester.tap(find.text('Сканировать QR'));
     await tester.pumpAndSettle();
     expect(api.calls, containsAll(['abc:one', 'abc:two']));
-    expect(find.text('Присутствие подтверждено'), findsWidgets);
+    expect(find.text('Отметка подтверждена'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 
@@ -187,6 +187,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(chosen, 'ru');
     expect(settings.language, 'ru');
+    await tester.scrollUntilVisible(find.text('About AntiAttendance'), 200);
     await tester.tap(find.text('About AntiAttendance'));
     await tester.pumpAndSettle();
     expect(find.text('AntiAttendance'), findsOneWidget);

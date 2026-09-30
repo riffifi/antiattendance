@@ -66,23 +66,20 @@ class _SettingsPageState extends State<SettingsPage> {
       );
     }
     if (!updates.checked) {
-      return tr(context, 'Проверка не выполнена', 'Not checked yet');
+      return tr(context, 'Ещё не проверяли', 'Not checked yet');
     }
     if (updates.release == null) {
-      return tr(context, 'Релизов пока нет', 'No releases yet');
+      return tr(context, 'Обновлений пока нет', 'No releases yet');
     }
     if (updates.updateAvailable) {
-      return tr(
+      return trf(
         context,
-        'Доступна версия ${updates.release!.tag}',
-        'Version ${updates.release!.tag} is available',
+        'Доступна версия {version}',
+        'Version {version} is available',
+        {'version': updates.release!.tag},
       );
     }
-    return tr(
-      context,
-      'Установлена последняя версия',
-      'You have the latest version',
-    );
+    return tr(context, 'У вас последняя версия', 'You have the latest version');
   }
 
   Future<void> _choose(String? language) async {
@@ -128,7 +125,7 @@ class _SettingsPageState extends State<SettingsPage> {
             Text(
               tr(
                 context,
-                'По умолчанию используется язык телефона.',
+                'По умолчанию — язык телефона.',
                 'Your phone language is used by default.',
               ),
               style: const TextStyle(color: AppColors.muted, fontSize: 13),
@@ -149,6 +146,21 @@ class _SettingsPageState extends State<SettingsPage> {
               title: 'English',
               selected: _language == 'en',
               onTap: _saving ? null : () => _choose('en'),
+            ),
+            _Choice(
+              title: 'Français',
+              selected: _language == 'fr',
+              onTap: _saving ? null : () => _choose('fr'),
+            ),
+            _Choice(
+              title: 'Português',
+              selected: _language == 'pt',
+              onTap: _saving ? null : () => _choose('pt'),
+            ),
+            _Choice(
+              title: '简体中文',
+              selected: _language == 'zh',
+              onTap: _saving ? null : () => _choose('zh'),
             ),
             const SizedBox(height: 28),
             if (widget.updates != null) ...[
@@ -196,10 +208,11 @@ class _SettingsPageState extends State<SettingsPage> {
                         if (updates.installedVersion != null) ...[
                           const SizedBox(height: 6),
                           Text(
-                            tr(
+                            trf(
                               context,
-                              'Сейчас: ${updates.installedVersion}',
-                              'Installed: ${updates.installedVersion}',
+                              'Установлена версия {version}',
+                              'Installed: {version}',
+                              {'version': updates.installedVersion!},
                             ),
                             style: const TextStyle(
                               color: AppColors.muted,

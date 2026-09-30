@@ -1,6 +1,6 @@
 # AntiAttendance
 
-Flutter app for Android and iOS. It stores several independently signed-in Пульс sessions on one device and submits one lecture QR code for the selected accounts. Each account owner signs in interactively through МИРЭА or imports a saved session from another phone. Passwords are never saved by this app; session cookies are saved with `flutter_secure_storage`. The interface follows the phone language: Russian or English (English is the fallback), with an optional override in **Settings**.
+Flutter app for Android and iOS. It stores several independently signed-in Пульс sessions on one device and submits one lecture QR code for the selected accounts. Each account owner signs in interactively through МИРЭА or imports a saved session from another phone. Passwords are never saved by this app; session cookies are saved with `flutter_secure_storage`. The interface follows the phone language: Russian, English, French, Portuguese, or Simplified Chinese (English is the fallback), with an optional override in **Settings**.
 
 ## Use
 
@@ -15,7 +15,7 @@ The sign-in screen has **− / +** controls below the WebView to shrink or enlar
 
 The app checks the [latest GitHub release](https://github.com/riffifi/antiattendance/releases) when it starts. A dot on Settings means a newer version is available. Settings can check again manually. On Android, **Download APK** opens the release APK in the browser so the user can install it; on iOS, **Open release** opens the release page. The app never installs an update silently. Until the first release is published, Settings shows **No releases yet**.
 
-To publish an Android update, increase `version:` in `pubspec.yaml`, set the GitHub Actions secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`, then push a tag matching the version, such as `v1.2.0` for `version: 1.2.0+3`. The [release workflow](.github/workflows/release-android.yml) runs analysis and tests, builds one signed APK, and attaches it to a GitHub release. Keep the same keystore for every release; Android requires the same signing key to upgrade an installed release. A locally installed debug build has a different signing key and must be removed before installing a signed release.
+To publish an Android update, increase `version:` in `pubspec.yaml`, set the GitHub Actions secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`, then push a tag matching the version, such as `v1.2.0` for `version: 1.2.0+4`. The [release workflow](.github/workflows/release-android.yml) runs analysis and tests, builds one signed APK, and attaches it to a GitHub release. Keep the same keystore for every release; Android requires the same signing key to upgrade an installed release. A locally installed debug build has a different signing key and must be removed before installing a signed release.
 
 ## Groups and schedule
 

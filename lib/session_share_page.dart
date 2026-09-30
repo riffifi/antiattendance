@@ -56,7 +56,7 @@ class _SessionSharePageState extends State<SessionSharePage> {
     final transfer = _transfer;
     return Scaffold(
       appBar: AppBar(
-        title: Text(tr(context, 'Передать сессии', 'Share sessions')),
+        title: Text(tr(context, 'Передать аккаунты', 'Share sessions')),
       ),
       body: Center(
         child: ConstrainedBox(
@@ -104,7 +104,7 @@ class _SessionSharePageState extends State<SessionSharePage> {
                               )
                             : tr(
                                 context,
-                                'Откройте «Импорт сессий» на другом телефоне и держите камеру на экране.',
+                                'Откройте «Получить аккаунты» на другом телефоне и держите камеру на экране.',
                                 'Open “Import sessions” on the other phone and keep its camera pointed here.',
                               ),
                         textAlign: TextAlign.center,

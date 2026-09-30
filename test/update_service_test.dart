@@ -123,6 +123,10 @@ void main() {
     );
     await controller.check();
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Version v1.2.0 is available'),
+      200,
+    );
     expect(find.text('Version v1.2.0 is available'), findsOneWidget);
     expect(find.text('Open release'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());

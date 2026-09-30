@@ -143,7 +143,7 @@ class QueueScanOverlay extends StatelessWidget {
                   ),
                   Expanded(
                     child: Text(
-                      tr(context, 'Очередь посещаемости', 'Attendance queue'),
+                      tr(context, 'Очередь отметок', 'Attendance queue'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
@@ -244,15 +244,15 @@ class QueueScanOverlay extends StatelessWidget {
                                     'Camera unavailable',
                                   )
                                 : queue.remaining == 0
-                                ? tr(
+                                ? tr(context, 'Все отмечены', 'All confirmed')
+                                : trf(
                                     context,
-                                    'Все подтверждены',
-                                    'All confirmed',
-                                  )
-                                : tr(
-                                    context,
-                                    'Осталось ${queue.remaining} из ${accounts.length}',
-                                    '${queue.remaining} of ${accounts.length} remaining',
+                                    'Осталось {remaining} из {total}',
+                                    '{remaining} of {total} remaining',
+                                    {
+                                      'remaining': queue.remaining,
+                                      'total': accounts.length,
+                                    },
                                   ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -285,12 +285,12 @@ class QueueScanOverlay extends StatelessWidget {
                           : queue.remaining == 0
                           ? tr(
                               context,
-                              'Можно закрыть камеру.',
+                              'Готово, камеру можно закрыть.',
                               'You can close the camera.',
                             )
                           : tr(
                               context,
-                              'Держите QR в кадре — остальные попробуют снова.',
+                              'Держите QR-код в кадре — оставшиеся аккаунты попробуют ещё раз.',
                               'Keep the QR in view; pending accounts will retry.',
                             ),
                       maxLines: 2,
@@ -324,7 +324,7 @@ class QueueScanOverlay extends StatelessWidget {
                           final status =
                               queue.errors[account.id] ??
                               queue.results[account.id]?.message ??
-                              tr(context, 'В очереди', 'Queued');
+                              tr(context, 'Ждёт отметки', 'Queued');
                           return Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [

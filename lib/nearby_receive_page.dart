@@ -59,7 +59,7 @@ class _NearbyReceivePageState extends State<NearbyReceivePage> {
               ? Text(
                   tr(
                     context,
-                    'Не удалось открыть приём. Проверьте Wi‑Fi и разрешение локальной сети.',
+                    'Не удалось начать передачу. Проверьте Wi‑Fi и доступ к локальной сети.',
                     'Could not start receiving. Check Wi‑Fi and local network permission.',
                   ),
                 )
@@ -113,12 +113,12 @@ class _NearbyReceivePageState extends State<NearbyReceivePage> {
                       _ready
                           ? tr(
                               context,
-                              'Ожидаем отправителя',
+                              'Ждём отправителя',
                               'Waiting for sender',
                             )
                           : tr(
                               context,
-                              'Открываем приём…',
+                              'Готовим соединение…',
                               'Starting receiver…',
                             ),
                       style: const TextStyle(

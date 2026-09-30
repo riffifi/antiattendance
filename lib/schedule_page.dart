@@ -230,13 +230,13 @@ class _SchedulePageState extends State<SchedulePage>
                   ],
                   const SizedBox(height: 22),
                   Text(
-                    tr(context, 'Подтверждены Пульсом', 'Confirmed by Pulse'),
+                    tr(context, 'Пульс подтвердил', 'Confirmed by Pulse'),
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 8),
                   if (confirmed.isEmpty)
                     Text(
-                      tr(context, 'Пока никого', 'Nobody yet'),
+                      tr(context, 'Пока нет отметок', 'Nobody yet'),
                       style: const TextStyle(color: AppColors.muted),
                     )
                   else
@@ -332,9 +332,15 @@ class _SchedulePageState extends State<SchedulePage>
           mark.lessonKey == null &&
           _sameDay(local, _day);
     }).toList();
-    final dayNames = Localizations.localeOf(context).languageCode == 'ru'
-        ? const ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
-        : const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final dayNames = [
+      tr(context, 'Пн', 'Mon'),
+      tr(context, 'Вт', 'Tue'),
+      tr(context, 'Ср', 'Wed'),
+      tr(context, 'Чт', 'Thu'),
+      tr(context, 'Пт', 'Fri'),
+      tr(context, 'Сб', 'Sat'),
+      tr(context, 'Вс', 'Sun'),
+    ];
     final dateText = MaterialLocalizations.of(context)
         .formatMediumDate(DateTime(_day.year, _day.month, _day.day));
     return RefreshIndicator(
@@ -378,7 +384,7 @@ class _SchedulePageState extends State<SchedulePage>
           Text(
             tr(
               context,
-              'Подтверждения Пульса на этом устройстве',
+              'Отметки Пульса с этого устройства',
               'Pulse confirmations on this device',
             ),
             style: const TextStyle(color: AppColors.muted, fontSize: 13),
@@ -390,7 +396,7 @@ class _SchedulePageState extends State<SchedulePage>
               title: tr(context, 'Выберите группу', 'Choose a group'),
               detail: tr(
                 context,
-                'Назначьте группу аккаунту через меню ⋮ на вкладке посещаемости.',
+                'Выберите группу в меню ⋮ у аккаунта на вкладке «Посещаемость».',
                 'Assign a group to an account using the ⋮ menu on the attendance tab.',
               ),
             )
@@ -503,8 +509,8 @@ class _SchedulePageState extends State<SchedulePage>
                       ),
                       if (!_loading && _error == null)
                         Text(
-                          '${_sameDay(_day, today) ? '$dateText · ' : ''}'
-                          '${tr(context, '${dailyLessons.length} занятий', '${dailyLessons.length} classes')}',
+                          (_sameDay(_day, today) ? '$dateText · ' : '') +
+                              classCountLabel(context, dailyLessons.length),
                           style: const TextStyle(
                             color: AppColors.muted,
                             fontSize: 13,
@@ -530,7 +536,7 @@ class _SchedulePageState extends State<SchedulePage>
                 title: _error!,
                 detail: tr(
                   context,
-                  'Потяните вниз или нажмите обновить.',
+                  'Потяните вниз или нажмите «Обновить».',
                   'Pull down or tap refresh to retry.',
                 ),
               ),
@@ -540,7 +546,7 @@ class _SchedulePageState extends State<SchedulePage>
                 title: tr(context, 'Свободный день', 'A free day'),
                 detail: tr(
                   context,
-                  'На этот день занятий нет.',
+                  'В этот день занятий нет.',
                   'No classes on this day.',
                 ),
               ),
@@ -563,7 +569,7 @@ class _SchedulePageState extends State<SchedulePage>
             if (dayConfirmations.isNotEmpty) ...[
               const SizedBox(height: 24),
               Text(
-                tr(context, 'Другие подтверждения', 'Other confirmations'),
+                tr(context, 'Другие отметки', 'Other confirmations'),
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 7),
@@ -784,11 +790,7 @@ class _LessonRow extends StatelessWidget {
                         Expanded(
                           child: Text(
                             confirmed.isEmpty
-                                ? tr(
-                                    context,
-                                    'Нет подтверждений',
-                                    'No confirmations',
-                                  )
+                                ? tr(context, 'Нет отметок', 'No confirmations')
                                 : confirmed
                                       .map((mark) => mark.accountLabel)
                                       .join(', '),

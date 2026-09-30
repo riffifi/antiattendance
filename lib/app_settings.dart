@@ -9,11 +9,12 @@ class AppSettingsStore {
 
   Future<String?> loadLanguage() async {
     final value = await _storage.read(key: _languageKey);
-    return value == 'ru' || value == 'en' ? value : null;
+    return {'ru', 'en', 'fr', 'pt', 'zh'}.contains(value) ? value : null;
   }
 
   Future<void> saveLanguage(String? language) async {
-    if (language != null && language != 'ru' && language != 'en') {
+    if (language != null &&
+        !{'ru', 'en', 'fr', 'pt', 'zh'}.contains(language)) {
       throw ArgumentError.value(language, 'language');
     }
     if (language == null) {

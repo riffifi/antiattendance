@@ -17,7 +17,7 @@ The sign-in screen has **− / +** controls below the WebView to shrink or enlar
 
 The app checks the [latest GitHub release](https://github.com/riffifi/antiattendance/releases) when it starts. A dot on Settings means a newer version is available. Settings can check again manually. On Android, **Install update** downloads the release APK into the app cache, verifies its size and GitHub SHA-256 digest when supplied, and opens the Android installer. The user must confirm installation and may need to allow installs from this app in Android settings. The release page remains available as a fallback. On iOS, **Open release** opens the release page. Until the first release is published, Settings shows **No releases yet**.
 
-To publish an Android update, increase `version:` in `pubspec.yaml`, set the GitHub Actions secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`, then push a tag matching the version, such as `v1.2.5` for `version: 1.2.5+3`. The [release workflow](.github/workflows/release-android.yml) runs analysis and tests, builds one signed APK, and attaches it to a GitHub release. Keep the same keystore for every release; Android requires the same signing key to upgrade an installed release. A locally installed debug build has a different signing key and must be removed before installing a signed release.
+To publish an Android update, increase `version:` in `pubspec.yaml`, set the GitHub Actions secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`, then push a tag matching the version, such as `v1.2.6` for `version: 1.2.6+4`. The [release workflow](.github/workflows/release-android.yml) runs analysis and tests, builds one signed APK, and attaches it to a GitHub release. Keep the same keystore for every release; Android requires the same signing key to upgrade an installed release. A locally installed debug build has a different signing key and must be removed before installing a signed release.
 
 ## Groups and schedule
 
@@ -36,6 +36,21 @@ Session transfer grants another device access to the saved accounts until their 
 The app sends the QR token to Пульс's `SelfApproveAttendanceThroughQRCode` gRPC-Web method. Пульс may reject an account that is not enrolled in the lecture or whose presence in the campus access system is not recorded. The API is inferred from the Пульс web client as of September 2026; it is not a documented public integration and may change.
 
 ## Development
+
+### USB NFC reader diagnostics
+
+On Ubuntu, install `pcscd`, `pcsc-tools`, and `libacsccid1`. The generic `libccid` package does not list the ACR1281 2S CL (`072f:2215`):
+
+```sh
+sudo apt update
+sudo apt install pcscd pcsc-tools libacsccid1
+sudo systemctl enable --now pcscd.socket
+sudo systemctl restart pcscd.service
+```
+
+Run `python3 tool/nfc_probe.py --watch` and hold a card or a phone with its NFC pass open near the ACR1281 reader. The utility reports reader names, card presence, protocol, and ATR. Press Ctrl+C to stop. It does not send APDUs, read a pass identifier, or save card data. `pcsc_scan` is an independent way to check whether Linux detects the reader and a nearby card.
+
+Android backups are disabled because device-bound secure storage cannot be restored with its original encryption key on another device. Use the app's QR or nearby session transfer when moving accounts between phones.
 
 ```sh
 /home/leo/flutter/bin/flutter pub get

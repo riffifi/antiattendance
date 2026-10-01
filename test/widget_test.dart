@@ -4,6 +4,7 @@ import 'package:antiattendance/app_theme.dart';
 import 'package:antiattendance/attendance_log.dart';
 import 'package:antiattendance/main.dart';
 import 'package:antiattendance/pulse_api.dart';
+import 'package:antiattendance/schedule_api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -60,6 +61,13 @@ class RecordingApi extends PulseApi {
   }
 }
 
+class FakeGroupApi extends ScheduleApi {
+  @override
+  Future<List<ScheduleGroup>> searchGroups(String query) async => const [
+    ScheduleGroup(id: 42, name: 'ИНБО-10-23'),
+  ];
+}
+
 void main() {
   testWidgets('shows a simple scan and account list', (tester) async {
     await tester.pumpWidget(
@@ -102,7 +110,46 @@ void main() {
     await tester.tap(find.text('Сканировать QR'));
     await tester.pumpAndSettle();
     expect(api.calls, containsAll(['abc:one', 'abc:two']));
+    await tester.scrollUntilVisible(find.text('Аня'), 200);
     expect(find.text('Отметка подтверждена'), findsWidgets);
+    expect(find.text('Сегодня 1'), findsWidgets);
+    expect(find.text('Неделя 1'), findsWidgets);
+    expect(find.text('Всего 1'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('selected accounts can receive one group together', (
+    tester,
+  ) async {
+    final store = MemoryAccountStore([
+      const SavedAccount(id: '1', label: 'Аня', cookie: 'one'),
+      const SavedAccount(id: '2', label: 'Борис', cookie: 'two'),
+    ]);
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        home: HomePage(
+          store: store,
+          logStore: MemoryLogStore(),
+          scheduleApi: FakeGroupApi(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Борис'), 200);
+    await tester.tap(find.text('Борис'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Selected: 1'), -200);
+    expect(find.text('Selected: 1'), findsOneWidget);
+    await tester.tap(find.text('Assign group'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'ИНБО');
+    await tester.tap(find.byIcon(Icons.arrow_forward_rounded));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ИНБО-10-23'));
+    await tester.pumpAndSettle();
+    expect(store.accounts.first.groupId, 42);
+    expect(store.accounts.last.groupId, isNull);
     expect(tester.takeException(), isNull);
   });
 

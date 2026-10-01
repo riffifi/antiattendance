@@ -50,7 +50,13 @@ sudo systemctl restart pcscd.service
 
 Run `python3 tool/nfc_probe.py --watch` and hold a card or a phone with its NFC pass open near the ACR1281 reader. The utility reports reader names, card presence, protocol, and ATR. Press Ctrl+C to stop. It does not send APDUs, read a pass identifier, or save card data. `pcsc_scan` is an independent way to check whether Linux detects the reader and a nearby card.
 
+On the ACR1281 2S CL, the two slots reporting a `MIFARE Plus SAM` ATR are SAM slots, not the phone. To watch the likely contactless slot alone, run `python3 tool/nfc_probe.py --watch --reader '00 01'`. Try a known ordinary contactless card or NFC tag first: detection there confirms the reader and driver can see a nearby target. An empty slot does not by itself show whether the reader's RF field is on, and a phone pass may require a specific application selection before it responds. This utility cannot determine whether a Pulse pass is compatible with the reader.
+
 Android backups are disabled because device-bound secure storage cannot be restored with its original encryption key on another device. Use the app's QR or nearby session transfer when moving accounts between phones.
+
+### Turnstile NFC diagnostics
+
+Settings → Testing → Turnstile signal uses Android 15+ NFC Observe Mode on phones whose NFC controller supports it. While the page is open, it shows polling frame type, raw polling bytes, relative timestamp, and the controller's vendor-specific gain reading. It is a passive diagnostic: it does not send a pass, save frames, or complete an NFC transaction. Android reader mode and iOS do not expose equivalent turnstile polling data to this app. Seeing frames confirms that the phone detected a reader field; it does not reveal the complete turnstile protocol or prove that a Pulse pass will work.
 
 ```sh
 /home/leo/flutter/bin/flutter pub get

@@ -143,12 +143,14 @@ class _HomePageState extends State<HomePage> {
   final _results = <String, ApprovalResult>{};
   final _errors = <String, String>{};
   List<SavedAccount> _accounts = [];
+  List<AttendanceMark>? _marks;
   bool _loading = true;
   bool _loadError = false;
   bool _scanning = false;
   bool _submitting = false;
   bool _widgetScanPending = false;
   bool _widgetScanScheduled = false;
+  Timer? _counterRefreshTimer;
 
   bool get _busy => _scanning || _submitting;
 
@@ -159,7 +161,18 @@ class _HomePageState extends State<HomePage> {
       _widgetChannel.setMethodCallHandler(_onWidgetCall);
       unawaited(_takeInitialWidgetRequest());
     }
+    _scheduleCounterRefresh();
     _load();
+  }
+
+  void _scheduleCounterRefresh() {
+    final now = DateTime.now();
+    final nextDay = DateTime(now.year, now.month, now.day + 1);
+    _counterRefreshTimer = Timer(nextDay.difference(now), () {
+      if (!mounted) return;
+      setState(() {});
+      _scheduleCounterRefresh();
+    });
   }
 
   Future<void> _onWidgetCall(MethodCall call) async {
@@ -213,6 +226,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     if (Platform.isAndroid) _widgetChannel.setMethodCallHandler(null);
+    _counterRefreshTimer?.cancel();
     if (widget.api == null) _api.close();
     if (widget.scheduleApi == null) _scheduleApi.close();
     super.dispose();
@@ -225,10 +239,13 @@ class _HomePageState extends State<HomePage> {
       if (!mounted) return;
       setState(() {
         _accounts = accounts;
+        _marks = accounts.isEmpty ? [] : null;
+        _selected.clear();
         _selected.addAll(accounts.map((account) => account.id));
         _loading = false;
         _loadError = false;
       });
+      if (accounts.isNotEmpty) unawaited(_refreshMarks());
       _openPendingWidgetScan();
     } catch (_) {
       if (mounted) {
@@ -237,6 +254,15 @@ class _HomePageState extends State<HomePage> {
           _loadError = true;
         });
       }
+    }
+  }
+
+  Future<void> _refreshMarks() async {
+    try {
+      final marks = await _logStore.load();
+      if (mounted) setState(() => _marks = marks);
+    } catch (_) {
+      if (mounted) setState(() => _marks = null);
     }
   }
 
@@ -502,6 +528,7 @@ class _HomePageState extends State<HomePage> {
         ),
       );
       await _logStore.flush();
+      await _refreshMarks();
     } catch (_) {
       if (mounted) {
         _message(
@@ -745,6 +772,7 @@ class _HomePageState extends State<HomePage> {
       }),
     );
     await _logStore.flush();
+    await _refreshMarks();
     if (mounted) {
       setState(() => _submitting = false);
       _openPendingWidgetScan();
@@ -780,14 +808,15 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _chooseGroup(SavedAccount account) async {
+  Future<void> _chooseGroup(Set<String> accountIds) async {
+    if (_busy || accountIds.isEmpty) return;
     final group = await Navigator.of(context).push<ScheduleGroup>(
       MaterialPageRoute(builder: (_) => GroupPickerPage(api: _scheduleApi)),
     );
     if (!mounted || group == null) return;
     final next = _accounts
         .map(
-          (item) => item.id == account.id
+          (item) => accountIds.contains(item.id)
               ? SavedAccount(
                   id: item.id,
                   label: item.label,
@@ -829,224 +858,296 @@ class _HomePageState extends State<HomePage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: Row(
-        children: [
-          SvgPicture.asset(
-            'icon/brand.svg',
-            width: 28,
-            height: 28,
-            semanticsLabel: tr(context, 'Логотип приложения', 'App logo'),
-          ),
-          const SizedBox(width: 6),
-          const Flexible(
-            child: Text(
-              'AntiAttendance',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontWeight: FontWeight.w700),
+  Widget build(BuildContext context) {
+    final countsByAccount = _marks == null
+        ? null
+        : AttendanceCounts.fromMarks(_marks!);
+    return Scaffold(
+      appBar: AppBar(
+        title: Row(
+          children: [
+            SvgPicture.asset(
+              'icon/brand.svg',
+              width: 28,
+              height: 28,
+              semanticsLabel: tr(context, 'Логотип приложения', 'App logo'),
             ),
+            const SizedBox(width: 6),
+            const Flexible(
+              child: Text(
+                'AntiAttendance',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+        actions: [_settingsButton(context), const SizedBox(width: 8)],
+      ),
+      bottomNavigationBar: NavigationBar(
+        backgroundColor: AppColors.paper,
+        selectedIndex: _tab,
+        onDestinationSelected: (index) => setState(() => _tab = index),
+        destinations: [
+          NavigationDestination(
+            icon: const Icon(Icons.qr_code_scanner_rounded),
+            label: tr(context, 'Посещаемость', 'Attendance'),
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.calendar_month_rounded),
+            label: tr(context, 'Расписание', 'Schedule'),
           ),
         ],
       ),
-      actions: [_settingsButton(context), const SizedBox(width: 8)],
-    ),
-    bottomNavigationBar: NavigationBar(
-      backgroundColor: AppColors.paper,
-      selectedIndex: _tab,
-      onDestinationSelected: (index) => setState(() => _tab = index),
-      destinations: [
-        NavigationDestination(
-          icon: const Icon(Icons.qr_code_scanner_rounded),
-          label: tr(context, 'Посещаемость', 'Attendance'),
-        ),
-        NavigationDestination(
-          icon: const Icon(Icons.calendar_month_rounded),
-          label: tr(context, 'Расписание', 'Schedule'),
-        ),
-      ],
-    ),
-    body: Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 640),
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : _loadError
-            ? Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _loadError
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        tr(
+                          context,
+                          'Не удалось загрузить сохранённые аккаунты.',
+                          'Could not load saved accounts.',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      FilledButton(
+                        onPressed: _load,
+                        child: Text(tr(context, 'Повторить', 'Retry')),
+                      ),
+                    ],
+                  ),
+                )
+              : _tab == 1
+              ? SchedulePage(
+                  accounts: _accounts,
+                  api: _scheduleApi,
+                  log: _logStore,
+                  onScanLesson: (lesson, accounts) =>
+                      _scanQueue(lesson: lesson, overrideAccounts: accounts),
+                  onPasteLesson: _pasteLesson,
+                  initialDay: _scheduleDay,
+                  initialGroupId: _scheduleGroupId,
+                  onDayChanged: (day) => _scheduleDay = day,
+                  onGroupChanged: (id) => _scheduleGroupId = id,
+                )
+              : ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
                   children: [
                     Text(
-                      tr(
-                        context,
-                        'Не удалось загрузить сохранённые аккаунты.',
-                        'Could not load saved accounts.',
+                      tr(context, 'Посещаемость', 'Attendance'),
+                      style: const TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    FilledButton(
-                      onPressed: _load,
-                      child: Text(tr(context, 'Повторить', 'Retry')),
-                    ),
-                  ],
-                ),
-              )
-            : _tab == 1
-            ? SchedulePage(
-                accounts: _accounts,
-                api: _scheduleApi,
-                log: _logStore,
-                onScanLesson: (lesson, accounts) =>
-                    _scanQueue(lesson: lesson, overrideAccounts: accounts),
-                onPasteLesson: _pasteLesson,
-                initialDay: _scheduleDay,
-                initialGroupId: _scheduleGroupId,
-                onDayChanged: (day) => _scheduleDay = day,
-                onGroupChanged: (id) => _scheduleGroupId = id,
-              )
-            : ListView(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
-                children: [
-                  Text(
-                    tr(context, 'Посещаемость', 'Attendance'),
-                    style: const TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    tr(
-                      context,
-                      'Наведите камеру на QR-код — отметки отправятся сразу.',
-                      'Scan a QR and submit attendance immediately.',
-                    ),
-                    style: const TextStyle(
-                      color: AppColors.muted,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: _busy ? null : _scan,
-                      icon: const Icon(Icons.qr_code_scanner_rounded),
-                      label: Text(tr(context, 'Сканировать QR', 'Scan QR')),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: _busy ? null : _scanQueue,
-                      icon: const Icon(Icons.repeat_rounded, size: 20),
-                      label: Text(tr(context, 'Режим очереди', 'Queue mode')),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: _busy ? null : _pasteLink,
-                      icon: const Icon(Icons.link_rounded, size: 20),
-                      label: Text(tr(context, 'Вставить ссылку', 'Paste link')),
-                    ),
-                  ),
-                  if (_submitting) ...[
-                    const SizedBox(height: 12),
-                    const LinearProgressIndicator(),
                     const SizedBox(height: 6),
                     Text(
                       tr(
                         context,
-                        'Отправляем отметки…',
-                        'Submitting attendance…',
+                        'Наведите камеру на QR-код — отметки отправятся сразу.',
+                        'Scan a QR and submit attendance immediately.',
                       ),
                       style: const TextStyle(
                         color: AppColors.muted,
-                        fontSize: 12,
+                        fontSize: 14,
                       ),
                     ),
-                  ],
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextButton.icon(
-                          onPressed: _busy ? null : _shareSessions,
-                          icon: const Icon(Icons.ios_share_rounded, size: 18),
-                          label: Text(tr(context, 'Передать', 'Share')),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: _busy ? null : _scan,
+                        icon: const Icon(Icons.qr_code_scanner_rounded),
+                        label: Text(tr(context, 'Сканировать QR', 'Scan QR')),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _busy ? null : _scanQueue,
+                        icon: const Icon(Icons.repeat_rounded, size: 20),
+                        label: Text(tr(context, 'Режим очереди', 'Queue mode')),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _busy ? null : _pasteLink,
+                        icon: const Icon(Icons.link_rounded, size: 20),
+                        label: Text(
+                          tr(context, 'Вставить ссылку', 'Paste link'),
                         ),
                       ),
-                      Expanded(
-                        child: TextButton.icon(
-                          onPressed: _busy ? null : _importSessions,
-                          icon: const Icon(Icons.download_rounded, size: 18),
-                          label: Text(tr(context, 'Получить', 'Receive')),
+                    ),
+                    if (_submitting) ...[
+                      const SizedBox(height: 12),
+                      const LinearProgressIndicator(),
+                      const SizedBox(height: 6),
+                      Text(
+                        tr(
+                          context,
+                          'Отправляем отметки…',
+                          'Submitting attendance…',
+                        ),
+                        style: const TextStyle(
+                          color: AppColors.muted,
+                          fontSize: 12,
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 32),
-                  Row(
-                    children: [
-                      Expanded(
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton.icon(
+                            onPressed: _busy ? null : _shareSessions,
+                            icon: const Icon(Icons.ios_share_rounded, size: 18),
+                            label: Text(tr(context, 'Передать', 'Share')),
+                          ),
+                        ),
+                        Expanded(
+                          child: TextButton.icon(
+                            onPressed: _busy ? null : _importSessions,
+                            icon: const Icon(Icons.download_rounded, size: 18),
+                            label: Text(tr(context, 'Получить', 'Receive')),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            tr(context, 'Аккаунты', 'Accounts'),
+                            style: const TextStyle(
+                              fontSize: 21,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: _busy ? null : () => _login(),
+                          icon: const Icon(Icons.add_rounded, size: 19),
+                          label: Text(tr(context, 'Добавить', 'Add')),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (_accounts.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 30),
                         child: Text(
-                          tr(context, 'Аккаунты', 'Accounts'),
-                          style: const TextStyle(
-                            fontSize: 21,
-                            fontWeight: FontWeight.w700,
+                          tr(
+                            context,
+                            'Добавьте первый аккаунт через МИРЭА.',
+                            'Add your first account through MIREA.',
+                          ),
+                          style: const TextStyle(color: AppColors.muted),
+                        ),
+                      ),
+                    if (_accounts.isNotEmpty) ...[
+                      Row(
+                        children: [
+                          Text(
+                            trf(
+                              context,
+                              'Выбрано: {count}',
+                              'Selected: {count}',
+                              {
+                                'count': _selected
+                                    .where(
+                                      (id) => _accounts.any((a) => a.id == id),
+                                    )
+                                    .length,
+                              },
+                            ),
+                            style: const TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const Spacer(),
+                          TextButton(
+                            onPressed: _busy
+                                ? null
+                                : () => setState(() {
+                                    if (_selected.length == _accounts.length) {
+                                      _selected.clear();
+                                    } else {
+                                      _selected
+                                        ..clear()
+                                        ..addAll(_accounts.map((a) => a.id));
+                                    }
+                                  }),
+                            child: Text(
+                              _selected.length == _accounts.length
+                                  ? tr(
+                                      context,
+                                      'Снять выбор',
+                                      'Clear selection',
+                                    )
+                                  : tr(context, 'Выбрать все', 'Select all'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: OutlinedButton.icon(
+                          onPressed: _busy || _selected.isEmpty
+                              ? null
+                              : () => _chooseGroup(Set.of(_selected)),
+                          icon: const Icon(Icons.groups_rounded, size: 18),
+                          label: Text(
+                            tr(context, 'Назначить группу', 'Assign group'),
                           ),
                         ),
                       ),
-                      TextButton.icon(
-                        onPressed: _busy ? null : () => _login(),
-                        icon: const Icon(Icons.add_rounded, size: 19),
-                        label: Text(tr(context, 'Добавить', 'Add')),
-                      ),
+                      const SizedBox(height: 10),
                     ],
-                  ),
-                  const SizedBox(height: 8),
-                  if (_accounts.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 30),
-                      child: Text(
-                        tr(
-                          context,
-                          'Добавьте первый аккаунт через МИРЭА.',
-                          'Add your first account through MIREA.',
-                        ),
-                        style: const TextStyle(color: AppColors.muted),
+                    for (final account in _accounts)
+                      _AccountRow(
+                        account: account,
+                        counts: countsByAccount == null
+                            ? null
+                            : (countsByAccount[account.id] ??
+                                  AttendanceCounts.zero),
+                        selected: _selected.contains(account.id),
+                        busy: _submitting,
+                        result: _results[account.id],
+                        error: _errors[account.id],
+                        onTap: () => setState(() {
+                          if (!_selected.add(account.id)) {
+                            _selected.remove(account.id);
+                          }
+                        }),
+                        onReauth: () => _login(replace: account),
+                        onGroup: () => _chooseGroup({account.id}),
+                        onRemove: () => _remove(account),
                       ),
-                    ),
-                  for (final account in _accounts)
-                    _AccountRow(
-                      account: account,
-                      selected: _selected.contains(account.id),
-                      busy: _submitting,
-                      result: _results[account.id],
-                      error: _errors[account.id],
-                      onTap: () => setState(() {
-                        if (!_selected.add(account.id)) {
-                          _selected.remove(account.id);
-                        }
-                      }),
-                      onReauth: () => _login(replace: account),
-                      onGroup: () => _chooseGroup(account),
-                      onRemove: () => _remove(account),
-                    ),
-                ],
-              ),
+                  ],
+                ),
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _AccountRow extends StatelessWidget {
   const _AccountRow({
     required this.account,
+    required this.counts,
     required this.selected,
     required this.busy,
     required this.result,
@@ -1058,6 +1159,7 @@ class _AccountRow extends StatelessWidget {
   });
 
   final SavedAccount account;
+  final AttendanceCounts? counts;
   final bool selected;
   final bool busy;
   final ApprovalResult? result;
@@ -1123,6 +1225,21 @@ class _AccountRow extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontSize: 12, color: color),
                       ),
+                      const SizedBox(height: 5),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 2,
+                        children: [
+                          _countText(
+                            context,
+                            'Сегодня',
+                            'Today',
+                            counts?.today,
+                          ),
+                          _countText(context, 'Неделя', 'Week', counts?.week),
+                          _countText(context, 'Всего', 'Total', counts?.total),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -1166,6 +1283,12 @@ class _AccountRow extends StatelessWidget {
       ),
     );
   }
+
+  Widget _countText(BuildContext context, String ru, String en, int? count) =>
+      Text(
+        '${tr(context, ru, en)} ${count ?? '—'}',
+        style: const TextStyle(fontSize: 11, color: AppColors.muted),
+      );
 }
 
 class _TextInputDialog extends StatefulWidget {

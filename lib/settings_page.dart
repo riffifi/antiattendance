@@ -10,6 +10,7 @@ import 'app_theme.dart';
 import 'external_links.dart';
 import 'l10n.dart';
 import 'nfc_diagnostics_page.dart';
+import 'turnstile_probe_page.dart';
 import 'update_service.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -426,6 +427,34 @@ class _SettingsPageState extends State<SettingsPage> {
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => Navigator.of(context).push<void>(
                   MaterialPageRoute(builder: (_) => const NfcDiagnosticsPage()),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              child: ListTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                leading: const Icon(
+                  Icons.sensors_rounded,
+                  color: AppColors.blue,
+                ),
+                title: Text(
+                  tr(context, 'Сигнал турникета', 'Turnstile signal'),
+                ),
+                subtitle: Text(
+                  tr(
+                    context,
+                    'Посмотреть опрос NFC-считывателя',
+                    'Observe NFC reader polling',
+                  ),
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute(builder: (_) => const TurnstileProbePage()),
                 ),
               ),
             ),

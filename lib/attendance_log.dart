@@ -67,14 +67,72 @@ class AttendanceLogStore {
     if (marks.any(
       (item) =>
           item.accountId == mark.accountId &&
-          item.lessonKey == mark.lessonKey &&
-          item.lessonKey != null,
+          ((mark.lessonKey != null && item.lessonKey == mark.lessonKey) ||
+              (mark.pulseLessonId != null &&
+                  item.pulseLessonId == mark.pulseLessonId)),
     )) {
       return;
     }
     marks.add(mark);
-    final cutoff = DateTime.now().subtract(const Duration(days: 120));
-    marks.removeWhere((item) => item.at.isBefore(cutoff));
     await _storage.write(key: _key, value: jsonEncode(marks));
+  }
+}
+
+class AttendanceCounts {
+  const AttendanceCounts({
+    required this.total,
+    required this.week,
+    required this.today,
+  });
+
+  final int total;
+  final int week;
+  final int today;
+
+  static const zero = AttendanceCounts(total: 0, week: 0, today: 0);
+
+  static Map<String, AttendanceCounts> fromMarks(
+    List<AttendanceMark> marks, {
+    DateTime? now,
+  }) {
+    final current = now ?? DateTime.now();
+    final localNow = current.toLocal();
+    final todayStart = DateTime(localNow.year, localNow.month, localNow.day);
+    final weekStart = DateTime(
+      localNow.year,
+      localNow.month,
+      localNow.day - localNow.weekday + 1,
+    );
+    final total = <String, int>{};
+    final week = <String, int>{};
+    final today = <String, int>{};
+    final seenLessons = <String, Set<String>>{};
+    for (final mark in marks) {
+      final keys = <String>{
+        if (mark.pulseLessonId != null) 'pulse:${mark.pulseLessonId}',
+        if (mark.lessonKey != null) 'schedule:${mark.lessonKey}',
+      };
+      final seen = seenLessons.putIfAbsent(mark.accountId, () => {});
+      if (keys.any(seen.contains)) {
+        continue;
+      }
+      seen.addAll(keys);
+      total.update(mark.accountId, (value) => value + 1, ifAbsent: () => 1);
+      final at = mark.at.toLocal();
+      if (!at.isBefore(weekStart) && !at.isAfter(current.toLocal())) {
+        week.update(mark.accountId, (value) => value + 1, ifAbsent: () => 1);
+      }
+      if (!at.isBefore(todayStart) && !at.isAfter(current.toLocal())) {
+        today.update(mark.accountId, (value) => value + 1, ifAbsent: () => 1);
+      }
+    }
+    return {
+      for (final id in total.keys)
+        id: AttendanceCounts(
+          total: total[id]!,
+          week: week[id] ?? 0,
+          today: today[id] ?? 0,
+        ),
+    };
   }
 }

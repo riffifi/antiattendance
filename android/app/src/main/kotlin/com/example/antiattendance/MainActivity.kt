@@ -1,10 +1,14 @@
 package com.example.antiattendance
 
 import android.content.ClipData
+import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Build
 import android.nfc.NfcAdapter
 import android.nfc.Tag
+import android.nfc.cardemulation.CardEmulation
 import android.nfc.tech.IsoDep
 import android.nfc.tech.NfcA
 import androidx.core.content.FileProvider
@@ -23,6 +27,9 @@ class MainActivity : FlutterActivity() {
     private var nfcChannel: MethodChannel? = null
     private var readerRequested = false
     private var readerActive = false
+    private var turnstileChannel: MethodChannel? = null
+    private var turnstileRequested = false
+    private var turnstileActive = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         pendingWidgetScan = intent?.action == ACTION_SCAN_ALL
@@ -65,6 +72,38 @@ class MainActivity : FlutterActivity() {
                 "stop" -> {
                     readerRequested = false
                     disableDiagnosticsReader()
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
+        turnstileChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "antiattendance/turnstile_probe")
+        turnstileChannel?.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "start" -> {
+                    val adapter = NfcAdapter.getDefaultAdapter(this)
+                    when {
+                        adapter == null -> result.error("NFC_UNAVAILABLE", "This device has no NFC", null)
+                        !adapter.isEnabled -> result.error("NFC_DISABLED", "NFC is turned off", null)
+                        Build.VERSION.SDK_INT < 35 -> result.error("OBSERVE_UNAVAILABLE", "Requires Android 15 or newer", null)
+                        !packageManager.hasSystemFeature(PackageManager.FEATURE_NFC_HOST_CARD_EMULATION) ||
+                            !adapter.isObserveModeSupported -> result.error("OBSERVE_UNAVAILABLE", "Observe Mode is not supported", null)
+                        else -> {
+                            turnstileRequested = true
+                            try {
+                                startTurnstileProbe(adapter)
+                                result.success(null)
+                            } catch (error: Exception) {
+                                turnstileRequested = false
+                                stopTurnstileProbe()
+                                result.error("OBSERVE_ERROR", error.message, null)
+                            }
+                        }
+                    }
+                }
+                "stop" -> {
+                    turnstileRequested = false
+                    stopTurnstileProbe()
                     result.success(null)
                 }
                 else -> result.notImplemented()
@@ -136,6 +175,42 @@ class MainActivity : FlutterActivity() {
         readerActive = false
     }
 
+    private fun startTurnstileProbe(adapter: NfcAdapter) {
+        if (turnstileActive || Build.VERSION.SDK_INT < 35) return
+        val emulation = CardEmulation.getInstance(adapter)
+        val service = ComponentName(this, TurnstileProbeService::class.java)
+        if (!emulation.setPreferredService(this, service)) {
+            throw IllegalStateException("Could not select the NFC diagnostic service")
+        }
+        val enabled = try {
+            adapter.setObserveModeEnabled(true)
+        } catch (error: Exception) {
+            emulation.unsetPreferredService(this)
+            throw error
+        }
+        if (!enabled) {
+            emulation.unsetPreferredService(this)
+            throw IllegalStateException("Could not enable NFC Observe Mode")
+        }
+        TurnstileProbeBridge.onFrames = { frames ->
+            runOnUiThread {
+                if (turnstileActive) turnstileChannel?.invokeMethod("frames", frames)
+            }
+        }
+        turnstileActive = true
+    }
+
+    private fun stopTurnstileProbe() {
+        TurnstileProbeBridge.onFrames = null
+        if (!turnstileActive || Build.VERSION.SDK_INT < 35) return
+        val adapter = NfcAdapter.getDefaultAdapter(this)
+        if (adapter != null && adapter.isEnabled) {
+            adapter.setObserveModeEnabled(false)
+            CardEmulation.getInstance(adapter).unsetPreferredService(this)
+        }
+        turnstileActive = false
+    }
+
     private fun reportTag(tag: Tag) {
         // Only cached protocol metadata is exposed. No identifier, APDU, or pass data is read.
         val data = mutableMapOf<String, Any>(
@@ -158,6 +233,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onPause() {
         disableDiagnosticsReader()
+        stopTurnstileProbe()
         super.onPause()
     }
 
@@ -166,6 +242,15 @@ class MainActivity : FlutterActivity() {
         if (readerRequested) {
             NfcAdapter.getDefaultAdapter(this)?.takeIf { it.isEnabled }?.let {
                 enableDiagnosticsReader(it)
+            }
+        }
+        if (turnstileRequested && Build.VERSION.SDK_INT >= 35) {
+            NfcAdapter.getDefaultAdapter(this)?.takeIf { it.isEnabled }?.let {
+                try {
+                    startTurnstileProbe(it)
+                } catch (_: Exception) {
+                    turnstileRequested = false
+                }
             }
         }
     }

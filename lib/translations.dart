@@ -6,8 +6,52 @@ const translations = <String, (String, String, String)>{
     'Adicione contas primeiro.',
     '请先添加账号。',
   ),
+  'Selected: {count}': (
+    'Sélectionnés : {count}',
+    'Selecionados: {count}',
+    '已选择：{count}',
+  ),
+  'Clear selection': ('Tout désélectionner', 'Limpar seleção', '取消全选'),
+  'Select all': ('Tout sélectionner', 'Selecionar todos', '全选'),
+  'Assign group': ('Attribuer un groupe', 'Atribuir turma', '分配班级'),
+  'Week': ('Semaine', 'Semana', '本周'),
+  'Total': ('Total', 'Total', '累计'),
   'Testing': ('Tests', 'Testes', '测试'),
   'NFC diagnostics': ('Diagnostic NFC', 'Diagnóstico NFC', 'NFC 检测'),
+  'Turnstile signal': ('Signal du tourniquet', 'Sinal do torniquete', '闸机信号'),
+  'Observe NFC reader polling': (
+    'Observer les signaux du lecteur NFC',
+    'Observar os sinais do leitor NFC',
+    '观察 NFC 读卡器轮询信号',
+  ),
+  'Requires Android 15 or newer and NFC Observe Mode support.': (
+    'Nécessite Android 15 ou plus récent et la prise en charge du mode Observation NFC.',
+    'Requer Android 15 ou posterior e suporte para o modo de observação NFC.',
+    '需要 Android 15 或更高版本，并支持 NFC 观察模式。',
+  ),
+  'Reader polling detected.': (
+    'Signal du lecteur détecté.',
+    'Sinal do leitor detetado.',
+    '检测到读卡器轮询信号。',
+  ),
+  'Hold the back of your phone near the turnstile reader.': (
+    'Approchez le dos du téléphone du lecteur du tourniquet.',
+    'Aproxime a parte de trás do telemóvel do leitor do torniquete.',
+    '将手机背面靠近闸机读卡器。',
+  ),
+  'Could not start NFC Observe Mode.': (
+    'Impossible de démarrer le mode Observation NFC.',
+    'Não foi possível iniciar o modo de observação NFC.',
+    '无法启动 NFC 观察模式。',
+  ),
+  'The phone only observes NFC polling. It does not present a pass or open the gate. Older Android versions cannot use this mode.':
+      (
+        'Le téléphone observe uniquement les signaux NFC. Il ne présente aucun badge et n’ouvre pas le portillon. Ce mode n’est pas disponible sur les anciennes versions d’Android.',
+        'O telemóvel apenas observa os sinais NFC. Não apresenta um passe nem abre o torniquete. Este modo não está disponível em versões antigas do Android.',
+        '手机只观察 NFC 轮询信号，不会出示通行证或打开闸机。旧版 Android 无法使用此模式。',
+      ),
+  'Polling frames': ('Trames de scrutation', 'Tramas de sondagem', '轮询帧'),
+  'Clear': ('Effacer', 'Limpar', '清除'),
   'View detected NFC connection details': (
     'Voir les détails de la connexion NFC détectée',
     'Ver os detalhes da ligação NFC detetada',

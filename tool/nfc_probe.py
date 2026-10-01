@@ -23,6 +23,16 @@ SCARD_LEAVE_CARD = 0
 SCARD_E_NO_SMARTCARD = 0x8010000C
 SCARD_E_NO_READERS_AVAILABLE = 0x8010002E
 SCARD_E_NO_SERVICE = 0x8010001D
+SAM_ATR_LABEL = b"MIFARE Plus SAM"
+
+
+def slot_label(reader, atr=""):
+    """Describe the observed slot without treating a SAM as an NFC phone."""
+    if SAM_ATR_LABEL.hex().upper() in atr.replace(" ", ""):
+        return "SAM slot (not the contactless phone/pass)"
+    if reader.endswith("00 01") and "ACR1281 2S CL" in reader:
+        return "likely contactless slot"
+    return "card/phone"
 
 
 def usb_readers():
@@ -198,13 +208,15 @@ def main():
                     continue
                 last[name] = status
                 if status is None:
-                    print(f"{name}: no card or phone in range")
+                    label = slot_label(name)
+                    print(f"{name}: no card detected ({label})")
                 else:
                     protocol, atr = status
-                    print(f"{name}: present; protocol {protocol}; ATR {atr or '(none)'}")
+                    label = slot_label(name, atr)
+                    print(f"{name}: {label} present; protocol {protocol}; ATR {atr or '(none)'}")
             if not args.watch:
                 break
-            time.sleep(0.5)
+            time.sleep(0.1)
         return 0
     except KeyboardInterrupt:
         print("\nStopped.")

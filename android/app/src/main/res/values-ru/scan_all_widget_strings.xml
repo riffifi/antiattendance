@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="scan_all_widget_title">Сканировать QR</string>
-    <string name="scan_all_widget_subtitle">Все аккаунты</string>
+    <string name="scan_all_widget_wide_title">QR всем</string>
+    <string name="scan_all_widget_wide_label">Сканировать QR (2×1)</string>
+    <string name="scan_all_widget_compact_label">Сканировать QR (1×1)</string>
+    <string name="scan_all_widget_compact_description">Сканировать QR пары для всех аккаунтов, компактный виджет</string>
     <string name="scan_all_widget_description">Сканировать QR пары для всех аккаунтов</string>
 </resources>

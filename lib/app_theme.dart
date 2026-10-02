@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+enum AppThemeMode { light, dark, amoled }
 
 abstract final class AppColors {
   static const paper = Color(0xFFF5F6F3);
@@ -12,49 +15,139 @@ abstract final class AppColors {
   static const red = Color(0xFFFCE9E4);
 }
 
-abstract final class AppTheme {
-  static ThemeData get light {
-    const scheme = ColorScheme.light(
-      primary: AppColors.blue,
-      onPrimary: Colors.white,
-      surface: Colors.white,
-      onSurface: AppColors.ink,
-      error: Color(0xFFBD4B46),
+class AppPalette {
+  const AppPalette({
+    required this.paper,
+    required this.surface,
+    required this.ink,
+    required this.muted,
+    required this.blue,
+    required this.onBlue,
+    required this.deepBlue,
+    required this.line,
+    required this.selected,
+    required this.mint,
+    required this.success,
+  });
+
+  final Color paper;
+  final Color surface;
+  final Color ink;
+  final Color muted;
+  final Color blue;
+  final Color onBlue;
+  final Color deepBlue;
+  final Color line;
+  final Color selected;
+  final Color mint;
+  final Color success;
+
+  static AppPalette of(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    return AppPalette(
+      paper: theme.scaffoldBackgroundColor,
+      surface: scheme.surface,
+      ink: scheme.onSurface,
+      muted: scheme.onSurfaceVariant,
+      blue: scheme.primary,
+      onBlue: scheme.onPrimary,
+      deepBlue: isDark ? scheme.onPrimaryContainer : scheme.primary,
+      line: scheme.outlineVariant,
+      selected: scheme.primaryContainer,
+      mint: isDark ? scheme.secondaryContainer : AppColors.mint,
+      success: isDark ? const Color(0xFF73D5AB) : const Color(0xFF238664),
     );
+  }
+}
+
+extension AppPaletteContext on BuildContext {
+  AppPalette get palette => AppPalette.of(this);
+}
+
+abstract final class AppTheme {
+  static ThemeData get light => build(AppThemeMode.light);
+
+  static ThemeData build(AppThemeMode mode, {Color? monetSeed}) {
+    final isDark = mode != AppThemeMode.light;
+    final amoled = mode == AppThemeMode.amoled;
+    final paper = amoled
+        ? Colors.black
+        : isDark
+        ? const Color(0xFF101820)
+        : AppColors.paper;
+    final surface = amoled
+        ? const Color(0xFF0A0A0A)
+        : isDark
+        ? const Color(0xFF1B2632)
+        : Colors.white;
+    final ink = isDark ? const Color(0xFFF2F5F8) : AppColors.ink;
+    final muted = isDark ? const Color(0xFFA7B5C4) : AppColors.muted;
+    final line = isDark ? const Color(0xFF354251) : AppColors.line;
+    final scheme =
+        (monetSeed == null
+                ? isDark
+                      ? ColorScheme.fromSeed(
+                          seedColor: AppColors.blue,
+                          brightness: Brightness.dark,
+                        )
+                      : const ColorScheme.light(
+                          primary: AppColors.blue,
+                          onPrimary: Colors.white,
+                          error: Color(0xFFBD4B46),
+                        )
+                : ColorScheme.fromSeed(
+                    seedColor: monetSeed,
+                    brightness: isDark ? Brightness.dark : Brightness.light,
+                  ))
+            .copyWith(
+              surface: surface,
+              onSurface: ink,
+              onSurfaceVariant: muted,
+              outlineVariant: line,
+            );
     final base = ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       fontFamily: 'Geist',
     );
     return base.copyWith(
-      scaffoldBackgroundColor: AppColors.paper,
+      scaffoldBackgroundColor: paper,
+      canvasColor: paper,
+      cardColor: surface,
       textTheme: base.textTheme.apply(
         fontFamily: 'Geist',
-        bodyColor: AppColors.ink,
-        displayColor: AppColors.ink,
+        bodyColor: ink,
+        displayColor: ink,
       ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.paper,
-        foregroundColor: AppColors.ink,
+      appBarTheme: AppBarTheme(
+        backgroundColor: paper,
+        foregroundColor: ink,
         elevation: 0,
         centerTitle: false,
         titleTextStyle: TextStyle(
           fontFamily: 'Geist',
           fontSize: 20,
           fontWeight: FontWeight.w600,
-          color: AppColors.ink,
+          color: ink,
+        ),
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+          statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: AppColors.paper,
-        indicatorColor: AppColors.blue,
+        backgroundColor: paper,
+        indicatorColor: scheme.primary,
         elevation: 0,
         height: 70,
         iconTheme: WidgetStateProperty.resolveWith(
           (states) => IconThemeData(
             color: states.contains(WidgetState.selected)
-                ? Colors.white
-                : AppColors.muted,
+                ? scheme.onPrimary
+                : muted,
             size: 23,
           ),
         ),
@@ -66,17 +159,17 @@ abstract final class AppTheme {
                 ? FontWeight.w700
                 : FontWeight.w500,
             color: states.contains(WidgetState.selected)
-                ? AppColors.deepBlue
-                : AppColors.muted,
+                ? scheme.primary
+                : muted,
           ),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.blue,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: AppColors.line,
-          disabledForegroundColor: AppColors.muted,
+          backgroundColor: scheme.primary,
+          foregroundColor: scheme.onPrimary,
+          disabledBackgroundColor: line,
+          disabledForegroundColor: muted,
           minimumSize: const Size(0, 52),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -90,8 +183,8 @@ abstract final class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.ink,
-          side: const BorderSide(color: AppColors.line),
+          foregroundColor: scheme.primary,
+          side: BorderSide(color: line),
           minimumSize: const Size(0, 48),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
@@ -100,7 +193,7 @@ abstract final class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.paper,
+        fillColor: paper,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,
@@ -111,11 +204,11 @@ abstract final class AppTheme {
         ),
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: Colors.white,
+        backgroundColor: surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: AppColors.ink,
+        backgroundColor: isDark ? const Color(0xFF2E3B49) : AppColors.ink,
         contentTextStyle: const TextStyle(
           fontFamily: 'Geist',
           color: Colors.white,

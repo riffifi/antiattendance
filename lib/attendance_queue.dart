@@ -26,6 +26,7 @@ class AttendanceQueue extends ChangeNotifier {
   bool _stopped = false;
 
   bool get processing => _processing;
+  bool get hasScanned => _activeToken != null || _queuedToken != null;
   int get remaining => accounts.length - confirmed.length;
 
   void accept(String raw) {

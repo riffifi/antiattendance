@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="scan_all_widget_title">Scanner le QR</string>
-    <string name="scan_all_widget_subtitle">Tous les comptes</string>
+    <string name="scan_all_widget_wide_title">QR tous</string>
+    <string name="scan_all_widget_wide_label">Scanner QR (2×1)</string>
+    <string name="scan_all_widget_compact_label">Scanner QR (1×1)</string>
+    <string name="scan_all_widget_compact_description">Scanner le QR du cours pour tous les comptes, widget compact</string>
     <string name="scan_all_widget_description">Scanner le QR du cours pour tous les comptes</string>
 </resources>

@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="scan_all_widget_title">Scan QR</string>
-    <string name="scan_all_widget_subtitle">All saved accounts</string>
+    <string name="scan_all_widget_wide_title">Scan all</string>
+    <string name="scan_all_widget_wide_label">Scan QR (2×1)</string>
+    <string name="scan_all_widget_compact_label">Scan QR (1×1)</string>
+    <string name="scan_all_widget_compact_description">Scan lecture QR for all accounts, compact widget</string>
     <string name="scan_all_widget_description">Scan lecture QR for all saved accounts</string>
 </resources>

@@ -5,13 +5,12 @@ Flutter app for Android and iOS. It stores several independently signed-in Пу�
 ## Use
 
 1. Tap **Добавить** and finish **Войти через МИРЭА** for each account. Give each session a local label.
-2. Select accounts and tap **Сканировать QR** for one immediate submission, or paste the Пульс URL and tap **Отправить**.
-3. Tap **Режим очереди** to keep the camera on a rotating lecture QR. The app immediately submits each new QR for accounts still waiting or rejected, and removes an account from the queue only when Пульс confirms attendance. A stationary QR may be retried after a short pause. Close the camera when finished.
-4. Use **Войти снова** if a session expires, or **Удалить** to remove it from the device.
+2. Select accounts and tap **Сканировать QR**. The scanner submits the first valid lecture QR immediately and keeps trying new QR tokens for accounts still waiting or rejected. It closes once all selected accounts are confirmed; you can close it sooner. Alternatively, paste the Пульс URL and tap **Отправить**.
+3. Use **Войти снова** if a session expires, or **Удалить** to remove it from the device.
 
-On Android, add the **Scan QR** AntiAttendance widget to the phone home screen for a one-tap shortcut to queue mode with every saved account. The widget opens the scanner; attendance is sent only after it sees a lecture QR code. Launcher widgets are not available in the iOS build.
+On Android, add either the 1×1 icon widget or the 2×1 labeled widget to the home screen for a one-tap shortcut to scanning with every saved account. The widget opens the scanner; attendance is sent only after it sees a lecture QR code. Launcher widgets are not available in the iOS build.
 
-The sign-in screen has **− / +** controls below the WebView to shrink or enlarge the MIREA page when a form is cut off on a phone. Open the gear icon for language settings and the About screen.
+The sign-in screen has **− / +** controls below the WebView to shrink or enlarge the MIREA page when a form is cut off on a phone. Settings offers Light, Dark, and Black (AMOLED) appearance. On Android 12+, **Phone colors (Monet)** applies the wallpaper accent to any of the three themes. Open the gear icon for appearance, language, and the About screen.
 
 ## Updates
 
@@ -56,7 +55,9 @@ Android backups are disabled because device-bound secure storage cannot be resto
 
 ### Turnstile NFC diagnostics
 
-Settings → Testing → Turnstile signal uses Android 15+ NFC Observe Mode on phones whose NFC controller supports it. While the page is open, it shows polling frame type, raw polling bytes, relative timestamp, and the controller's vendor-specific gain reading. It is a passive diagnostic: it does not send a pass, save frames, or complete an NFC transaction. Android reader mode and iOS do not expose equivalent turnstile polling data to this app. Seeing frames confirms that the phone detected a reader field; it does not reveal the complete turnstile protocol or prove that a Pulse pass will work.
+Settings → Testing → Turnstile signal uses Android 15+ NFC Observe Mode when Android allows it. While the page is open, it shows polling frame type, raw polling bytes, relative timestamp, and the controller's vendor-specific gain reading. When Android rejects Observe Mode, Android 16+ falls back to reporting reader field on/off events without polling bytes. It is a passive diagnostic: it does not send a pass, save frames, or complete an NFC transaction. Android reader mode and iOS do not expose equivalent turnstile polling data to this app. Seeing frames confirms that the phone detected a reader field; it does not reveal the complete turnstile protocol or prove that a Pulse pass will work.
+
+The [Android Observe Mode Demo compatibility table](https://github.com/kormax/android-observe-mode-demo#supported-devices) reports that Pixel 6/7 support ended after Android 15 QPR2. A newer Android version alone does not restore it; the NFC service must report support.
 
 ```sh
 /home/leo/flutter/bin/flutter pub get

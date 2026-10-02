@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="scan_all_widget_title">扫描二维码</string>
-    <string name="scan_all_widget_subtitle">所有已保存账号</string>
+    <string name="scan_all_widget_wide_title">扫描全部</string>
+    <string name="scan_all_widget_wide_label">扫描二维码 (2×1)</string>
+    <string name="scan_all_widget_compact_label">扫描二维码 (1×1)</string>
+    <string name="scan_all_widget_compact_description">为所有已保存账号扫描课程二维码，紧凑小组件</string>
     <string name="scan_all_widget_description">为所有已保存账号扫描课程二维码</string>
 </resources>

@@ -26,9 +26,8 @@ class _AboutPageState extends State<AboutPage> {
     if (await widget.openGitHub(_repository)) return;
     if (!mounted) return;
     unawaited(
-      Clipboard.setData(
-        ClipboardData(text: _repository.toString()),
-      ).catchError((Object _) {}),
+      Clipboard.setData(ClipboardData(text: _repository.toString()))
+          .catchError((Object _) {}),
     );
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -58,11 +57,11 @@ class _AboutPageState extends State<AboutPage> {
                 height: 112,
                 padding: const EdgeInsets.all(22),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.palette.surface,
                   borderRadius: BorderRadius.circular(32),
-                  boxShadow: const [
+                  boxShadow: [
                     BoxShadow(
-                      color: Color(0x17315DDE),
+                      color: context.palette.blue.withValues(alpha: .09),
                       blurRadius: 28,
                       offset: Offset(0, 10),
                     ),
@@ -89,7 +88,7 @@ class _AboutPageState extends State<AboutPage> {
                 'Pulse and your schedule in one place.',
               ),
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.muted, fontSize: 15),
+              style: TextStyle(color: context.palette.muted, fontSize: 15),
             ),
             const SizedBox(height: 28),
             Wrap(
@@ -115,14 +114,14 @@ class _AboutPageState extends State<AboutPage> {
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: AppColors.mint,
+                color: context.palette.mint,
                 borderRadius: BorderRadius.circular(18),
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.lock_outline_rounded,
-                    color: AppColors.deepBlue,
+                    color: context.palette.deepBlue,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -132,7 +131,7 @@ class _AboutPageState extends State<AboutPage> {
                         'Пароли не сохраняются. Приложение не является официальным сервисом МИРЭА.',
                         'Passwords are not saved. This is not an official MIREA app.',
                       ),
-                      style: const TextStyle(fontSize: 13, height: 1.4),
+                      style: TextStyle(fontSize: 13, height: 1.4),
                     ),
                   ),
                 ],
@@ -142,7 +141,7 @@ class _AboutPageState extends State<AboutPage> {
             Center(
               child: TextButton.icon(
                 onPressed: _openRepository,
-                icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                icon: Icon(Icons.open_in_new_rounded, size: 18),
                 label: const Text('GitHub'),
               ),
             ),
@@ -160,9 +159,9 @@ class _FeatureChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Chip(
-    avatar: Icon(icon, color: AppColors.blue, size: 18),
+    avatar: Icon(icon, color: context.palette.blue, size: 18),
     label: Text(label),
-    backgroundColor: Colors.white,
-    side: const BorderSide(color: AppColors.line),
+    backgroundColor: context.palette.surface,
+    side: BorderSide(color: context.palette.line),
   );
 }

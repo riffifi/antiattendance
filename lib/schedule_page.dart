@@ -199,18 +199,15 @@ class _SchedulePageState extends State<SchedulePage>
                 children: [
                   Text(
                     '${_date(lesson.start)}  ${_time(lesson.start)}–${_time(lesson.end)}',
-                    style: const TextStyle(
-                      color: AppColors.muted,
+                    style: TextStyle(
+                      color: context.palette.muted,
                       fontSize: 13,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     lesson.subject,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
                   ),
                   if (lesson.type.isNotEmpty ||
                       lesson.location.isNotEmpty ||
@@ -222,8 +219,8 @@ class _SchedulePageState extends State<SchedulePage>
                         lesson.location,
                         lesson.teachers,
                       ].where((value) => value.isNotEmpty).join(' · '),
-                      style: const TextStyle(
-                        color: AppColors.muted,
+                      style: TextStyle(
+                        color: context.palette.muted,
                         height: 1.35,
                       ),
                     ),
@@ -231,13 +228,13 @@ class _SchedulePageState extends State<SchedulePage>
                   const SizedBox(height: 22),
                   Text(
                     tr(context, 'Подтверждённые Пульсом', 'Confirmed by Pulse'),
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 8),
                   if (confirmed.isEmpty)
                     Text(
                       tr(context, 'Пока нет отметок', 'Nobody yet'),
-                      style: const TextStyle(color: AppColors.muted),
+                      style: TextStyle(color: context.palette.muted),
                     )
                   else
                     Wrap(
@@ -246,13 +243,13 @@ class _SchedulePageState extends State<SchedulePage>
                       children: [
                         for (final mark in confirmed)
                           Chip(
-                            avatar: const Icon(
+                            avatar: Icon(
                               Icons.check_rounded,
                               size: 16,
-                              color: Color(0xFF238664),
+                              color: context.palette.success,
                             ),
                             label: Text(mark.accountLabel),
-                            backgroundColor: AppColors.mint,
+                            backgroundColor: context.palette.mint,
                             side: BorderSide.none,
                           ),
                       ],
@@ -288,7 +285,7 @@ class _SchedulePageState extends State<SchedulePage>
                         onPressed: groupAccounts.isEmpty
                             ? null
                             : () => Navigator.pop(context, 'paste'),
-                        icon: const Icon(Icons.link_rounded, size: 18),
+                        icon: Icon(Icons.link_rounded, size: 18),
                         label: Text(
                           tr(context, 'Вставить ссылку', 'Paste link'),
                         ),
@@ -354,10 +351,7 @@ class _SchedulePageState extends State<SchedulePage>
               Expanded(
                 child: Text(
                   tr(context, 'Расписание', 'Schedule'),
-                  style: const TextStyle(
-                    fontSize: 30,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700),
                 ),
               ),
               IconButton.filled(
@@ -366,15 +360,15 @@ class _SchedulePageState extends State<SchedulePage>
                     : () => _refresh(force: true),
                 style: IconButton.styleFrom(
                   disabledBackgroundColor: _loading
-                      ? AppColors.blue
-                      : AppColors.line,
+                      ? context.palette.blue
+                      : context.palette.line,
                   disabledForegroundColor: _loading
-                      ? Colors.white
-                      : AppColors.muted,
+                      ? context.palette.onBlue
+                      : context.palette.muted,
                 ),
                 icon: RotationTransition(
                   turns: _refreshRotation,
-                  child: const Icon(Icons.refresh_rounded),
+                  child: Icon(Icons.refresh_rounded),
                 ),
                 tooltip: tr(context, 'Обновить', 'Refresh'),
               ),
@@ -387,7 +381,7 @@ class _SchedulePageState extends State<SchedulePage>
               'Отметки Пульса с этого устройства',
               'Pulse confirmations on this device',
             ),
-            style: const TextStyle(color: AppColors.muted, fontSize: 13),
+            style: TextStyle(color: context.palette.muted, fontSize: 13),
           ),
           const SizedBox(height: 20),
           if (groups.isEmpty)
@@ -417,15 +411,15 @@ class _SchedulePageState extends State<SchedulePage>
                   vertical: 13,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.palette.surface,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.line),
+                  border: Border.all(color: context.palette.line),
                 ),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.groups_rounded,
-                      color: AppColors.blue,
+                      color: context.palette.blue,
                       size: 21,
                     ),
                     const SizedBox(width: 10),
@@ -434,12 +428,12 @@ class _SchedulePageState extends State<SchedulePage>
                         groups[_groupId] ?? '',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
+                        style: TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ),
-                    const Icon(
+                    Icon(
                       Icons.keyboard_arrow_down_rounded,
-                      color: AppColors.muted,
+                      color: context.palette.muted,
                     ),
                   ],
                 ),
@@ -451,20 +445,20 @@ class _SchedulePageState extends State<SchedulePage>
                 IconButton(
                   onPressed: () =>
                       _selectDay(_day.subtract(const Duration(days: 7))),
-                  icon: const Icon(Icons.chevron_left_rounded),
+                  icon: Icon(Icons.chevron_left_rounded),
                   tooltip: tr(context, 'Предыдущая неделя', 'Previous week'),
                 ),
                 Expanded(
                   child: Text(
                     '${_date(week)} — ${_date(week.add(const Duration(days: 6)))}',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
                 IconButton(
                   onPressed: () =>
                       _selectDay(_day.add(const Duration(days: 7))),
-                  icon: const Icon(Icons.chevron_right_rounded),
+                  icon: Icon(Icons.chevron_right_rounded),
                   tooltip: tr(context, 'Следующая неделя', 'Next week'),
                 ),
               ],
@@ -502,7 +496,7 @@ class _SchedulePageState extends State<SchedulePage>
                         _sameDay(_day, today)
                             ? tr(context, 'Сегодня', 'Today')
                             : dateText,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w700,
                         ),
@@ -511,8 +505,8 @@ class _SchedulePageState extends State<SchedulePage>
                         Text(
                           (_sameDay(_day, today) ? '$dateText · ' : '') +
                               classCountLabel(context, dailyLessons.length),
-                          style: const TextStyle(
-                            color: AppColors.muted,
+                          style: TextStyle(
+                            color: context.palette.muted,
                             fontSize: 13,
                           ),
                         ),
@@ -570,7 +564,7 @@ class _SchedulePageState extends State<SchedulePage>
               const SizedBox(height: 24),
               Text(
                 tr(context, 'Другие отметки', 'Other confirmations'),
-                style: const TextStyle(fontWeight: FontWeight.w700),
+                style: TextStyle(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 7),
               Text(
@@ -578,7 +572,7 @@ class _SchedulePageState extends State<SchedulePage>
                     .map((mark) => mark.accountLabel)
                     .toSet()
                     .join(', '),
-                style: const TextStyle(color: AppColors.muted),
+                style: TextStyle(color: context.palette.muted),
               ),
             ],
           ],
@@ -608,7 +602,7 @@ class _DayButton extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 2),
     child: Material(
-      color: selected ? AppColors.blue : Colors.transparent,
+      color: selected ? context.palette.blue : Colors.transparent,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -625,7 +619,9 @@ class _DayButton extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 11,
-                  color: selected ? Colors.white70 : AppColors.muted,
+                  color: selected
+                      ? context.palette.onBlue.withValues(alpha: .75)
+                      : context.palette.muted,
                 ),
               ),
               const SizedBox(height: 2),
@@ -634,7 +630,9 @@ class _DayButton extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: selected ? Colors.white : AppColors.ink,
+                  color: selected
+                      ? context.palette.onBlue
+                      : context.palette.ink,
                 ),
               ),
               const SizedBox(height: 4),
@@ -644,9 +642,15 @@ class _DayButton extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: hasLessons
-                      ? (selected ? Colors.white : AppColors.blue)
+                      ? (selected
+                            ? context.palette.onBlue
+                            : context.palette.blue)
                       : (today
-                            ? (selected ? Colors.white70 : AppColors.line)
+                            ? (selected
+                                  ? context.palette.onBlue.withValues(
+                                      alpha: .75,
+                                    )
+                                  : context.palette.line)
                             : Colors.transparent),
                 ),
               ),
@@ -683,7 +687,7 @@ class _LessonRow extends StatelessWidget {
         : lesson.type.toLowerCase().contains('пр') ||
               lesson.type.toLowerCase().contains('prac')
         ? const Color(0xFFBE7B2B)
-        : AppColors.blue;
+        : context.palette.blue;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -696,14 +700,11 @@ class _LessonRow extends StatelessWidget {
               children: [
                 Text(
                   time,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                 ),
                 Text(
                   endTime,
-                  style: const TextStyle(fontSize: 11, color: AppColors.muted),
+                  style: TextStyle(fontSize: 11, color: context.palette.muted),
                 ),
               ],
             ),
@@ -712,7 +713,7 @@ class _LessonRow extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: Material(
-            color: Colors.white,
+            color: context.palette.surface,
             borderRadius: BorderRadius.circular(16),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
@@ -731,7 +732,7 @@ class _LessonRow extends StatelessWidget {
                     colors: [
                       accent.withValues(alpha: isCurrent ? .23 : .16),
                       accent.withValues(alpha: isCurrent ? .07 : .04),
-                      Colors.white,
+                      context.palette.surface,
                     ],
                     stops: const [0, .55, 1],
                   ),
@@ -746,16 +747,16 @@ class _LessonRow extends StatelessWidget {
                             lesson.subject,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
                         const SizedBox(width: 4),
-                        const Icon(
+                        Icon(
                           Icons.chevron_right_rounded,
-                          color: AppColors.muted,
+                          color: context.palette.muted,
                           size: 20,
                         ),
                       ],
@@ -764,8 +765,8 @@ class _LessonRow extends StatelessWidget {
                       const SizedBox(height: 6),
                       Text(
                         tr(context, '● Сейчас', '● Now'),
-                        style: const TextStyle(
-                          color: AppColors.blue,
+                        style: TextStyle(
+                          color: context.palette.blue,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                         ),
@@ -781,9 +782,9 @@ class _LessonRow extends StatelessWidget {
                         ].where((value) => value.isNotEmpty).join(' · '),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: AppColors.muted,
+                          color: context.palette.muted,
                         ),
                       ),
                     ],
@@ -795,8 +796,8 @@ class _LessonRow extends StatelessWidget {
                               ? Icons.radio_button_unchecked_rounded
                               : Icons.check_circle_rounded,
                           color: confirmed.isEmpty
-                              ? AppColors.muted
-                              : const Color(0xFF238664),
+                              ? context.palette.muted
+                              : context.palette.success,
                           size: 15,
                         ),
                         const SizedBox(width: 5),
@@ -812,8 +813,8 @@ class _LessonRow extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 12,
                               color: confirmed.isEmpty
-                                  ? AppColors.muted
-                                  : const Color(0xFF238664),
+                                  ? context.palette.muted
+                                  : context.palette.success,
                               fontWeight: confirmed.isEmpty
                                   ? FontWeight.w400
                                   : FontWeight.w600,
@@ -848,23 +849,23 @@ class _EmptyPanel extends StatelessWidget {
     width: double.infinity,
     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: context.palette.surface,
       borderRadius: BorderRadius.circular(18),
     ),
     child: Column(
       children: [
-        Icon(icon, color: AppColors.blue, size: 30),
+        Icon(icon, color: context.palette.blue, size: 30),
         const SizedBox(height: 10),
         Text(
           title,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 5),
         Text(
           detail,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: AppColors.muted, fontSize: 13),
+          style: TextStyle(color: context.palette.muted, fontSize: 13),
         ),
       ],
     ),

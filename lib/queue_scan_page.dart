@@ -38,8 +38,19 @@ class _QueueScanPageState extends State<QueueScanPage> {
   )..addListener(_updated);
   bool _torchOn = false;
   bool _cameraError = false;
+  Timer? _finishTimer;
 
-  void _updated() => widget.onUpdate(_queue);
+  void _updated() {
+    widget.onUpdate(_queue);
+    if (_queue.remaining == 0 && _finishTimer == null) {
+      unawaited(HapticFeedback.mediumImpact());
+      _finishTimer = Timer(const Duration(milliseconds: 1100), () {
+        if (mounted && (ModalRoute.of(context)?.isCurrent ?? false)) {
+          Navigator.of(context).pop();
+        }
+      });
+    }
+  }
 
   Future<void> _toggleTorch() async {
     try {
@@ -52,6 +63,7 @@ class _QueueScanPageState extends State<QueueScanPage> {
 
   @override
   void dispose() {
+    _finishTimer?.cancel();
     _queue.removeListener(_updated);
     _queue.dispose();
     unawaited(_camera.dispose());
@@ -88,6 +100,23 @@ class _QueueScanPageState extends State<QueueScanPage> {
               }
               return const ColoredBox(color: Colors.black);
             },
+          ),
+          const IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0x99000000),
+                    Color(0x00000000),
+                    Color(0x00000000),
+                    Color(0x77000000),
+                  ],
+                  stops: [0, 0.2, 0.7, 1],
+                ),
+              ),
+            ),
           ),
           QueueScanOverlay(
             queue: _queue,
@@ -143,7 +172,7 @@ class QueueScanOverlay extends StatelessWidget {
                   ),
                   Expanded(
                     child: Text(
-                      tr(context, 'Очередь отметок', 'Attendance queue'),
+                      tr(context, 'Сканировать QR', 'Scan QR'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
@@ -183,8 +212,10 @@ class QueueScanOverlay extends StatelessWidget {
                   return Center(
                     child: AnimatedBuilder(
                       animation: queue,
-                      builder: (context, _) => Container(
+                      builder: (context, _) => AnimatedContainer(
                         key: const ValueKey('queue-scan-frame'),
+                        duration: const Duration(milliseconds: 180),
+                        curve: Curves.easeOut,
                         width: size,
                         height: size,
                         decoration: BoxDecoration(
@@ -198,19 +229,26 @@ class QueueScanOverlay extends StatelessWidget {
                           ),
                           borderRadius: BorderRadius.circular(24),
                         ),
-                        child: cameraError
-                            ? const Icon(
-                                Icons.no_photography_rounded,
-                                color: Color(0xFFFFC16B),
-                                size: 42,
-                              )
-                            : queue.remaining == 0
-                            ? const Icon(
-                                Icons.check_rounded,
-                                color: Color(0xFF95E6BD),
-                                size: 52,
-                              )
-                            : null,
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 180),
+                          child: cameraError
+                              ? const Icon(
+                                  Icons.no_photography_rounded,
+                                  key: ValueKey('camera-error'),
+                                  color: Color(0xFFFFC16B),
+                                  size: 42,
+                                )
+                              : queue.remaining == 0
+                              ? const Icon(
+                                  Icons.check_rounded,
+                                  key: ValueKey('scan-complete'),
+                                  color: Color(0xFF95E6BD),
+                                  size: 52,
+                                )
+                              : const SizedBox.shrink(
+                                  key: ValueKey('scan-pending'),
+                                ),
+                        ),
                       ),
                     ),
                   );
@@ -219,15 +257,22 @@ class QueueScanOverlay extends StatelessWidget {
             ),
             AnimatedBuilder(
               animation: queue,
-              builder: (context, _) => Container(
+              builder: (context, _) => AnimatedContainer(
                 key: const ValueKey('queue-status-panel'),
+                duration: const Duration(milliseconds: 180),
                 height: panelHeight,
                 width: double.infinity,
                 margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
                 decoration: BoxDecoration(
                   color: const Color(0xF2122039),
-                  border: Border.all(color: const Color(0x558CA6D5)),
+                  border: Border.all(
+                    color: cameraError
+                        ? const Color(0x99FFC16B)
+                        : queue.remaining == 0
+                        ? const Color(0x9995E6BD)
+                        : const Color(0x558CA6D5),
+                  ),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Column(
@@ -275,41 +320,70 @@ class QueueScanOverlay extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      cameraError
-                          ? tr(
-                              context,
-                              'Проверьте разрешение камеры и откройте режим снова.',
-                              'Check camera permission and reopen this mode.',
-                            )
-                          : queue.remaining == 0
-                          ? tr(
-                              context,
-                              'Готово, камеру можно закрыть.',
-                              'You can close the camera.',
-                            )
-                          : tr(
-                              context,
-                              'Держите QR-код в кадре — мы повторим попытку отметить остальных.',
-                              'Keep the QR in view; pending accounts will retry.',
-                            ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 180),
+                      child: Text(
+                        cameraError
+                            ? tr(
+                                context,
+                                'Проверьте разрешение камеры и откройте экран снова.',
+                                'Check camera permission and reopen this screen.',
+                              )
+                            : queue.remaining == 0
+                            ? tr(
+                                context,
+                                'Готово, камеру можно закрыть.',
+                                'You can close the camera.',
+                              )
+                            : !queue.hasScanned
+                            ? tr(
+                                context,
+                                'Наведите камеру на QR-код Пульса — отправим отметки сразу.',
+                                'Point at a Pulse QR code; attendance sends immediately.',
+                              )
+                            : queue.processing
+                            ? tr(
+                                context,
+                                'Отправляем отметки. Держите QR-код в кадре.',
+                                'Submitting. Keep the QR in view.',
+                              )
+                            : tr(
+                                context,
+                                'Держите QR-код в кадре — повторим попытку для остальных.',
+                                'Keep the QR in view; pending accounts will retry.',
+                              ),
+                        key: ValueKey((
+                          cameraError,
+                          queue.remaining == 0,
+                          queue.hasScanned,
+                          queue.processing,
+                        )),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
-                    LinearProgressIndicator(
-                      value: accounts.isEmpty
-                          ? 0
-                          : queue.confirmed.length / accounts.length,
-                      minHeight: 4,
-                      borderRadius: BorderRadius.circular(4),
-                      backgroundColor: Colors.white24,
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                        Color(0xFF95E6BD),
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(
+                        begin: 0,
+                        end: accounts.isEmpty
+                            ? 0
+                            : queue.confirmed.length / accounts.length,
+                      ),
+                      duration: const Duration(milliseconds: 240),
+                      curve: Curves.easeOut,
+                      builder: (context, value, _) => LinearProgressIndicator(
+                        value: value,
+                        minHeight: 4,
+                        borderRadius: BorderRadius.circular(4),
+                        backgroundColor: Colors.white24,
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          Color(0xFF95E6BD),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),

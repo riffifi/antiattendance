@@ -29,6 +29,41 @@ const translations = <String, (String, String, String)>{
     'Requer Android 15 ou posterior e suporte para o modo de observação NFC.',
     '需要 Android 15 或更高版本，并支持 NFC 观察模式。',
   ),
+  'NFC works, but Android does not allow Observe Mode on this device.': (
+    'Le NFC fonctionne, mais Android ne permet pas d’activer le mode Observation sur cet appareil.',
+    'O NFC funciona, mas o Android não permite ativar o modo de observação neste dispositivo.',
+    'NFC 可以使用，但 Android 不允许在此设备上启用观察模式。',
+  ),
+  'Android could not select the NFC diagnostic service. Reopen this screen and try again.':
+      (
+        'Android n’a pas pu sélectionner le service de diagnostic NFC. Rouvrez cet écran et réessayez.',
+        'O Android não conseguiu selecionar o serviço de diagnóstico NFC. Volte a abrir este ecrã e tente novamente.',
+        'Android 无法选择 NFC 诊断服务。请重新打开此页面并重试。',
+      ),
+  'NFC reader field detected.': (
+    'Champ du lecteur NFC détecté.',
+    'Campo do leitor NFC detetado.',
+    '检测到 NFC 读卡器射频场。',
+  ),
+  'Listening for an NFC reader field. Polling frames are unavailable.': (
+    'Recherche du champ d’un lecteur NFC. Les trames de scrutation ne sont pas disponibles.',
+    'À escuta do campo de um leitor NFC. As tramas de sondagem não estão disponíveis.',
+    '正在监听 NFC 读卡器射频场；无法获取轮询帧。',
+  ),
+  'Android reports Observe Mode unavailable on this phone. Only reader field detection is available; polling commands and pass data are not captured.':
+      (
+        'Android indique que le mode Observation est indisponible sur ce téléphone. Seule la détection du champ du lecteur est disponible ; les commandes de scrutation et les données du badge ne sont pas capturées.',
+        'O Android indica que o modo de observação está indisponível neste telemóvel. Apenas é possível detetar o campo do leitor; os comandos de sondagem e os dados do passe não são captados.',
+        'Android 报告此手机无法使用观察模式。只能检测读卡器射频场，无法获取轮询命令或通行证数据。',
+      ),
+  'This screen does not present a pass or open the gate.': (
+    'Cet écran ne présente aucun badge et n’ouvre pas le portillon.',
+    'Este ecrã não apresenta um passe nem abre o torniquete.',
+    '此页面不会出示通行证或打开闸机。',
+  ),
+  'Field events': ('Événements de champ', 'Eventos de campo', '射频场事件'),
+  'Field on': ('Champ détecté', 'Campo detetado', '射频场出现'),
+  'Field off': ('Champ perdu', 'Campo perdido', '射频场消失'),
   'Reader polling detected.': (
     'Signal du lecteur détecté.',
     'Sinal do leitor detetado.',
@@ -233,6 +268,30 @@ const translations = <String, (String, String, String)>{
     '无法保存班级。',
   ),
   'Settings': ('Paramètres', 'Definições', '设置'),
+  'Appearance': ('Apparence', 'Aspeto', '外观'),
+  'Light': ('Clair', 'Claro', '浅色'),
+  'Dark': ('Sombre', 'Escuro', '深色'),
+  'Black (AMOLED)': ('Noir (AMOLED)', 'Preto (AMOLED)', '纯黑（AMOLED）'),
+  'Phone colors (Monet)': (
+    'Couleurs du téléphone (Monet)',
+    'Cores do telemóvel (Monet)',
+    '手机配色（Monet）',
+  ),
+  'Use your wallpaper colors for any theme.': (
+    'Utilise les couleurs du fond d’écran avec chaque thème.',
+    'Usa as cores do papel de parede em qualquer tema.',
+    '在所有主题中使用壁纸配色。',
+  ),
+  'Available on Android 12 and newer.': (
+    'Disponible à partir d’Android 12.',
+    'Disponível a partir do Android 12.',
+    '适用于 Android 12 及更高版本。',
+  ),
+  'Could not save appearance.': (
+    'Impossible d’enregistrer l’apparence.',
+    'Não foi possível guardar o aspeto.',
+    '无法保存外观设置。',
+  ),
   'App logo': ('Logo de l’application', 'Logótipo da aplicação', '应用标志'),
   'Could not load saved accounts.': (
     'Impossible de charger les comptes enregistrés.',
@@ -240,13 +299,27 @@ const translations = <String, (String, String, String)>{
     '无法加载已保存的账号。',
   ),
   'Retry': ('Réessayer', 'Tentar novamente', '重试'),
-  'Scan a QR and submit attendance immediately.': (
-    'Scannez un QR pour valider tout de suite les présences.',
-    'Leia um QR para registar logo as presenças.',
-    '扫描二维码即可立即提交考勤。',
+  'Scan a QR to mark selected accounts. Keep it in view for retries.': (
+    'Scannez le QR pour valider les comptes choisis. Gardez-le dans le cadre pour réessayer.',
+    'Leia o QR para marcar as contas selecionadas. Mantenha-o no ecrã para repetir.',
+    '扫描二维码为所选账号签到。持续对准二维码即可重试。',
   ),
   'Scan QR': ('Scanner un QR', 'Ler QR', '扫描二维码'),
-  'Queue mode': ('Mode file d’attente', 'Modo fila', '队列模式'),
+  'Check camera permission and reopen this screen.': (
+    'Vérifiez l’accès à la caméra, puis rouvrez cet écran.',
+    'Verifique a permissão da câmara e volte a abrir este ecrã.',
+    '检查相机权限，然后重新打开此页面。',
+  ),
+  'Point at a Pulse QR code; attendance sends immediately.': (
+    'Visez un QR code Pulse : les présences seront envoyées aussitôt.',
+    'Aponte para um QR do Pulse: as presenças serão enviadas de imediato.',
+    '对准 Pulse 二维码即可立即提交签到。',
+  ),
+  'Submitting. Keep the QR in view.': (
+    'Envoi en cours. Gardez le QR dans le cadre.',
+    'A enviar. Mantenha o QR no ecrã.',
+    '正在提交。请继续对准二维码。',
+  ),
   'Paste link': ('Coller un lien', 'Colar ligação', '粘贴链接'),
   'Submitting attendance…': (
     'Envoi des présences…',

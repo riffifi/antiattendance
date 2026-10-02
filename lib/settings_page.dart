@@ -19,6 +19,11 @@ class SettingsPage extends StatefulWidget {
     required this.store,
     required this.language,
     required this.onLanguageChanged,
+    this.themeMode = AppThemeMode.light,
+    this.onThemeModeChanged,
+    this.monetEnabled = false,
+    this.monetAvailable = false,
+    this.onMonetChanged,
     this.updates,
     this.downloadApk,
     this.installApk,
@@ -27,6 +32,11 @@ class SettingsPage extends StatefulWidget {
   final AppSettingsStore store;
   final String? language;
   final ValueChanged<String?> onLanguageChanged;
+  final AppThemeMode themeMode;
+  final ValueChanged<AppThemeMode>? onThemeModeChanged;
+  final bool monetEnabled;
+  final bool monetAvailable;
+  final ValueChanged<bool>? onMonetChanged;
   final UpdateController? updates;
   final Future<File> Function(
     AppRelease release,
@@ -41,9 +51,22 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   late String? _language = widget.language;
+  late AppThemeMode _themeMode = widget.themeMode;
+  late bool _monetEnabled = widget.monetEnabled;
   bool _saving = false;
   bool _downloading = false;
   double? _downloadProgress;
+
+  @override
+  void didUpdateWidget(covariant SettingsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_saving) return;
+    if (widget.language != oldWidget.language) _language = widget.language;
+    if (widget.themeMode != oldWidget.themeMode) _themeMode = widget.themeMode;
+    if (widget.monetEnabled != oldWidget.monetEnabled) {
+      _monetEnabled = widget.monetEnabled;
+    }
+  }
 
   Future<File> _downloadApk(
     AppRelease release,
@@ -191,6 +214,48 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _chooseTheme(AppThemeMode mode) async {
+    if (_saving || mode == _themeMode) return;
+    setState(() => _saving = true);
+    try {
+      await widget.store.saveThemeMode(mode);
+      if (!mounted) return;
+      setState(() => _themeMode = mode);
+      widget.onThemeModeChanged?.call(mode);
+    } catch (_) {
+      if (mounted) _saveAppearanceError();
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _chooseMonet(bool enabled) async {
+    if (_saving || !widget.monetAvailable) return;
+    setState(() => _saving = true);
+    try {
+      await widget.store.saveMonetEnabled(enabled);
+      if (!mounted) return;
+      setState(() => _monetEnabled = enabled);
+      widget.onMonetChanged?.call(enabled);
+    } catch (_) {
+      if (mounted) _saveAppearanceError();
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  void _saveAppearanceError() => ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        tr(
+          context,
+          'Не удалось сохранить оформление.',
+          'Could not save appearance.',
+        ),
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text(tr(context, 'Настройки', 'Settings'))),
@@ -201,8 +266,56 @@ class _SettingsPageState extends State<SettingsPage> {
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
           children: [
             Text(
+              tr(context, 'Оформление', 'Appearance'),
+              style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 12),
+            _Choice(
+              title: tr(context, 'Светлая', 'Light'),
+              selected: _themeMode == AppThemeMode.light,
+              onTap: _saving ? null : () => _chooseTheme(AppThemeMode.light),
+            ),
+            _Choice(
+              title: tr(context, 'Тёмная', 'Dark'),
+              selected: _themeMode == AppThemeMode.dark,
+              onTap: _saving ? null : () => _chooseTheme(AppThemeMode.dark),
+            ),
+            _Choice(
+              title: tr(context, 'Чёрная (AMOLED)', 'Black (AMOLED)'),
+              selected: _themeMode == AppThemeMode.amoled,
+              onTap: _saving ? null : () => _chooseTheme(AppThemeMode.amoled),
+            ),
+            if (Platform.isAndroid || widget.monetAvailable)
+              Material(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                child: SwitchListTile.adaptive(
+                  value: _monetEnabled && widget.monetAvailable,
+                  onChanged: _saving || !widget.monetAvailable
+                      ? null
+                      : _chooseMonet,
+                  title: Text(
+                    tr(context, 'Цвета телефона', 'Phone colors (Monet)'),
+                  ),
+                  subtitle: Text(
+                    widget.monetAvailable
+                        ? tr(
+                            context,
+                            'Цвет оформления подстраивается под обои.',
+                            'Use your wallpaper colors for any theme.',
+                          )
+                        : tr(
+                            context,
+                            'Доступно на Android 12 и новее.',
+                            'Available on Android 12 and newer.',
+                          ),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 28),
+            Text(
               tr(context, 'Язык приложения', 'App language'),
-              style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
+              style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 6),
             Text(
@@ -211,7 +324,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 'По умолчанию — язык телефона.',
                 'Your phone language is used by default.',
               ),
-              style: const TextStyle(color: AppColors.muted, fontSize: 13),
+              style: TextStyle(color: context.palette.muted, fontSize: 13),
             ),
             const SizedBox(height: 16),
             _Choice(
@@ -249,10 +362,7 @@ class _SettingsPageState extends State<SettingsPage> {
             if (widget.updates != null) ...[
               Text(
                 tr(context, 'Обновления', 'Updates'),
-                style: const TextStyle(
-                  fontSize: 21,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 12),
               AnimatedBuilder(
@@ -263,7 +373,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   return Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: context.palette.surface,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Column(
@@ -275,15 +385,13 @@ class _SettingsPageState extends State<SettingsPage> {
                               updates.updateAvailable
                                   ? Icons.system_update_rounded
                                   : Icons.check_circle_outline_rounded,
-                              color: AppColors.blue,
+                              color: context.palette.blue,
                             ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
                                 _updateStatus(updates),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                style: TextStyle(fontWeight: FontWeight.w600),
                               ),
                             ),
                           ],
@@ -297,8 +405,8 @@ class _SettingsPageState extends State<SettingsPage> {
                               'Installed: {version}',
                               {'version': updates.installedVersion!},
                             ),
-                            style: const TextStyle(
-                              color: AppColors.muted,
+                            style: TextStyle(
+                              color: context.palette.muted,
                               fontSize: 12,
                             ),
                           ),
@@ -312,7 +420,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               onPressed: updates.checking
                                   ? null
                                   : () => unawaited(updates.check()),
-                              icon: const Icon(Icons.refresh_rounded, size: 18),
+                              icon: Icon(Icons.refresh_rounded, size: 18),
                               label: Text(
                                 tr(context, 'Проверить', 'Check now'),
                               ),
@@ -325,16 +433,17 @@ class _SettingsPageState extends State<SettingsPage> {
                                     ? () => _downloadAndInstall(release)
                                     : () => _openRelease(release.page),
                                 style: FilledButton.styleFrom(
-                                  disabledBackgroundColor: AppColors.blue,
-                                  disabledForegroundColor: Colors.white,
+                                  disabledBackgroundColor: context.palette.blue,
+                                  disabledForegroundColor:
+                                      context.palette.onBlue,
                                 ),
                                 icon: _downloading
-                                    ? const SizedBox(
+                                    ? SizedBox(
                                         width: 18,
                                         height: 18,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
-                                          color: Colors.white,
+                                          color: context.palette.onBlue,
                                         ),
                                       )
                                     : Icon(
@@ -405,17 +514,17 @@ class _SettingsPageState extends State<SettingsPage> {
             ],
             Text(
               tr(context, 'Тестирование', 'Testing'),
-              style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
+              style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
             Material(
-              color: Colors.white,
+              color: context.palette.surface,
               borderRadius: BorderRadius.circular(16),
               child: ListTile(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-                leading: const Icon(Icons.nfc_rounded, color: AppColors.blue),
+                leading: Icon(Icons.nfc_rounded, color: context.palette.blue),
                 title: Text(tr(context, 'Проверка NFC', 'NFC diagnostics')),
                 subtitle: Text(
                   tr(
@@ -424,7 +533,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     'View detected NFC connection details',
                   ),
                 ),
-                trailing: const Icon(Icons.chevron_right_rounded),
+                trailing: Icon(Icons.chevron_right_rounded),
                 onTap: () => Navigator.of(context).push<void>(
                   MaterialPageRoute(builder: (_) => const NfcDiagnosticsPage()),
                 ),
@@ -432,15 +541,15 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             const SizedBox(height: 12),
             Material(
-              color: Colors.white,
+              color: context.palette.surface,
               borderRadius: BorderRadius.circular(16),
               child: ListTile(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-                leading: const Icon(
+                leading: Icon(
                   Icons.sensors_rounded,
-                  color: AppColors.blue,
+                  color: context.palette.blue,
                 ),
                 title: Text(
                   tr(context, 'Сигнал турникета', 'Turnstile signal'),
@@ -452,7 +561,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     'Observe NFC reader polling',
                   ),
                 ),
-                trailing: const Icon(Icons.chevron_right_rounded),
+                trailing: Icon(Icons.chevron_right_rounded),
                 onTap: () => Navigator.of(context).push<void>(
                   MaterialPageRoute(builder: (_) => const TurnstileProbePage()),
                 ),
@@ -461,24 +570,24 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(height: 28),
             Text(
               tr(context, 'Приложение', 'App'),
-              style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
+              style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
             Material(
-              color: Colors.white,
+              color: context.palette.surface,
               borderRadius: BorderRadius.circular(16),
               child: ListTile(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-                leading: const Icon(
+                leading: Icon(
                   Icons.info_outline_rounded,
-                  color: AppColors.blue,
+                  color: context.palette.blue,
                 ),
                 title: Text(
                   tr(context, 'О AntiAttendance', 'About AntiAttendance'),
                 ),
-                trailing: const Icon(Icons.chevron_right_rounded),
+                trailing: Icon(Icons.chevron_right_rounded),
                 onTap: () => Navigator.of(context).push<void>(
                   MaterialPageRoute(builder: (_) => const AboutPage()),
                 ),
@@ -507,15 +616,15 @@ class _Choice extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 8),
     child: Material(
-      color: selected ? const Color(0xFFE8EDFC) : Colors.white,
+      color: selected ? context.palette.selected : context.palette.surface,
       borderRadius: BorderRadius.circular(16),
       child: ListTile(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        title: Text(title, style: TextStyle(fontWeight: FontWeight.w600)),
         subtitle: subtitle == null ? null : Text(subtitle!),
         trailing: Icon(
           selected ? Icons.check_circle_rounded : Icons.circle_outlined,
-          color: selected ? AppColors.blue : AppColors.muted,
+          color: selected ? context.palette.blue : context.palette.muted,
         ),
         onTap: onTap,
       ),

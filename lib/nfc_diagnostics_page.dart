@@ -102,7 +102,7 @@ class _NfcDiagnosticsPageState extends State<NfcDiagnosticsPage> {
       children: [
         Expanded(
           flex: 3,
-          child: Text(label, style: const TextStyle(color: AppColors.muted)),
+          child: Text(label, style: TextStyle(color: context.palette.muted)),
         ),
         Expanded(
           flex: 4,
@@ -129,7 +129,7 @@ class _NfcDiagnosticsPageState extends State<NfcDiagnosticsPage> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.palette.surface,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Column(
@@ -139,13 +139,13 @@ class _NfcDiagnosticsPageState extends State<NfcDiagnosticsPage> {
                       tag == null
                           ? Icons.nfc_rounded
                           : Icons.check_circle_rounded,
-                      color: AppColors.blue,
+                      color: context.palette.blue,
                       size: 32,
                     ),
                     const SizedBox(height: 12),
                     Text(
                       _status(context),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w600,
                       ),
@@ -161,16 +161,13 @@ class _NfcDiagnosticsPageState extends State<NfcDiagnosticsPage> {
                 const SizedBox(height: 20),
                 Text(
                   tr(context, 'Что увидел телефон', 'What this phone detected'),
-                  style: const TextStyle(
-                    fontSize: 21,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: context.palette.surface,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
@@ -213,7 +210,7 @@ class _NfcDiagnosticsPageState extends State<NfcDiagnosticsPage> {
                   'Это технические сведения о NFC-соединении. Они не подтверждают, что обнаружен именно Пульс; данные пропуска не считываются и не сохраняются.',
                   'These are NFC connection details. They do not confirm that the device is Pulse; pass data is neither read nor saved.',
                 ),
-                style: const TextStyle(color: AppColors.muted, fontSize: 13),
+                style: TextStyle(color: context.palette.muted, fontSize: 13),
               ),
             ],
           ),

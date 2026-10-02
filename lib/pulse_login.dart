@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import 'l10n.dart';
+import 'app_theme.dart';
 import 'pulse_api.dart';
 
 class PulseLoginPage extends StatefulWidget {
@@ -167,9 +168,11 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
                     horizontal: 16,
                     vertical: 6,
                   ),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    border: Border(top: BorderSide(color: Color(0xFFE3E8EC))),
+                  decoration: BoxDecoration(
+                    color: context.palette.surface,
+                    border: Border(
+                      top: BorderSide(color: context.palette.line),
+                    ),
                   ),
                   child: Row(
                     children: [

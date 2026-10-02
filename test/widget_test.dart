@@ -5,6 +5,7 @@ import 'package:antiattendance/attendance_log.dart';
 import 'package:antiattendance/main.dart';
 import 'package:antiattendance/pulse_api.dart';
 import 'package:antiattendance/schedule_api.dart';
+import 'package:antiattendance/settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -43,9 +44,17 @@ class MemoryLogStore extends AttendanceLogStore {
 
 class MemorySettingsStore extends AppSettingsStore {
   String? language;
+  AppThemeMode? themeMode;
+  bool? monetEnabled;
 
   @override
   Future<void> saveLanguage(String? value) async => language = value;
+
+  @override
+  Future<void> saveThemeMode(AppThemeMode value) async => themeMode = value;
+
+  @override
+  Future<void> saveMonetEnabled(bool value) async => monetEnabled = value;
 }
 
 class RecordingApi extends PulseApi {
@@ -69,6 +78,36 @@ class FakeGroupApi extends ScheduleApi {
 }
 
 void main() {
+  testWidgets('appearance choices save dark mode and phone colors', (
+    tester,
+  ) async {
+    final store = MemorySettingsStore();
+    AppThemeMode? chosenMode;
+    bool? chosenMonet;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: SettingsPage(
+          store: store,
+          language: null,
+          onLanguageChanged: (_) {},
+          onThemeModeChanged: (value) => chosenMode = value,
+          onMonetChanged: (value) => chosenMonet = value,
+          monetAvailable: true,
+        ),
+      ),
+    );
+    await tester.tap(find.text('Dark'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Phone colors (Monet)'));
+    await tester.pumpAndSettle();
+    expect(store.themeMode, AppThemeMode.dark);
+    expect(chosenMode, AppThemeMode.dark);
+    expect(store.monetEnabled, isTrue);
+    expect(chosenMonet, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('shows a simple scan and account list', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -81,6 +120,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Посещаемость'), findsNWidgets(2));
     expect(find.text('Сканировать QR'), findsOneWidget);
+    expect(find.text('Режим очереди'), findsNothing);
     expect(find.text('Аккаунты'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

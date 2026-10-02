@@ -16,7 +16,6 @@ import 'nearby_receive_page.dart';
 import 'nearby_share_page.dart';
 import 'pulse_api.dart';
 import 'pulse_login.dart';
-import 'qr_scan_page.dart';
 import 'queue_scan_page.dart';
 import 'schedule_api.dart';
 import 'schedule_page.dart';
@@ -45,22 +44,35 @@ class AntiattendanceApp extends StatefulWidget {
   State<AntiattendanceApp> createState() => _AntiattendanceAppState();
 }
 
-class _AntiattendanceAppState extends State<AntiattendanceApp> {
+class _AntiattendanceAppState extends State<AntiattendanceApp>
+    with WidgetsBindingObserver {
+  static const _monetChannel = MethodChannel('antiattendance/monet');
   final AppSettingsStore _settingsStore = AppSettingsStore();
   final UpdateController _updates = UpdateController();
   String? _language;
+  AppThemeMode _themeMode = AppThemeMode.light;
+  bool _monetEnabled = false;
+  Color? _monetSeed;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadLanguage();
+    _loadAppearance();
     unawaited(_updates.check());
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _updates.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) unawaited(_loadAppearance());
   }
 
   Future<void> _loadLanguage() async {
@@ -72,11 +84,54 @@ class _AntiattendanceAppState extends State<AntiattendanceApp> {
     }
   }
 
+  Future<void> _loadAppearance() async {
+    var mode = AppThemeMode.light;
+    var monet = false;
+    int? color;
+    try {
+      mode = await _settingsStore.loadThemeMode();
+      monet = await _settingsStore.loadMonetEnabled();
+    } catch (_) {
+      // Keep default appearance if saved preferences cannot be read.
+    }
+    if (Platform.isAndroid) {
+      try {
+        color = await _monetChannel.invokeMethod<int>('getSeedColor');
+      } catch (_) {
+        // Android without wallpaper colors keeps the app accent.
+      }
+    }
+    if (mounted) {
+      setState(() {
+        _themeMode = mode;
+        _monetEnabled = monet;
+        _monetSeed = color == null ? null : Color(color);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) => MaterialApp(
     title: 'AntiAttendance',
     debugShowCheckedModeBanner: false,
-    theme: AppTheme.light,
+    theme: AppTheme.build(
+      _themeMode,
+      monetSeed: _monetEnabled ? _monetSeed : null,
+    ),
+    builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        systemNavigationBarColor: _themeMode == AppThemeMode.amoled
+            ? Colors.black
+            : _themeMode == AppThemeMode.dark
+            ? const Color(0xFF101820)
+            : AppColors.paper,
+        systemNavigationBarDividerColor: Colors.transparent,
+        systemNavigationBarIconBrightness: _themeMode == AppThemeMode.light
+            ? Brightness.dark
+            : Brightness.light,
+      ),
+      child: child!,
+    ),
     locale: _language == null ? null : Locale(_language!),
     supportedLocales: const [
       Locale('en'),
@@ -94,6 +149,11 @@ class _AntiattendanceAppState extends State<AntiattendanceApp> {
       settingsStore: _settingsStore,
       language: _language,
       onLanguageChanged: (language) => setState(() => _language = language),
+      themeMode: _themeMode,
+      onThemeModeChanged: (mode) => setState(() => _themeMode = mode),
+      monetEnabled: _monetEnabled,
+      monetAvailable: _monetSeed != null,
+      onMonetChanged: (value) => setState(() => _monetEnabled = value),
       updates: _updates,
     ),
   );
@@ -110,6 +170,11 @@ class HomePage extends StatefulWidget {
     this.settingsStore,
     this.language,
     this.onLanguageChanged,
+    this.themeMode = AppThemeMode.light,
+    this.onThemeModeChanged,
+    this.monetEnabled = false,
+    this.monetAvailable = false,
+    this.onMonetChanged,
     this.updates,
   });
 
@@ -120,6 +185,11 @@ class HomePage extends StatefulWidget {
   final AppSettingsStore? settingsStore;
   final String? language;
   final ValueChanged<String?>? onLanguageChanged;
+  final AppThemeMode themeMode;
+  final ValueChanged<AppThemeMode>? onThemeModeChanged;
+  final bool monetEnabled;
+  final bool monetAvailable;
+  final ValueChanged<bool>? onMonetChanged;
   final UpdateController? updates;
   final Future<String?> Function(BuildContext context)? scanQr;
 
@@ -278,6 +348,11 @@ class _HomePageState extends State<HomePage> {
           store: _settingsStore,
           language: widget.language,
           onLanguageChanged: widget.onLanguageChanged ?? (_) {},
+          themeMode: widget.themeMode,
+          onThemeModeChanged: widget.onThemeModeChanged ?? (_) {},
+          monetEnabled: widget.monetEnabled,
+          monetAvailable: widget.monetAvailable,
+          onMonetChanged: widget.onMonetChanged ?? (_) {},
           updates: widget.updates,
         ),
       ),
@@ -427,30 +502,20 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _scan() async {
     if (_busy) return;
+    if (widget.scanQr == null) {
+      await _scanQueue();
+      return;
+    }
     if (_selected.isEmpty) {
       _message(
         tr(context, 'Сначала выберите аккаунты.', 'Select accounts first.'),
       );
       return;
     }
-    if (widget.scanQr == null && !Platform.isAndroid && !Platform.isIOS) {
-      _message(
-        tr(
-          context,
-          'Камера доступна на Android и iOS. Для проверки вставьте ссылку.',
-          'The camera is available on Android and iOS. Paste a link to test here.',
-        ),
-      );
-      return;
-    }
     setState(() => _scanning = true);
     String? raw;
     try {
-      raw = widget.scanQr == null
-          ? await Navigator.of(context).push<String>(
-              MaterialPageRoute(builder: (_) => const QrScanPage()),
-            )
-          : await widget.scanQr!(context);
+      raw = await widget.scanQr!(context);
     } catch (_) {
       if (mounted) {
         _message(
@@ -502,8 +567,14 @@ class _HomePageState extends State<HomePage> {
     final recorded = <String>{};
     try {
       await Navigator.of(context).push<void>(
-        MaterialPageRoute(
-          builder: (_) => QueueScanPage(
+        PageRouteBuilder<void>(
+          transitionDuration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : const Duration(milliseconds: 220),
+          reverseTransitionDuration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : const Duration(milliseconds: 180),
+          pageBuilder: (_, _, _) => QueueScanPage(
             accounts: accounts,
             api: _api,
             onUpdate: (queue) {
@@ -524,6 +595,22 @@ class _HomePageState extends State<HomePage> {
                   ..addAll(queue.errors);
               });
             },
+          ),
+          transitionsBuilder: (context, animation, _, child) => FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position:
+                  Tween<Offset>(
+                    begin: const Offset(0, 0.04),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutCubic,
+                    ),
+                  ),
+              child: child,
+            ),
           ),
         ),
       );
@@ -563,7 +650,7 @@ class _HomePageState extends State<HomePage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.wifi_tethering_rounded),
+              leading: Icon(Icons.wifi_tethering_rounded),
               title: Text(tr(context, 'Передать рядом', 'Share nearby')),
               subtitle: Text(
                 tr(
@@ -575,7 +662,7 @@ class _HomePageState extends State<HomePage> {
               onTap: () => Navigator.pop(context, 'nearby'),
             ),
             ListTile(
-              leading: const Icon(Icons.qr_code_rounded),
+              leading: Icon(Icons.qr_code_rounded),
               title: Text(tr(context, 'Передать через QR', 'Share by QR')),
               onTap: () => Navigator.pop(context, 'qr'),
             ),
@@ -602,7 +689,7 @@ class _HomePageState extends State<HomePage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.wifi_tethering_rounded),
+              leading: Icon(Icons.wifi_tethering_rounded),
               title: Text(tr(context, 'Получить рядом', 'Receive nearby')),
               subtitle: Text(
                 tr(
@@ -614,7 +701,7 @@ class _HomePageState extends State<HomePage> {
               onTap: () => Navigator.pop(context, 'nearby'),
             ),
             ListTile(
-              leading: const Icon(Icons.qr_code_scanner_rounded),
+              leading: Icon(Icons.qr_code_scanner_rounded),
               title: Text(
                 tr(context, 'Сканировать QR передачи', 'Scan transfer QR'),
               ),
@@ -846,8 +933,8 @@ class _HomePageState extends State<HomePage> {
       tooltip: tr(context, 'Настройки', 'Settings'),
       icon: Badge(
         isLabelVisible: available,
-        backgroundColor: AppColors.blue,
-        child: const Icon(Icons.settings_outlined),
+        backgroundColor: context.palette.blue,
+        child: Icon(Icons.settings_outlined),
       ),
     );
     if (updates == null) return button(false);
@@ -886,16 +973,16 @@ class _HomePageState extends State<HomePage> {
         actions: [_settingsButton(context), const SizedBox(width: 8)],
       ),
       bottomNavigationBar: NavigationBar(
-        backgroundColor: AppColors.paper,
+        backgroundColor: context.palette.paper,
         selectedIndex: _tab,
         onDestinationSelected: (index) => setState(() => _tab = index),
         destinations: [
           NavigationDestination(
-            icon: const Icon(Icons.qr_code_scanner_rounded),
+            icon: Icon(Icons.qr_code_scanner_rounded),
             label: tr(context, 'Посещаемость', 'Attendance'),
           ),
           NavigationDestination(
-            icon: const Icon(Icons.calendar_month_rounded),
+            icon: Icon(Icons.calendar_month_rounded),
             label: tr(context, 'Расписание', 'Schedule'),
           ),
         ],
@@ -925,218 +1012,249 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                 )
-              : _tab == 1
-              ? SchedulePage(
-                  accounts: _accounts,
-                  api: _scheduleApi,
-                  log: _logStore,
-                  onScanLesson: (lesson, accounts) =>
-                      _scanQueue(lesson: lesson, overrideAccounts: accounts),
-                  onPasteLesson: _pasteLesson,
-                  initialDay: _scheduleDay,
-                  initialGroupId: _scheduleGroupId,
-                  onDayChanged: (day) => _scheduleDay = day,
-                  onGroupChanged: (id) => _scheduleGroupId = id,
-                )
-              : ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
-                  children: [
-                    Text(
-                      tr(context, 'Посещаемость', 'Attendance'),
-                      style: const TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      tr(
-                        context,
-                        'Наведите камеру на QR-код — отметки отправятся сразу.',
-                        'Scan a QR and submit attendance immediately.',
-                      ),
-                      style: const TextStyle(
-                        color: AppColors.muted,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: _busy ? null : _scan,
-                        icon: const Icon(Icons.qr_code_scanner_rounded),
-                        label: Text(tr(context, 'Сканировать QR', 'Scan QR')),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: _busy ? null : _scanQueue,
-                        icon: const Icon(Icons.repeat_rounded, size: 20),
-                        label: Text(tr(context, 'Режим очереди', 'Queue mode')),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: _busy ? null : _pasteLink,
-                        icon: const Icon(Icons.link_rounded, size: 20),
-                        label: Text(
-                          tr(context, 'Вставить ссылку', 'Paste link'),
-                        ),
-                      ),
-                    ),
-                    if (_submitting) ...[
-                      const SizedBox(height: 12),
-                      const LinearProgressIndicator(),
-                      const SizedBox(height: 6),
-                      Text(
-                        tr(
-                          context,
-                          'Отправляем отметки…',
-                          'Submitting attendance…',
-                        ),
-                        style: const TextStyle(
-                          color: AppColors.muted,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextButton.icon(
-                            onPressed: _busy ? null : _shareSessions,
-                            icon: const Icon(Icons.ios_share_rounded, size: 18),
-                            label: Text(tr(context, 'Передать', 'Share')),
+              : AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  transitionBuilder: (child, animation) =>
+                      FadeTransition(opacity: animation, child: child),
+                  child: _tab == 1
+                      ? SchedulePage(
+                          key: const ValueKey('schedule-tab'),
+                          accounts: _accounts,
+                          api: _scheduleApi,
+                          log: _logStore,
+                          onScanLesson: (lesson, accounts) => _scanQueue(
+                            lesson: lesson,
+                            overrideAccounts: accounts,
                           ),
-                        ),
-                        Expanded(
-                          child: TextButton.icon(
-                            onPressed: _busy ? null : _importSessions,
-                            icon: const Icon(Icons.download_rounded, size: 18),
-                            label: Text(tr(context, 'Получить', 'Receive')),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            tr(context, 'Аккаунты', 'Accounts'),
-                            style: const TextStyle(
-                              fontSize: 21,
-                              fontWeight: FontWeight.w700,
+                          onPasteLesson: _pasteLesson,
+                          initialDay: _scheduleDay,
+                          initialGroupId: _scheduleGroupId,
+                          onDayChanged: (day) => _scheduleDay = day,
+                          onGroupChanged: (id) => _scheduleGroupId = id,
+                        )
+                      : ListView(
+                          key: const ValueKey('attendance-tab'),
+                          padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+                          children: [
+                            Text(
+                              tr(context, 'Посещаемость', 'Attendance'),
+                              style: TextStyle(
+                                fontSize: 30,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
-                          ),
-                        ),
-                        TextButton.icon(
-                          onPressed: _busy ? null : () => _login(),
-                          icon: const Icon(Icons.add_rounded, size: 19),
-                          label: Text(tr(context, 'Добавить', 'Add')),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    if (_accounts.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 30),
-                        child: Text(
-                          tr(
-                            context,
-                            'Добавьте первый аккаунт через МИРЭА.',
-                            'Add your first account through MIREA.',
-                          ),
-                          style: const TextStyle(color: AppColors.muted),
-                        ),
-                      ),
-                    if (_accounts.isNotEmpty) ...[
-                      Row(
-                        children: [
-                          Text(
-                            trf(
-                              context,
-                              'Выбрано: {count}',
-                              'Selected: {count}',
-                              {
-                                'count': _selected
-                                    .where(
-                                      (id) => _accounts.any((a) => a.id == id),
-                                    )
-                                    .length,
-                              },
+                            const SizedBox(height: 6),
+                            Text(
+                              tr(
+                                context,
+                                'Наведите камеру на QR-код — отметим выбранных. Если не вышло, попробуем снова.',
+                                'Scan a QR to mark selected accounts. Keep it in view for retries.',
+                              ),
+                              style: TextStyle(
+                                color: context.palette.muted,
+                                fontSize: 14,
+                              ),
                             ),
-                            style: const TextStyle(
-                              color: AppColors.muted,
-                              fontSize: 12,
+                            const SizedBox(height: 24),
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton.icon(
+                                onPressed: _busy ? null : _scan,
+                                icon: Icon(Icons.qr_code_scanner_rounded),
+                                label: Text(
+                                  tr(context, 'Сканировать QR', 'Scan QR'),
+                                ),
+                              ),
                             ),
-                          ),
-                          const Spacer(),
-                          TextButton(
-                            onPressed: _busy
-                                ? null
-                                : () => setState(() {
-                                    if (_selected.length == _accounts.length) {
-                                      _selected.clear();
-                                    } else {
-                                      _selected
-                                        ..clear()
-                                        ..addAll(_accounts.map((a) => a.id));
-                                    }
-                                  }),
-                            child: Text(
-                              _selected.length == _accounts.length
-                                  ? tr(
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: _busy ? null : _pasteLink,
+                                icon: Icon(Icons.link_rounded, size: 20),
+                                label: Text(
+                                  tr(context, 'Вставить ссылку', 'Paste link'),
+                                ),
+                              ),
+                            ),
+                            if (_submitting) ...[
+                              const SizedBox(height: 12),
+                              const LinearProgressIndicator(),
+                              const SizedBox(height: 6),
+                              Text(
+                                tr(
+                                  context,
+                                  'Отправляем отметки…',
+                                  'Submitting attendance…',
+                                ),
+                                style: TextStyle(
+                                  color: context.palette.muted,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextButton.icon(
+                                    onPressed: _busy ? null : _shareSessions,
+                                    icon: Icon(
+                                      Icons.ios_share_rounded,
+                                      size: 18,
+                                    ),
+                                    label: Text(
+                                      tr(context, 'Передать', 'Share'),
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: TextButton.icon(
+                                    onPressed: _busy ? null : _importSessions,
+                                    icon: Icon(
+                                      Icons.download_rounded,
+                                      size: 18,
+                                    ),
+                                    label: Text(
+                                      tr(context, 'Получить', 'Receive'),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 18),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    tr(context, 'Аккаунты', 'Accounts'),
+                                    style: TextStyle(
+                                      fontSize: 21,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                TextButton.icon(
+                                  onPressed: _busy ? null : () => _login(),
+                                  icon: Icon(Icons.add_rounded, size: 19),
+                                  label: Text(tr(context, 'Добавить', 'Add')),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            if (_accounts.isEmpty)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 30,
+                                ),
+                                child: Text(
+                                  tr(
+                                    context,
+                                    'Добавьте первый аккаунт через МИРЭА.',
+                                    'Add your first account through MIREA.',
+                                  ),
+                                  style: TextStyle(
+                                    color: context.palette.muted,
+                                  ),
+                                ),
+                              ),
+                            if (_accounts.isNotEmpty) ...[
+                              Row(
+                                children: [
+                                  Text(
+                                    trf(
                                       context,
-                                      'Снять выбор',
-                                      'Clear selection',
-                                    )
-                                  : tr(context, 'Выбрать все', 'Select all'),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: OutlinedButton.icon(
-                          onPressed: _busy || _selected.isEmpty
-                              ? null
-                              : () => _chooseGroup(Set.of(_selected)),
-                          icon: const Icon(Icons.groups_rounded, size: 18),
-                          label: Text(
-                            tr(context, 'Назначить группу', 'Assign group'),
-                          ),
+                                      'Выбрано: {count}',
+                                      'Selected: {count}',
+                                      {
+                                        'count': _selected
+                                            .where(
+                                              (id) => _accounts.any(
+                                                (a) => a.id == id,
+                                              ),
+                                            )
+                                            .length,
+                                      },
+                                    ),
+                                    style: TextStyle(
+                                      color: context.palette.muted,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  TextButton(
+                                    onPressed: _busy
+                                        ? null
+                                        : () => setState(() {
+                                            if (_selected.length ==
+                                                _accounts.length) {
+                                              _selected.clear();
+                                            } else {
+                                              _selected
+                                                ..clear()
+                                                ..addAll(
+                                                  _accounts.map((a) => a.id),
+                                                );
+                                            }
+                                          }),
+                                    child: Text(
+                                      _selected.length == _accounts.length
+                                          ? tr(
+                                              context,
+                                              'Снять выбор',
+                                              'Clear selection',
+                                            )
+                                          : tr(
+                                              context,
+                                              'Выбрать все',
+                                              'Select all',
+                                            ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: OutlinedButton.icon(
+                                  onPressed: _busy || _selected.isEmpty
+                                      ? null
+                                      : () => _chooseGroup(Set.of(_selected)),
+                                  icon: Icon(Icons.groups_rounded, size: 18),
+                                  label: Text(
+                                    tr(
+                                      context,
+                                      'Назначить группу',
+                                      'Assign group',
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                            ],
+                            for (final account in _accounts)
+                              _AccountRow(
+                                account: account,
+                                counts: countsByAccount == null
+                                    ? null
+                                    : (countsByAccount[account.id] ??
+                                          AttendanceCounts.zero),
+                                selected: _selected.contains(account.id),
+                                busy: _submitting,
+                                result: _results[account.id],
+                                error: _errors[account.id],
+                                onTap: () => setState(() {
+                                  if (!_selected.add(account.id)) {
+                                    _selected.remove(account.id);
+                                  }
+                                }),
+                                onReauth: () => _login(replace: account),
+                                onGroup: () => _chooseGroup({account.id}),
+                                onRemove: () => _remove(account),
+                              ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                    ],
-                    for (final account in _accounts)
-                      _AccountRow(
-                        account: account,
-                        counts: countsByAccount == null
-                            ? null
-                            : (countsByAccount[account.id] ??
-                                  AttendanceCounts.zero),
-                        selected: _selected.contains(account.id),
-                        busy: _submitting,
-                        result: _results[account.id],
-                        error: _errors[account.id],
-                        onTap: () => setState(() {
-                          if (!_selected.add(account.id)) {
-                            _selected.remove(account.id);
-                          }
-                        }),
-                        onReauth: () => _login(replace: account),
-                        onGroup: () => _chooseGroup({account.id}),
-                        onRemove: () => _remove(account),
-                      ),
-                  ],
                 ),
         ),
       ),
@@ -1178,105 +1296,128 @@ class _AccountRow extends StatelessWidget {
     final color = error != null || result?.state == ApprovalState.rejected
         ? Theme.of(context).colorScheme.error
         : result?.state == ApprovalState.approved
-        ? const Color(0xFF238664)
-        : AppColors.muted;
+        ? context.palette.success
+        : context.palette.muted;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          onTap: busy ? null : onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        decoration: BoxDecoration(
+          color: selected
+              ? context.palette.blue.withValues(alpha: .07)
+              : context.palette.surface,
+          border: Border.all(
+            color: selected
+                ? context.palette.blue.withValues(alpha: .35)
+                : context.palette.line,
+          ),
           borderRadius: BorderRadius.circular(14),
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(14, 9, 4, 9),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.line),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  selected ? Icons.check_circle_rounded : Icons.circle_outlined,
-                  color: selected ? AppColors.blue : AppColors.muted,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        account.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      if (account.groupName != null)
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+          child: InkWell(
+            onTap: busy ? null : onTap,
+            borderRadius: BorderRadius.circular(14),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 9, 4, 9),
+              child: Row(
+                children: [
+                  Icon(
+                    selected
+                        ? Icons.check_circle_rounded
+                        : Icons.circle_outlined,
+                    color: selected
+                        ? context.palette.blue
+                        : context.palette.muted,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          account.groupName!,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.muted,
-                          ),
+                          account.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontWeight: FontWeight.w600),
                         ),
-                      Text(
-                        trMessage(context, status),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12, color: color),
-                      ),
-                      const SizedBox(height: 5),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 2,
-                        children: [
-                          _countText(
-                            context,
-                            'Сегодня',
-                            'Today',
-                            counts?.today,
+                        if (account.groupName != null)
+                          Text(
+                            account.groupName!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: context.palette.muted,
+                            ),
                           ),
-                          _countText(context, 'Неделя', 'Week', counts?.week),
-                          _countText(context, 'Всего', 'Total', counts?.total),
-                        ],
+                        Text(
+                          trMessage(context, status),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 12, color: color),
+                        ),
+                        const SizedBox(height: 5),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 2,
+                          children: [
+                            _countText(
+                              context,
+                              'Сегодня',
+                              'Today',
+                              counts?.today,
+                            ),
+                            _countText(context, 'Неделя', 'Week', counts?.week),
+                            _countText(
+                              context,
+                              'Всего',
+                              'Total',
+                              counts?.total,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  PopupMenuButton<String>(
+                    enabled: !busy,
+                    tooltip: tr(
+                      context,
+                      'Действия с аккаунтом',
+                      'Account actions',
+                    ),
+                    icon: Icon(
+                      Icons.more_vert_rounded,
+                      color: context.palette.muted,
+                    ),
+                    onSelected: (value) {
+                      if (value == 'login') onReauth();
+                      if (value == 'group') onGroup();
+                      if (value == 'remove') onRemove();
+                    },
+                    itemBuilder: (_) => [
+                      PopupMenuItem(
+                        value: 'login',
+                        child: Text(
+                          tr(context, 'Войти снова', 'Sign in again'),
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'group',
+                        child: Text(
+                          tr(context, 'Выбрать группу', 'Choose group'),
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'remove',
+                        child: Text(tr(context, 'Удалить', 'Delete')),
                       ),
                     ],
                   ),
-                ),
-                PopupMenuButton<String>(
-                  enabled: !busy,
-                  tooltip: tr(
-                    context,
-                    'Действия с аккаунтом',
-                    'Account actions',
-                  ),
-                  icon: const Icon(
-                    Icons.more_vert_rounded,
-                    color: AppColors.muted,
-                  ),
-                  onSelected: (value) {
-                    if (value == 'login') onReauth();
-                    if (value == 'group') onGroup();
-                    if (value == 'remove') onRemove();
-                  },
-                  itemBuilder: (_) => [
-                    PopupMenuItem(
-                      value: 'login',
-                      child: Text(tr(context, 'Войти снова', 'Sign in again')),
-                    ),
-                    PopupMenuItem(
-                      value: 'group',
-                      child: Text(
-                        tr(context, 'Выбрать группу', 'Choose group'),
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'remove',
-                      child: Text(tr(context, 'Удалить', 'Delete')),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -1287,7 +1428,7 @@ class _AccountRow extends StatelessWidget {
   Widget _countText(BuildContext context, String ru, String en, int? count) =>
       Text(
         '${tr(context, ru, en)} ${count ?? '—'}',
-        style: const TextStyle(fontSize: 11, color: AppColors.muted),
+        style: TextStyle(fontSize: 11, color: context.palette.muted),
       );
 }
 

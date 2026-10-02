@@ -19,6 +19,8 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
   final List<Map<String, Object?>> _frames = [];
   String? _error;
   bool _listening = false;
+  bool _fieldOnly = false;
+  bool _fieldDetected = false;
 
   @override
   void initState() {
@@ -30,7 +32,28 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
   }
 
   Future<void> _handleCall(MethodCall call) async {
-    if (call.method != 'frames' || !mounted || call.arguments is! List) return;
+    if (!mounted) return;
+    if (call.method == 'modeChanged') {
+      setState(() {
+        _fieldOnly = call.arguments == 'field';
+        _fieldDetected = false;
+      });
+      return;
+    }
+    if (call.method == 'fieldChanged' && call.arguments is Map) {
+      final event = call.arguments as Map;
+      final detected = event['detected'] == true;
+      setState(() {
+        _fieldDetected = detected;
+        _frames.insert(0, {
+          'type': detected ? 'Field on' : 'Field off',
+          'timestampUs': event['timestampUs'],
+        });
+        if (_frames.length > 80) _frames.removeRange(80, _frames.length);
+      });
+      return;
+    }
+    if (call.method != 'frames' || call.arguments is! List) return;
     final frames = (call.arguments as List)
         .whereType<Map>()
         .map((frame) => frame.map((key, value) => MapEntry('$key', value)))
@@ -43,11 +66,13 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
 
   Future<void> _start() async {
     if (!mounted || !Platform.isAndroid) return;
+    setState(() => _fieldDetected = false);
     try {
-      await _channel.invokeMethod<void>('start');
+      final mode = await _channel.invokeMethod<String>('start');
       if (mounted) {
         setState(() {
           _listening = true;
+          _fieldOnly = mode == 'field';
           _error = null;
         });
       }
@@ -101,6 +126,26 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
         'Нужен Android 15 или новее и поддержка режима наблюдения NFC.',
         'Requires Android 15 or newer and NFC Observe Mode support.',
       ),
+      'OBSERVE_DISABLED_BY_SYSTEM' => tr(
+        context,
+        'NFC работает, но Android не разрешает включить режим наблюдения на этом устройстве.',
+        'NFC works, but Android does not allow Observe Mode on this device.',
+      ),
+      'OBSERVE_PREFERENCE_FAILED' => tr(
+        context,
+        'Android не удалось выбрать сервис проверки NFC. Закройте экран и попробуйте снова.',
+        'Android could not select the NFC diagnostic service. Reopen this screen and try again.',
+      ),
+      null when _fieldOnly && _fieldDetected => tr(
+        context,
+        'Поле NFC-считывателя обнаружено.',
+        'NFC reader field detected.',
+      ),
+      null when _fieldOnly => tr(
+        context,
+        'Слушаем поле NFC-считывателя. Кадры опроса недоступны.',
+        'Listening for an NFC reader field. Polling frames are unavailable.',
+      ),
       null when _frames.isNotEmpty => tr(
         context,
         'Сигнал считывателя обнаружен.',
@@ -135,7 +180,7 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.palette.surface,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Column(
@@ -145,13 +190,13 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
                       _frames.isEmpty
                           ? Icons.sensors_rounded
                           : Icons.check_circle_rounded,
-                      color: AppColors.blue,
+                      color: context.palette.blue,
                       size: 32,
                     ),
                     const SizedBox(height: 12),
                     Text(
                       _message(context),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w600,
                       ),
@@ -164,7 +209,7 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
                       const SizedBox(height: 12),
                       TextButton.icon(
                         onPressed: _start,
-                        icon: const Icon(Icons.refresh_rounded),
+                        icon: Icon(Icons.refresh_rounded),
                         label: Text(tr(context, 'Повторить', 'Retry')),
                       ),
                     ],
@@ -173,12 +218,24 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
               ),
               const SizedBox(height: 16),
               Text(
-                tr(
-                  context,
-                  'Телефон только слушает опрос NFC. Пропуск не передаётся, вход через турникет не выполняется. На старых Android этот режим недоступен.',
-                  'The phone only observes NFC polling. It does not present a pass or open the gate. Older Android versions cannot use this mode.',
-                ),
-                style: const TextStyle(color: AppColors.muted, fontSize: 13),
+                _error != null
+                    ? tr(
+                        context,
+                        'Этот экран не передаёт пропуск и не открывает турникет.',
+                        'This screen does not present a pass or open the gate.',
+                      )
+                    : _fieldOnly
+                    ? tr(
+                        context,
+                        'Android не предоставляет режим наблюдения на этом телефоне. Показываем только появление поля NFC-считывателя: его команды и данные пропуска недоступны.',
+                        'Android reports Observe Mode unavailable on this phone. Only reader field detection is available; polling commands and pass data are not captured.',
+                      )
+                    : tr(
+                        context,
+                        'Телефон только слушает опрос NFC. Пропуск не передаётся, вход через турникет не выполняется. На старых Android этот режим недоступен.',
+                        'The phone only observes NFC polling. It does not present a pass or open the gate. Older Android versions cannot use this mode.',
+                      ),
+                style: TextStyle(color: context.palette.muted, fontSize: 13),
               ),
               if (_frames.isNotEmpty) ...[
                 const SizedBox(height: 24),
@@ -186,8 +243,10 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
                   children: [
                     Expanded(
                       child: Text(
-                        tr(context, 'Кадры опроса', 'Polling frames'),
-                        style: const TextStyle(
+                        _fieldOnly
+                            ? tr(context, 'События поля', 'Field events')
+                            : tr(context, 'Кадры опроса', 'Polling frames'),
+                        style: TextStyle(
                           fontSize: 21,
                           fontWeight: FontWeight.w700,
                         ),
@@ -196,7 +255,7 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
                     IconButton(
                       tooltip: tr(context, 'Очистить', 'Clear'),
                       onPressed: () => setState(_frames.clear),
-                      icon: const Icon(Icons.delete_outline_rounded),
+                      icon: Icon(Icons.delete_outline_rounded),
                     ),
                   ],
                 ),
@@ -207,28 +266,39 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
                     child: Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: context.palette.surface,
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            '${frame['type'] ?? '—'}',
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
+                          Text(switch (frame['type']) {
+                            'Field on' => tr(
+                              context,
+                              'Поле появилось',
+                              'Field on',
+                            ),
+                            'Field off' => tr(
+                              context,
+                              'Поле исчезло',
+                              'Field off',
+                            ),
+                            _ => '${frame['type'] ?? '—'}',
+                          }, style: TextStyle(fontWeight: FontWeight.w700)),
                           if ('${frame['data'] ?? ''}'.isNotEmpty) ...[
                             const SizedBox(height: 5),
                             SelectableText(
                               '${frame['data']}',
-                              style: const TextStyle(fontFamily: 'monospace'),
+                              style: TextStyle(fontFamily: 'monospace'),
                             ),
                           ],
                           const SizedBox(height: 5),
                           Text(
-                            't = ${frame['timestampUs']} µs  ·  gain = ${frame['gain']}',
-                            style: const TextStyle(
-                              color: AppColors.muted,
+                            _fieldOnly
+                                ? 't = ${frame['timestampUs']} µs'
+                                : 't = ${frame['timestampUs']} µs  ·  gain = ${frame['gain']}',
+                            style: TextStyle(
+                              color: context.palette.muted,
                               fontSize: 12,
                             ),
                           ),

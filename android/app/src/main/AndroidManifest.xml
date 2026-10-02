@@ -35,6 +35,7 @@
         </activity>
         <receiver
             android:name=".ScanAllWidgetProvider"
+            android:label="@string/scan_all_widget_wide_label"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -42,6 +43,17 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/scan_all_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".ScanAllCompactWidgetProvider"
+            android:label="@string/scan_all_widget_compact_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/scan_all_widget_compact_info" />
         </receiver>
         <service
             android:name=".TurnstileProbeService"

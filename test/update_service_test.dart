@@ -219,6 +219,7 @@ void main() {
     final service = FakeReleases(
       AppRelease(
         tag: 'v1.2.0',
+        notes: '## Improvements\n\n- Smooth scrolling\n- Theme-aware scanner',
         page: Uri.parse(
           'https://github.com/riffifi/antiattendance/releases/tag/v1.2.0',
         ),
@@ -253,6 +254,9 @@ void main() {
     await tester.tap(find.text('Version v1.2.0 is available'));
     await tester.pumpAndSettle();
     expect(find.text('Open release'), findsOneWidget);
+    expect(find.text('What’s new'), findsOneWidget);
+    expect(find.text('Improvements'), findsOneWidget);
+    expect(find.textContaining('Smooth scrolling'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
     controller.dispose();
     service.close();

@@ -281,43 +281,6 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             const SizedBox(height: 28),
-            if (widget.updates != null) ...[
-              AnimatedBuilder(
-                animation: widget.updates!,
-                builder: (context, _) => CampusPanel(
-                  padding: EdgeInsets.zero,
-                  child: CampusListItem(
-                    headline: tr(context, 'Обновления', 'Updates'),
-                    supportingText: widget.updates!.updateAvailable
-                        ? trf(
-                            context,
-                            'Доступна версия {version}',
-                            'Version {version} is available',
-                            {'version': widget.updates!.release!.tag},
-                          )
-                        : tr(context, 'Проверить', 'Check now'),
-                    leading: Badge(
-                      isLabelVisible: widget.updates!.updateAvailable,
-                      child: Icon(
-                        Icons.system_update_rounded,
-                        color: context.palette.blue,
-                      ),
-                    ),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => Navigator.of(context).push<void>(
-                      MaterialPageRoute(
-                        builder: (_) => UpdatesPage(
-                          updates: widget.updates!,
-                          downloadApk: widget.downloadApk,
-                          installApk: widget.installApk,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 28),
-            ],
             Text(
               tr(context, 'Тестирование', 'Testing'),
               style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
@@ -365,6 +328,43 @@ class _SettingsPageState extends State<SettingsPage> {
               style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
+            if (widget.updates != null) ...[
+              AnimatedBuilder(
+                animation: widget.updates!,
+                builder: (context, _) => CampusPanel(
+                  padding: EdgeInsets.zero,
+                  child: CampusListItem(
+                    headline: tr(context, 'Обновления', 'Updates'),
+                    supportingText: widget.updates!.updateAvailable
+                        ? trf(
+                            context,
+                            'Доступна версия {version}',
+                            'Version {version} is available',
+                            {'version': widget.updates!.release!.tag},
+                          )
+                        : tr(context, 'Проверить', 'Check now'),
+                    leading: Badge(
+                      isLabelVisible: widget.updates!.updateAvailable,
+                      child: Icon(
+                        Icons.system_update_rounded,
+                        color: context.palette.blue,
+                      ),
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => Navigator.of(context).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) => UpdatesPage(
+                          updates: widget.updates!,
+                          downloadApk: widget.downloadApk,
+                          installApk: widget.installApk,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             CampusPanel(
               padding: EdgeInsets.zero,
               child: CampusListItem(

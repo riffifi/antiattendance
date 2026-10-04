@@ -405,7 +405,7 @@ class _SchedulePageState extends State<SchedulePage>
               ),
             )
           else ...[
-            M3EMenu(
+            AppActionMenu(
               entries: [
                 for (final entry in groups.entries)
                   M3EMenuEntry(value: entry.key, label: entry.value),

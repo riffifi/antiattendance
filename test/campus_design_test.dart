@@ -1,3 +1,6 @@
+import 'package:antiattendance/update_service.dart';
+import 'package:antiattendance/updates_page.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:antiattendance/about_page.dart';
 import 'package:antiattendance/settings_page.dart';
 import 'package:antiattendance/app_settings.dart';
@@ -16,6 +19,18 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+class _PreviewRelease extends GitHubUpdateService {
+  @override
+  Future<AppRelease?> latest() async => AppRelease(
+    tag: 'v1.3.0',
+    page: Uri.parse(
+      'https://github.com/riffifi/antiattendance/releases/tag/v1.3.0',
+    ),
+    publishedAt: DateTime.utc(2026, 10, 4),
+    notes: '## A smoother campus\n\n- Smoother navigation and scrolling\n- Theme-aware QR scanning\n- Clearer attendance and passes\n\n## Improvements\n\nReceive an alert when a new version is ready. Update directly from the app.',
+  );
+}
 
 class _Accounts extends AccountStore {
   @override
@@ -120,6 +135,16 @@ void main() {
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
       }
+      await tester.drag(
+        find.byType(CustomScrollView).first,
+        const Offset(0, -2000),
+      );
+      await tester.pumpAndSettle();
+      final last = find.byKey(const ValueKey('c'));
+      expect(
+        tester.getBottomLeft(last).dy,
+        lessThan(tester.getTopLeft(bar).dy),
+      );
       await tester.pumpWidget(const SizedBox());
       await tester.pumpAndSettle();
     });
@@ -281,6 +306,17 @@ void main() {
         tester.view.devicePixelRatio = 1;
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
+        final updates = UpdateController(
+          service: _PreviewRelease(),
+          packageInfo: () async => PackageInfo(
+            appName: 'AntiAttendance',
+            packageName: 'antiattendance',
+            version: '1.2.13',
+            buildNumber: '13',
+          ),
+        );
+        await updates.check();
+        addTearDown(updates.dispose);
         final boundary = GlobalKey();
         await tester.pumpWidget(
           RepaintBoundary(
@@ -303,6 +339,7 @@ void main() {
           'Passes',
           'Settings',
           'About',
+          'Updates',
         ].indexed) {
           if (index >= 3) {
             tester
@@ -317,7 +354,9 @@ void main() {
                             monetAvailable: true,
                             onLanguageChanged: (_) {},
                           )
-                        : const AboutPage(version: '1.2.13'),
+                        : index == 4
+                        ? const AboutPage(version: '1.2.13')
+                        : UpdatesPage(updates: updates),
                   ),
                 );
             await tester.pumpAndSettle();

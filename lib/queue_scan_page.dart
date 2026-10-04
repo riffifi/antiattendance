@@ -101,10 +101,7 @@ class _QueueScanPageState extends State<QueueScanPage> {
                 if (value != null) {
                   try {
                     attendanceTokenFromQr(value);
-                    _tracker.detect(
-                      barcode.corners,
-                      barcode.size.isEmpty ? capture.size : barcode.size,
-                    );
+                    _tracker.detect(barcode.corners, capture.size);
                     _queue.accept(value);
                   } on FormatException {
                     /* Unrelated QR codes do not move the frame. */

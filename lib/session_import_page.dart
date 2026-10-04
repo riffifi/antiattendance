@@ -88,10 +88,7 @@ class _SessionImportPageState extends State<SessionImportPage> {
             final value = barcode.rawValue;
             if (value != null && _collector.accept(value)) {
               changed = true;
-              _tracker.detect(
-                barcode.corners,
-                barcode.size.isEmpty ? capture.size : barcode.size,
-              );
+              _tracker.detect(barcode.corners, capture.size);
             }
           }
           if (changed && mounted) {

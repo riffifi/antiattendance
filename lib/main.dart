@@ -751,14 +751,8 @@ class _HomePageState extends State<HomePage> {
     final recorded = <String>{};
     try {
       await Navigator.of(context).push<void>(
-        PageRouteBuilder<void>(
-          transitionDuration: MediaQuery.disableAnimationsOf(context)
-              ? Duration.zero
-              : const Duration(milliseconds: 220),
-          reverseTransitionDuration: MediaQuery.disableAnimationsOf(context)
-              ? Duration.zero
-              : const Duration(milliseconds: 180),
-          pageBuilder: (_, _, _) => QueueScanPage(
+        MaterialPageRoute<void>(
+          builder: (_) => QueueScanPage(
             accounts: accounts,
             api: _api,
             onUpdate: (queue) {
@@ -779,22 +773,6 @@ class _HomePageState extends State<HomePage> {
                   ..addAll(queue.errors);
               });
             },
-          ),
-          transitionsBuilder: (context, animation, _, child) => FadeTransition(
-            opacity: animation,
-            child: SlideTransition(
-              position:
-                  Tween<Offset>(
-                    begin: const Offset(0, 0.04),
-                    end: Offset.zero,
-                  ).animate(
-                    CurvedAnimation(
-                      parent: animation,
-                      curve: Curves.easeOutCubic,
-                    ),
-                  ),
-              child: child,
-            ),
           ),
         ),
       );
@@ -1725,7 +1703,7 @@ class _AccountRow extends StatelessWidget {
                         ],
                       ),
                     ),
-                    M3EMenu(
+                    AppActionMenu(
                       entries: [
                         M3EMenuEntry(
                           value: 'rename',

@@ -15,12 +15,16 @@ class AppRelease {
     this.apk,
     this.apkSha256,
     this.apkSize,
+    this.notes = '',
+    this.publishedAt,
   });
   final String tag;
   final Uri page;
   final Uri? apk;
   final String? apkSha256;
   final int? apkSize;
+  final String notes;
+  final DateTime? publishedAt;
 }
 
 class GitHubUpdateService {
@@ -100,6 +104,10 @@ class GitHubUpdateService {
       apk: apk?.url,
       apkSha256: apk?.sha256,
       apkSize: apk?.size,
+      notes: data['body'] is String ? data['body'] as String : '',
+      publishedAt: data['published_at'] is String
+          ? DateTime.tryParse(data['published_at'] as String)
+          : null,
     );
   }
 
@@ -157,9 +165,15 @@ class UpdateController extends ChangeNotifier {
   String? installedVersion;
   AppRelease? release;
   bool updateAvailable = false;
+  DateTime? lastCheckedAt;
 
-  Future<void> check() async {
-    if (checking) return;
+  Future<void> check({bool force = true}) async {
+    if (_disposed || checking) return;
+    if (!force &&
+        lastCheckedAt != null &&
+        DateTime.now().difference(lastCheckedAt!) < const Duration(hours: 6)) {
+      return;
+    }
     checking = true;
     error = null;
     notifyListeners();
@@ -173,6 +187,7 @@ class UpdateController extends ChangeNotifier {
           latest != null &&
           isNewerRelease(latest.tag, info.version, info.buildNumber);
       checked = true;
+      lastCheckedAt = DateTime.now();
     } catch (_) {
       if (!_disposed) error = 'Could not check for updates.';
     } finally {

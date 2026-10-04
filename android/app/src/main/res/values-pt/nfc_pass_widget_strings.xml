@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nfc_pass_widget_title">Passes NFC</string>
+    <string name="nfc_pass_widget_wide_label">Passes NFC (2×1)</string>
+    <string name="nfc_pass_widget_compact_label">Passes NFC (1×1)</string>
+    <string name="nfc_pass_widget_description">Iniciar a fila de passes NFC guardada</string>
+</resources>

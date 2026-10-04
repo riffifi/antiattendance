@@ -1,0 +1,5 @@
+<resources>
+    <string name="updates_channel">App updates</string>
+    <string name="update_available">Update available</string>
+    <string name="update_version_available">Version %1$s is available. Tap to view release notes.</string>
+</resources>

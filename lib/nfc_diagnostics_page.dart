@@ -1,7 +1,9 @@
+import 'package:material_3_expressive/material_3_expressive.dart';
+
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
 import 'app_theme.dart';
@@ -119,6 +121,7 @@ class _NfcDiagnosticsPageState extends State<NfcDiagnosticsPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(tr(context, 'Проверка NFC', 'NFC diagnostics')),
+        automaticallyImplyLeading: true,
       ),
       body: Center(
         child: ConstrainedBox(
@@ -152,7 +155,7 @@ class _NfcDiagnosticsPageState extends State<NfcDiagnosticsPage> {
                     ),
                     if (_scanning && tag == null) ...[
                       const SizedBox(height: 16),
-                      const LinearProgressIndicator(),
+                      const M3EProgressIndicator.linearWavy(),
                     ],
                   ],
                 ),
@@ -181,19 +184,31 @@ class _NfcDiagnosticsPageState extends State<NfcDiagnosticsPage> {
                       if (tag['sak'] != null) _detail('NFC-A SAK', tag['sak']),
                       if (tag['maxTransceiveLength'] != null) ...[
                         _detail(
-                          'ISO-DEP max bytes',
+                          tr(
+                            context,
+                            'ISO-DEP: максимальный размер',
+                            'ISO-DEP max bytes',
+                          ),
                           tag['maxTransceiveLength'],
                         ),
                         _detail(
-                          'ISO-DEP historical bytes',
+                          tr(
+                            context,
+                            'ISO-DEP: исторические байты',
+                            'ISO-DEP historical bytes',
+                          ),
                           tag['historicalBytesLength'],
                         ),
                         _detail(
-                          'ISO-DEP higher layer bytes',
+                          tr(
+                            context,
+                            'ISO-DEP: байты верхнего уровня',
+                            'ISO-DEP higher layer bytes',
+                          ),
                           tag['hiLayerResponseLength'],
                         ),
                         _detail(
-                          'Extended APDU',
+                          tr(context, 'Расширенные APDU', 'Extended APDU'),
                           tag['extendedApduSupported'] == true
                               ? tr(context, 'Да', 'Yes')
                               : tr(context, 'Нет', 'No'),

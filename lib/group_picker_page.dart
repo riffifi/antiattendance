@@ -1,4 +1,7 @@
-import 'package:flutter/material.dart';
+import 'campus_design.dart';
+
+import 'package:material_3_expressive/material_3_expressive.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'l10n.dart';
 import 'schedule_api.dart';
@@ -59,7 +62,10 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(tr(context, 'Выбрать группу', 'Choose group'))),
+    appBar: AppBar(
+      title: Text(tr(context, 'Выбрать группу', 'Choose group')),
+      automaticallyImplyLeading: true,
+    ),
     body: Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 640),
@@ -67,25 +73,25 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
           children: [
             Padding(
               padding: const EdgeInsets.all(20),
-              child: TextField(
+              child: CampusTextField(
                 controller: _controller,
                 autofocus: true,
-                decoration: InputDecoration(
-                  hintText: tr(
-                    context,
-                    'Например, ИНБО-10-23',
-                    'For example, ИНБО-10-23',
-                  ),
-                  prefixIcon: const Icon(Icons.search_rounded),
-                  suffixIcon: IconButton(
-                    onPressed: _search,
-                    icon: const Icon(Icons.arrow_forward_rounded),
-                  ),
+                label: tr(
+                  context,
+                  'Например, ИНБО-10-23',
+                  'For example, ИНБО-10-23',
+                ),
+                leading: const Icon(Icons.search_rounded),
+                trailing: M3EIconButton(
+                  suppressInk: true,
+                  onPressed: _search,
+                  icon: const Icon(Icons.arrow_forward_rounded),
+                  variant: M3EIconButtonVariant.standard,
                 ),
                 onSubmitted: (_) => _search(),
               ),
             ),
-            if (_loading) const LinearProgressIndicator(),
+            if (_loading) const M3EProgressIndicator.linearWavy(),
             if (_error != null)
               Padding(padding: const EdgeInsets.all(16), child: Text(_error!)),
             Expanded(
@@ -93,8 +99,8 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
                 itemCount: _groups.length,
                 itemBuilder: (context, index) {
                   final group = _groups[index];
-                  return ListTile(
-                    title: Text(group.name),
+                  return CampusListItem(
+                    headline: (group.name),
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () => Navigator.pop(context, group),
                   );

@@ -1,0 +1,16 @@
+name: nfc_pass_client
+description: Configurable gRPC-Web client for university NFC-pass providers.
+version: 0.1.0+1
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
+  flutter: ^3.24.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  grpc: ^5.1.0
+  http: ^1.6.0
+  protobuf: ^6.0.0
+

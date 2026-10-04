@@ -1,15 +1,16 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
 enum AppThemeMode { light, dark, amoled }
 
 abstract final class AppColors {
-  static const paper = Color(0xFFF5F6F3);
-  static const ink = Color(0xFF14243A);
-  static const muted = Color(0xFF718093);
-  static const blue = Color(0xFF315DDE);
+  static const paper = Color(0xFFFAFAFA);
+  static const ink = Color(0xFF20232B);
+  static const muted = Color(0xFF636774);
+  static const blue = Color(0xFF234CDB);
   static const deepBlue = Color(0xFF152B62);
-  static const line = Color(0xFFE3E8EC);
+  static const line = Color(0xFFE2E3E9);
   static const lime = Color(0xFFD9F36B);
   static const mint = Color(0xFFE7F6EE);
   static const red = Color(0xFFFCE9E4);
@@ -56,7 +57,7 @@ class AppPalette {
       deepBlue: isDark ? scheme.onPrimaryContainer : scheme.primary,
       line: scheme.outlineVariant,
       selected: scheme.primaryContainer,
-      mint: isDark ? scheme.secondaryContainer : AppColors.mint,
+      mint: scheme.secondaryContainer,
       success: isDark ? const Color(0xFF73D5AB) : const Color(0xFF238664),
     );
   }
@@ -72,59 +73,118 @@ abstract final class AppTheme {
   static ThemeData build(AppThemeMode mode, {Color? monetSeed}) {
     final isDark = mode != AppThemeMode.light;
     final amoled = mode == AppThemeMode.amoled;
+    final generated = ColorScheme.fromSeed(
+      seedColor: monetSeed ?? AppColors.blue,
+      brightness: isDark ? Brightness.dark : Brightness.light,
+    );
     final paper = amoled
         ? Colors.black
+        : monetSeed != null
+        ? generated.surface
         : isDark
-        ? const Color(0xFF101820)
+        ? const Color(0xFF14151A)
         : AppColors.paper;
-    final surface = amoled
+    final surface = monetSeed != null
+        ? generated.surfaceContainerLow
+        : amoled
         ? const Color(0xFF0A0A0A)
         : isDark
-        ? const Color(0xFF1B2632)
+        ? const Color(0xFF202127)
         : Colors.white;
-    final ink = isDark ? const Color(0xFFF2F5F8) : AppColors.ink;
-    final muted = isDark ? const Color(0xFFA7B5C4) : AppColors.muted;
-    final line = isDark ? const Color(0xFF354251) : AppColors.line;
-    final scheme =
-        (monetSeed == null
-                ? isDark
-                      ? ColorScheme.fromSeed(
-                          seedColor: AppColors.blue,
-                          brightness: Brightness.dark,
-                        )
-                      : const ColorScheme.light(
-                          primary: AppColors.blue,
-                          onPrimary: Colors.white,
-                          error: Color(0xFFBD4B46),
-                        )
-                : ColorScheme.fromSeed(
-                    seedColor: monetSeed,
-                    brightness: isDark ? Brightness.dark : Brightness.light,
-                  ))
-            .copyWith(
-              surface: surface,
-              onSurface: ink,
-              onSurfaceVariant: muted,
-              outlineVariant: line,
-            );
+    final ink = monetSeed != null
+        ? generated.onSurface
+        : isDark
+        ? const Color(0xFFF2F5F8)
+        : AppColors.ink;
+    final muted = monetSeed != null
+        ? generated.onSurfaceVariant
+        : isDark
+        ? const Color(0xFFA7ADBD)
+        : AppColors.muted;
+    final line = monetSeed != null
+        ? generated.outlineVariant
+        : isDark
+        ? const Color(0xFF3B3D47)
+        : AppColors.line;
+    final scheme = generated.copyWith(
+      primary: monetSeed == null && !isDark ? AppColors.blue : null,
+      onPrimary: monetSeed == null && !isDark ? Colors.white : null,
+      surface: surface,
+      onSurface: ink,
+      onSurfaceVariant: muted,
+      outlineVariant: line,
+    );
     final base = ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       fontFamily: 'Geist',
     );
+    final feedback = WidgetStateProperty.resolveWith<Color?>(
+      (states) =>
+          states.contains(WidgetState.focused) ||
+              states.contains(WidgetState.hovered)
+          ? scheme.primary.withValues(alpha: .08)
+          : Colors.transparent,
+    );
     return base.copyWith(
+      splashFactory: NoSplash.splashFactory,
+      splashColor: Colors.transparent,
+      highlightColor: Colors.transparent,
+      hoverColor: scheme.primary.withValues(alpha: .05),
+      focusColor: scheme.primary.withValues(alpha: .08),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+        },
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          minimumSize: const Size(48, 48),
+          foregroundColor: muted,
+        ).copyWith(overlayColor: feedback),
+      ),
       scaffoldBackgroundColor: paper,
       canvasColor: paper,
       cardColor: surface,
-      textTheme: base.textTheme.apply(
-        fontFamily: 'Geist',
-        bodyColor: ink,
-        displayColor: ink,
+      textTheme: base.textTheme
+          .copyWith(
+            headlineLarge: TextStyle(
+              fontSize: 36,
+              height: 1.05,
+              letterSpacing: -1.5,
+              fontWeight: FontWeight.w800,
+              color: ink,
+            ),
+            titleLarge: TextStyle(
+              fontSize: 22,
+              letterSpacing: -.6,
+              fontWeight: FontWeight.w700,
+              color: ink,
+            ),
+          )
+          .apply(fontFamily: 'Geist', bodyColor: ink, displayColor: ink),
+      dividerTheme: DividerThemeData(color: line, thickness: 1, space: 1),
+      listTileTheme: ListTileThemeData(
+        iconColor: muted,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: surface,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        showDragHandle: true,
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: paper,
         foregroundColor: ink,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         centerTitle: false,
         titleTextStyle: TextStyle(
           fontFamily: 'Geist',
@@ -139,14 +199,15 @@ abstract final class AppTheme {
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: paper,
-        indicatorColor: scheme.primary,
+        backgroundColor: surface,
+        surfaceTintColor: Colors.transparent,
+        indicatorColor: scheme.primaryContainer,
         elevation: 0,
-        height: 70,
+        height: 76,
         iconTheme: WidgetStateProperty.resolveWith(
           (states) => IconThemeData(
             color: states.contains(WidgetState.selected)
-                ? scheme.onPrimary
+                ? scheme.onPrimaryContainer
                 : muted,
             size: 23,
           ),
@@ -172,14 +233,14 @@ abstract final class AppTheme {
           disabledForegroundColor: muted,
           minimumSize: const Size(0, 52),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
           ),
           textStyle: const TextStyle(
             fontFamily: 'Geist',
             fontSize: 15,
             fontWeight: FontWeight.w600,
           ),
-        ),
+        ).copyWith(overlayColor: feedback),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
@@ -187,16 +248,42 @@ abstract final class AppTheme {
           side: BorderSide(color: line),
           minimumSize: const Size(0, 48),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(12),
           ),
+        ).copyWith(overlayColor: feedback),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: scheme.primary,
+          minimumSize: const Size(0, 44),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          textStyle: const TextStyle(
+            fontFamily: 'Geist',
+            fontWeight: FontWeight.w600,
+          ),
+        ).copyWith(overlayColor: feedback),
+      ),
+      cardTheme: CardThemeData(
+        color: surface,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: line),
         ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: surface,
+        side: BorderSide(color: line),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: paper,
+        fillColor: surface,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: line),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
@@ -205,7 +292,7 @@ abstract final class AppTheme {
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: isDark ? const Color(0xFF2E3B49) : AppColors.ink,
@@ -213,7 +300,7 @@ abstract final class AppTheme {
           fontFamily: 'Geist',
           color: Colors.white,
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         behavior: SnackBarBehavior.floating,
       ),
     );

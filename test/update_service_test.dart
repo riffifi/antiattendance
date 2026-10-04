@@ -7,7 +7,7 @@ import 'package:antiattendance/external_links.dart';
 import 'package:antiattendance/update_service.dart';
 import 'package:antiattendance/settings_page.dart';
 import 'package:antiattendance/app_settings.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -44,6 +44,8 @@ void main() {
         (request) async => http.Response(
           jsonEncode({
             'tag_name': 'v1.2.0',
+            'body': '## Improvements\n\n- Smoother scrolling',
+            'published_at': '2026-10-04T09:00:00Z',
             'html_url':
                 'https://github.com/riffifi/antiattendance/releases/tag/v1.2.0',
             'assets': [
@@ -65,6 +67,8 @@ void main() {
     );
     final release = (await service.latest())!;
     expect(release.tag, 'v1.2.0');
+    expect(release.notes, contains('Smoother scrolling'));
+    expect(release.publishedAt, DateTime.utc(2026, 10, 4, 9));
     expect(release.apk!.host, 'github.com');
     expect(release.apk!.pathSegments.last, 'app-release.apk');
     expect(release.apkSize, 1234);
@@ -246,6 +250,8 @@ void main() {
       200,
     );
     expect(find.text('Version v1.2.0 is available'), findsOneWidget);
+    await tester.tap(find.text('Version v1.2.0 is available'));
+    await tester.pumpAndSettle();
     expect(find.text('Open release'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
     controller.dispose();

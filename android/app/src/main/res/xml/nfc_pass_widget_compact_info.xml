@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="56dp"
+    android:minHeight="50dp"
+    android:targetCellWidth="1"
+    android:targetCellHeight="1"
+    android:initialLayout="@layout/nfc_pass_widget_compact"
+    android:resizeMode="none"
+    android:widgetCategory="home_screen"
+    android:description="@string/nfc_pass_widget_description" />

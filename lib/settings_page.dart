@@ -1,13 +1,17 @@
+import 'updates_page.dart';
+import 'expressive.dart';
+import 'campus_design.dart';
+
+import 'package:material_3_expressive/material_3_expressive.dart';
+
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'about_page.dart';
-import 'apk_update.dart';
 import 'app_settings.dart';
 import 'app_theme.dart';
-import 'external_links.dart';
 import 'l10n.dart';
 import 'nfc_diagnostics_page.dart';
 import 'turnstile_probe_page.dart';
@@ -54,8 +58,6 @@ class _SettingsPageState extends State<SettingsPage> {
   late AppThemeMode _themeMode = widget.themeMode;
   late bool _monetEnabled = widget.monetEnabled;
   bool _saving = false;
-  bool _downloading = false;
-  double? _downloadProgress;
 
   @override
   void didUpdateWidget(covariant SettingsPage oldWidget) {
@@ -68,126 +70,6 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  Future<File> _downloadApk(
-    AppRelease release,
-    void Function(int received, int? total) onProgress,
-  ) async {
-    final downloader = ApkUpdateDownloader();
-    try {
-      return await downloader.download(release, onProgress: onProgress);
-    } finally {
-      downloader.close();
-    }
-  }
-
-  Future<void> _downloadAndInstall(AppRelease release) async {
-    if (_downloading) return;
-    setState(() {
-      _downloading = true;
-      _downloadProgress = null;
-    });
-    try {
-      final apk = await (widget.downloadApk ?? _downloadApk)(release, (
-        received,
-        total,
-      ) {
-        if (!mounted) return;
-        final next = total == null || total == 0
-            ? null
-            : (received / total).clamp(0.0, 1.0);
-        if (next == null && _downloadProgress == null ||
-            next != null &&
-                _downloadProgress != null &&
-                (next * 100).floor() == (_downloadProgress! * 100).floor()) {
-          return;
-        }
-        setState(() {
-          _downloadProgress = next;
-        });
-      });
-      if (!mounted) return;
-      await (widget.installApk ?? openAndroidInstaller)(apk);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            tr(
-              context,
-              'Подтвердите установку в Android.',
-              'Confirm installation in Android.',
-            ),
-          ),
-        ),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            tr(
-              context,
-              'Не удалось скачать или установить обновление.',
-              'Could not download or install the update.',
-            ),
-          ),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _downloading = false;
-          _downloadProgress = null;
-        });
-      }
-    }
-  }
-
-  Future<void> _openRelease(Uri uri) async {
-    if (!await openWebPage(uri)) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              tr(
-                context,
-                'Не удалось открыть GitHub.',
-                'Could not open GitHub.',
-              ),
-            ),
-          ),
-        );
-      }
-    }
-  }
-
-  String _updateStatus(UpdateController updates) {
-    if (updates.checking) {
-      return tr(context, 'Проверяем обновления…', 'Checking for updates…');
-    }
-    if (updates.error != null) {
-      return tr(
-        context,
-        'Не удалось проверить обновления.',
-        'Could not check for updates.',
-      );
-    }
-    if (!updates.checked) {
-      return tr(context, 'Ещё не проверяли', 'Not checked yet');
-    }
-    if (updates.release == null) {
-      return tr(context, 'Обновлений пока нет', 'No releases yet');
-    }
-    if (updates.updateAvailable) {
-      return trf(
-        context,
-        'Доступна версия {version}',
-        'Version {version} is available',
-        {'version': updates.release!.tag},
-      );
-    }
-    return tr(context, 'У вас последняя версия', 'You have the latest version');
-  }
-
   Future<void> _choose(String? language) async {
     if (_saving || language == _language) return;
     setState(() => _saving = true);
@@ -198,15 +80,12 @@ class _SettingsPageState extends State<SettingsPage> {
       widget.onLanguageChanged(language);
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            tr(
-              context,
-              'Не удалось сохранить язык.',
-              'Could not save language.',
-            ),
-          ),
+      M3ESnackbar.show(
+        context,
+        message: tr(
+          context,
+          'Не удалось сохранить язык.',
+          'Could not save language.',
         ),
       );
     } finally {
@@ -244,71 +123,131 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  void _saveAppearanceError() => ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(
-        tr(
-          context,
-          'Не удалось сохранить оформление.',
-          'Could not save appearance.',
-        ),
-      ),
+  void _saveAppearanceError() => M3ESnackbar.show(
+    context,
+    message: tr(
+      context,
+      'Не удалось сохранить оформление.',
+      'Could not save appearance.',
     ),
   );
 
+  static const _languages = <String, String>{
+    'ru': 'Русский',
+    'en': 'English',
+    'fr': 'Français',
+    'pt': 'Português',
+    'zh': '简体中文',
+  };
+
+  Future<void> _openLanguages() async {
+    await showExpressiveSheet<void>(
+      context: context,
+      compact: true,
+      builder: (sheetContext) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: CampusSectionTitle(
+                tr(context, 'Язык приложения', 'App language'),
+              ),
+            ),
+            for (final entry in <String?, String>{
+              null: tr(context, 'Как на телефоне', 'Use phone language'),
+              ..._languages,
+            }.entries)
+              _Choice(
+                title: entry.value,
+                selected: entry.key == _language,
+                onTap: _saving
+                    ? null
+                    : () async {
+                        await _choose(entry.key);
+                        if (sheetContext.mounted) Navigator.pop(sheetContext);
+                      },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(tr(context, 'Настройки', 'Settings'))),
+    appBar: AppBar(
+      title: Text(tr(context, 'Настройки', 'Settings')),
+      automaticallyImplyLeading: true,
+    ),
     body: Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 640),
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
           children: [
-            Text(
-              tr(context, 'Оформление', 'Appearance'),
-              style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
+            CampusSectionTitle(tr(context, 'Оформление', 'Appearance')),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final (mode, title) in [
+                    (AppThemeMode.light, tr(context, 'Светлая', 'Light')),
+                    (AppThemeMode.dark, tr(context, 'Тёмная', 'Dark')),
+                    (
+                      AppThemeMode.amoled,
+                      tr(context, 'Чёрная (AMOLED)', 'Black (AMOLED)'),
+                    ),
+                  ])
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          right: mode == AppThemeMode.amoled ? 0 : 8,
+                        ),
+                        child: _ThemePreview(
+                          mode: mode,
+                          title: title,
+                          selected: mode == _themeMode,
+                          seed: _monetEnabled
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                          onTap: _saving ? null : () => _chooseTheme(mode),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
             const SizedBox(height: 12),
-            _Choice(
-              title: tr(context, 'Светлая', 'Light'),
-              selected: _themeMode == AppThemeMode.light,
-              onTap: _saving ? null : () => _chooseTheme(AppThemeMode.light),
-            ),
-            _Choice(
-              title: tr(context, 'Тёмная', 'Dark'),
-              selected: _themeMode == AppThemeMode.dark,
-              onTap: _saving ? null : () => _chooseTheme(AppThemeMode.dark),
-            ),
-            _Choice(
-              title: tr(context, 'Чёрная (AMOLED)', 'Black (AMOLED)'),
-              selected: _themeMode == AppThemeMode.amoled,
-              onTap: _saving ? null : () => _chooseTheme(AppThemeMode.amoled),
-            ),
             if (Platform.isAndroid || widget.monetAvailable)
-              Material(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(16),
-                child: SwitchListTile.adaptive(
-                  value: _monetEnabled && widget.monetAvailable,
-                  onChanged: _saving || !widget.monetAvailable
+              CampusPanel(
+                padding: EdgeInsets.zero,
+                child: CampusListItem(
+                  headline: (tr(
+                    context,
+                    'Цвета телефона',
+                    'Phone colors (Monet)',
+                  )),
+                  supportingText: (widget.monetAvailable
+                      ? tr(
+                          context,
+                          'Цвет оформления подстраивается под обои.',
+                          'Use your wallpaper colors for any theme.',
+                        )
+                      : tr(
+                          context,
+                          'Доступно на Android 12 и новее.',
+                          'Available on Android 12 and newer.',
+                        )),
+                  onTap: _saving || !widget.monetAvailable
                       ? null
-                      : _chooseMonet,
-                  title: Text(
-                    tr(context, 'Цвета телефона', 'Phone colors (Monet)'),
-                  ),
-                  subtitle: Text(
-                    widget.monetAvailable
-                        ? tr(
-                            context,
-                            'Цвет оформления подстраивается под обои.',
-                            'Use your wallpaper colors for any theme.',
-                          )
-                        : tr(
-                            context,
-                            'Доступно на Android 12 и новее.',
-                            'Available on Android 12 and newer.',
-                          ),
+                      : () => _chooseMonet(!_monetEnabled),
+                  trailing: M3ESwitch(
+                    value: _monetEnabled && widget.monetAvailable,
+                    onChanged: _saving || !widget.monetAvailable
+                        ? null
+                        : _chooseMonet,
                   ),
                 ),
               ),
@@ -327,188 +266,55 @@ class _SettingsPageState extends State<SettingsPage> {
               style: TextStyle(color: context.palette.muted, fontSize: 13),
             ),
             const SizedBox(height: 16),
-            _Choice(
-              title: tr(context, 'Как на телефоне', 'Use phone language'),
-              subtitle: tr(context, 'Автоматически', 'Automatic'),
-              selected: _language == null,
-              onTap: _saving ? null : () => _choose(null),
-            ),
-            _Choice(
-              title: 'Русский',
-              selected: _language == 'ru',
-              onTap: _saving ? null : () => _choose('ru'),
-            ),
-            _Choice(
-              title: 'English',
-              selected: _language == 'en',
-              onTap: _saving ? null : () => _choose('en'),
-            ),
-            _Choice(
-              title: 'Français',
-              selected: _language == 'fr',
-              onTap: _saving ? null : () => _choose('fr'),
-            ),
-            _Choice(
-              title: 'Português',
-              selected: _language == 'pt',
-              onTap: _saving ? null : () => _choose('pt'),
-            ),
-            _Choice(
-              title: '简体中文',
-              selected: _language == 'zh',
-              onTap: _saving ? null : () => _choose('zh'),
+            CampusPanel(
+              padding: EdgeInsets.zero,
+              child: CampusListItem(
+                headline:
+                    _languages[_language] ??
+                    tr(context, 'Как на телефоне', 'Use phone language'),
+                leading: Icon(
+                  Icons.language_rounded,
+                  color: context.palette.blue,
+                ),
+                trailing: const Icon(Icons.unfold_more_rounded),
+                onTap: _saving ? null : _openLanguages,
+              ),
             ),
             const SizedBox(height: 28),
             if (widget.updates != null) ...[
-              Text(
-                tr(context, 'Обновления', 'Updates'),
-                style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 12),
               AnimatedBuilder(
                 animation: widget.updates!,
-                builder: (context, _) {
-                  final updates = widget.updates!;
-                  final release = updates.release;
-                  return Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: context.palette.surface,
-                      borderRadius: BorderRadius.circular(16),
+                builder: (context, _) => CampusPanel(
+                  padding: EdgeInsets.zero,
+                  child: CampusListItem(
+                    headline: tr(context, 'Обновления', 'Updates'),
+                    supportingText: widget.updates!.updateAvailable
+                        ? trf(
+                            context,
+                            'Доступна версия {version}',
+                            'Version {version} is available',
+                            {'version': widget.updates!.release!.tag},
+                          )
+                        : tr(context, 'Проверить', 'Check now'),
+                    leading: Badge(
+                      isLabelVisible: widget.updates!.updateAvailable,
+                      child: Icon(
+                        Icons.system_update_rounded,
+                        color: context.palette.blue,
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              updates.updateAvailable
-                                  ? Icons.system_update_rounded
-                                  : Icons.check_circle_outline_rounded,
-                              color: context.palette.blue,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                _updateStatus(updates),
-                                style: TextStyle(fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                          ],
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => Navigator.of(context).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) => UpdatesPage(
+                          updates: widget.updates!,
+                          downloadApk: widget.downloadApk,
+                          installApk: widget.installApk,
                         ),
-                        if (updates.installedVersion != null) ...[
-                          const SizedBox(height: 6),
-                          Text(
-                            trf(
-                              context,
-                              'Установлена версия {version}',
-                              'Installed: {version}',
-                              {'version': updates.installedVersion!},
-                            ),
-                            style: TextStyle(
-                              color: context.palette.muted,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 4,
-                          children: [
-                            TextButton.icon(
-                              onPressed: updates.checking
-                                  ? null
-                                  : () => unawaited(updates.check()),
-                              icon: Icon(Icons.refresh_rounded, size: 18),
-                              label: Text(
-                                tr(context, 'Проверить', 'Check now'),
-                              ),
-                            ),
-                            if (updates.updateAvailable && release != null)
-                              FilledButton.icon(
-                                onPressed: _downloading
-                                    ? null
-                                    : Platform.isAndroid && release.apk != null
-                                    ? () => _downloadAndInstall(release)
-                                    : () => _openRelease(release.page),
-                                style: FilledButton.styleFrom(
-                                  disabledBackgroundColor: context.palette.blue,
-                                  disabledForegroundColor:
-                                      context.palette.onBlue,
-                                ),
-                                icon: _downloading
-                                    ? SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: context.palette.onBlue,
-                                        ),
-                                      )
-                                    : Icon(
-                                        Platform.isAndroid &&
-                                                release.apk != null
-                                            ? Icons.system_update_rounded
-                                            : Icons.open_in_new_rounded,
-                                        size: 18,
-                                      ),
-                                label: Text(
-                                  _downloading
-                                      ? _downloadProgress == null
-                                            ? tr(
-                                                context,
-                                                'Скачиваем…',
-                                                'Downloading…',
-                                              )
-                                            : trf(
-                                                context,
-                                                'Скачиваем: {percent}%',
-                                                'Downloading {percent}%',
-                                                {
-                                                  'percent':
-                                                      (_downloadProgress! * 100)
-                                                          .round(),
-                                                },
-                                              )
-                                      : Platform.isAndroid &&
-                                            release.apk != null
-                                      ? tr(
-                                          context,
-                                          'Установить обновление',
-                                          'Install update',
-                                        )
-                                      : tr(
-                                          context,
-                                          'Открыть релиз',
-                                          'Open release',
-                                        ),
-                                ),
-                              ),
-                            if (updates.updateAvailable &&
-                                release != null &&
-                                Platform.isAndroid &&
-                                release.apk != null)
-                              TextButton(
-                                onPressed: () => _openRelease(release.page),
-                                child: Text(
-                                  tr(
-                                    context,
-                                    'Страница релиза',
-                                    'Release page',
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        if (_downloading) ...[
-                          const SizedBox(height: 8),
-                          LinearProgressIndicator(value: _downloadProgress),
-                        ],
-                      ],
+                      ),
                     ),
-                  );
-                },
+                  ),
+                ),
               ),
               const SizedBox(height: 28),
             ],
@@ -517,22 +323,16 @@ class _SettingsPageState extends State<SettingsPage> {
               style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
-            Material(
-              color: context.palette.surface,
-              borderRadius: BorderRadius.circular(16),
-              child: ListTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+            CampusPanel(
+              padding: EdgeInsets.zero,
+              child: CampusListItem(
                 leading: Icon(Icons.nfc_rounded, color: context.palette.blue),
-                title: Text(tr(context, 'Проверка NFC', 'NFC diagnostics')),
-                subtitle: Text(
-                  tr(
-                    context,
-                    'Посмотреть сведения о найденном NFC-устройстве',
-                    'View detected NFC connection details',
-                  ),
-                ),
+                headline: (tr(context, 'Проверка NFC', 'NFC diagnostics')),
+                supportingText: (tr(
+                  context,
+                  'Посмотреть сведения о найденном NFC-устройстве',
+                  'View detected NFC connection details',
+                )),
                 trailing: Icon(Icons.chevron_right_rounded),
                 onTap: () => Navigator.of(context).push<void>(
                   MaterialPageRoute(builder: (_) => const NfcDiagnosticsPage()),
@@ -540,27 +340,19 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             const SizedBox(height: 12),
-            Material(
-              color: context.palette.surface,
-              borderRadius: BorderRadius.circular(16),
-              child: ListTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+            CampusPanel(
+              padding: EdgeInsets.zero,
+              child: CampusListItem(
                 leading: Icon(
                   Icons.sensors_rounded,
                   color: context.palette.blue,
                 ),
-                title: Text(
-                  tr(context, 'Сигнал турникета', 'Turnstile signal'),
-                ),
-                subtitle: Text(
-                  tr(
-                    context,
-                    'Посмотреть опрос NFC-считывателя',
-                    'Observe NFC reader polling',
-                  ),
-                ),
+                headline: (tr(context, 'Сигнал турникета', 'Turnstile signal')),
+                supportingText: (tr(
+                  context,
+                  'Посмотреть опрос NFC-считывателя',
+                  'Observe NFC reader polling',
+                )),
                 trailing: Icon(Icons.chevron_right_rounded),
                 onTap: () => Navigator.of(context).push<void>(
                   MaterialPageRoute(builder: (_) => const TurnstileProbePage()),
@@ -573,20 +365,18 @@ class _SettingsPageState extends State<SettingsPage> {
               style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
-            Material(
-              color: context.palette.surface,
-              borderRadius: BorderRadius.circular(16),
-              child: ListTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+            CampusPanel(
+              padding: EdgeInsets.zero,
+              child: CampusListItem(
                 leading: Icon(
                   Icons.info_outline_rounded,
                   color: context.palette.blue,
                 ),
-                title: Text(
-                  tr(context, 'О AntiAttendance', 'About AntiAttendance'),
-                ),
+                headline: (tr(
+                  context,
+                  'О AntiAttendance',
+                  'About AntiAttendance',
+                )),
                 trailing: Icon(Icons.chevron_right_rounded),
                 onTap: () => Navigator.of(context).push<void>(
                   MaterialPageRoute(builder: (_) => const AboutPage()),
@@ -605,29 +395,187 @@ class _Choice extends StatelessWidget {
     required this.title,
     required this.selected,
     required this.onTap,
-    this.subtitle,
   });
   final String title;
-  final String? subtitle;
   final bool selected;
   final VoidCallback? onTap;
-
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 8),
-    child: Material(
-      color: selected ? context.palette.selected : context.palette.surface,
-      borderRadius: BorderRadius.circular(16),
-      child: ListTile(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(title, style: TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: subtitle == null ? null : Text(subtitle!),
-        trailing: Icon(
-          selected ? Icons.check_circle_rounded : Icons.circle_outlined,
-          color: selected ? context.palette.blue : context.palette.muted,
+    child: AnimatedContainer(
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 160),
+      decoration: BoxDecoration(
+        color: selected ? context.palette.selected : context.palette.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: selected
+              ? context.palette.blue.withValues(alpha: .4)
+              : context.palette.line,
         ),
-        onTap: onTap,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: CampusListItem(
+          selected: selected,
+          headline: title,
+          trailing: AnimatedSwitcher(
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 140),
+            child: Icon(
+              selected ? Icons.check_circle_rounded : Icons.circle_outlined,
+              key: ValueKey(selected),
+              color: selected ? context.palette.blue : context.palette.muted,
+            ),
+          ),
+          onTap: onTap,
+        ),
       ),
     ),
   );
+}
+
+class _ThemePreview extends StatelessWidget {
+  const _ThemePreview({
+    required this.mode,
+    required this.title,
+    required this.selected,
+    required this.onTap,
+    this.seed,
+  });
+  final AppThemeMode mode;
+  final String title;
+  final bool selected;
+  final VoidCallback? onTap;
+  final Color? seed;
+  @override
+  Widget build(BuildContext context) {
+    final preview = AppTheme.build(mode, monetSeed: seed);
+    final duration = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 160);
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: CampusPressable(
+        enabled: onTap != null,
+        child: AnimatedContainer(
+          duration: duration,
+          decoration: BoxDecoration(
+            color: selected
+                ? context.palette.selected
+                : context.palette.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: selected ? context.palette.blue : context.palette.line,
+            ),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ExcludeSemantics(
+                      child: Container(
+                        height: 92,
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(9),
+                        decoration: BoxDecoration(
+                          color: preview.scaffoldBackgroundColor,
+                          borderRadius: BorderRadius.circular(9),
+                          border: Border.all(
+                            color: preview.colorScheme.outlineVariant,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 22,
+                              height: 4,
+                              color: preview.colorScheme.onSurface,
+                            ),
+                            const SizedBox(height: 10),
+                            Container(
+                              height: 17,
+                              decoration: BoxDecoration(
+                                color: preview.colorScheme.primary,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Container(
+                              height: 17,
+                              decoration: BoxDecoration(
+                                color: preview.colorScheme.primaryContainer,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            const Spacer(),
+                            Row(
+                              children: [
+                                for (var i = 0; i < 3; i++)
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 2,
+                                      ),
+                                      child: Container(
+                                        height: 5,
+                                        color: i == 0
+                                            ? preview.colorScheme.primary
+                                            : preview
+                                                  .colorScheme
+                                                  .outlineVariant,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: context.palette.ink,
+                      ),
+                    ),
+                    const Spacer(),
+                    const SizedBox(height: 8),
+                    AnimatedSwitcher(
+                      duration: duration,
+                      child: Icon(
+                        selected
+                            ? Icons.check_circle_rounded
+                            : Icons.circle_outlined,
+                        key: ValueKey(selected),
+                        size: 20,
+                        color: selected
+                            ? context.palette.blue
+                            : context.palette.muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

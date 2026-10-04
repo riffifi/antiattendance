@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nfc_pass_widget_title">Badges NFC</string>
+    <string name="nfc_pass_widget_wide_label">Badges NFC (2×1)</string>
+    <string name="nfc_pass_widget_compact_label">Badges NFC (1×1)</string>
+    <string name="nfc_pass_widget_description">Démarrer la file de badges NFC enregistrée</string>
+</resources>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<host-apdu-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/digital_pass_description"
+    android:requireDeviceUnlock="true">
+    <aid-group android:category="other" android:description="@string/digital_pass_description">
+        <!-- Campus AID is registered dynamically only while testing. -->
+        <aid-filter android:name="F0416E746950617373" />
+    </aid-group>
+</host-apdu-service>

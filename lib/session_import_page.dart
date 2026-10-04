@@ -1,6 +1,10 @@
+import 'qr_tracking.dart';
+import 'app_theme.dart';
+import 'campus_design.dart';
+
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import 'accounts.dart';
@@ -20,6 +24,7 @@ class _SessionImportPageState extends State<SessionImportPage> {
     detectionTimeoutMs: 400,
     formats: const [BarcodeFormat.qrCode],
   );
+  final _tracker = QrFrameTracker();
   final _collector = SessionTransferCollector();
   final _code = TextEditingController();
   List<SavedAccount>? _accounts;
@@ -28,6 +33,7 @@ class _SessionImportPageState extends State<SessionImportPage> {
 
   @override
   void dispose() {
+    _tracker.dispose();
     _code.dispose();
     unawaited(_camera.dispose());
     super.dispose();
@@ -61,6 +67,7 @@ class _SessionImportPageState extends State<SessionImportPage> {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
       title: Text(tr(context, 'Получить аккаунты', 'Import sessions')),
+      automaticallyImplyLeading: true,
     ),
     body: _accounts != null
         ? _preview(context)
@@ -79,7 +86,13 @@ class _SessionImportPageState extends State<SessionImportPage> {
           var changed = false;
           for (final barcode in capture.barcodes) {
             final value = barcode.rawValue;
-            if (value != null && _collector.accept(value)) changed = true;
+            if (value != null && _collector.accept(value)) {
+              changed = true;
+              _tracker.detect(
+                barcode.corners,
+                barcode.size.isEmpty ? capture.size : barcode.size,
+              );
+            }
           }
           if (changed && mounted) {
             setState(() {});
@@ -89,18 +102,14 @@ class _SessionImportPageState extends State<SessionImportPage> {
         errorBuilder: (context, error) => Center(
           child: Text(
             tr(context, 'Камера недоступна', 'Camera unavailable'),
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: context.palette.ink),
           ),
         ),
       ),
-      Center(
-        child: Container(
-          width: 250,
-          height: 250,
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.white, width: 3),
-            borderRadius: BorderRadius.circular(24),
-          ),
+      Positioned.fill(
+        child: QrTrackingOverlay(
+          tracker: _tracker,
+          color: context.palette.blue,
         ),
       ),
       SafeArea(
@@ -109,7 +118,7 @@ class _SessionImportPageState extends State<SessionImportPage> {
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
-            color: const Color(0xE6181B24),
+            color: context.palette.surface.withValues(alpha: .95),
             child: Text(
               _collector.total == 0
                   ? tr(
@@ -127,7 +136,7 @@ class _SessionImportPageState extends State<SessionImportPage> {
                       },
                     ),
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.palette.ink),
             ),
           ),
         ),
@@ -142,26 +151,20 @@ class _SessionImportPageState extends State<SessionImportPage> {
         shrinkWrap: true,
         padding: const EdgeInsets.all(20),
         children: [
-          Text(
-            tr(context, 'QR-коды считаны', 'QR received'),
-            style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            tr(
+          CampusHeader(
+            title: tr(context, 'QR-коды считаны', 'QR received'),
+            subtitle: tr(
               context,
               'Попросите отправителя открыть «Показать код» и введите его здесь.',
               'Ask the sender to tap “Show code” and enter it here.',
             ),
+            icon: Icons.lock_open_rounded,
           ),
-          const SizedBox(height: 20),
-          TextField(
+          CampusTextField(
             controller: _code,
-            autocorrect: false,
+            keyboardType: TextInputType.visiblePassword,
             textCapitalization: TextCapitalization.characters,
-            decoration: InputDecoration(
-              labelText: tr(context, 'Код передачи', 'Transfer code'),
-            ),
+            label: tr(context, 'Код передачи', 'Transfer code'),
             onSubmitted: (_) => _decrypt(),
           ),
           if (_error != null) ...[
@@ -172,7 +175,7 @@ class _SessionImportPageState extends State<SessionImportPage> {
             ),
           ],
           const SizedBox(height: 16),
-          FilledButton(
+          CampusButton.filled(
             onPressed: _decrypting ? null : _decrypt,
             child: Text(
               _decrypting
@@ -205,12 +208,12 @@ class _SessionImportPageState extends State<SessionImportPage> {
           ),
           const SizedBox(height: 16),
           for (final account in _accounts!)
-            ListTile(
+            CampusListItem(
               leading: const Icon(Icons.person_outline),
-              title: Text(account.label),
+              headline: (account.label),
             ),
           const SizedBox(height: 16),
-          FilledButton(
+          CampusButton.filled(
             onPressed: () => Navigator.of(context).pop(_accounts),
             child: Text(tr(context, 'Импортировать', 'Import')),
           ),

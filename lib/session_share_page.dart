@@ -1,6 +1,10 @@
+import 'campus_design.dart';
+
+import 'package:material_3_expressive/material_3_expressive.dart';
+
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import 'accounts.dart';
@@ -57,6 +61,7 @@ class _SessionSharePageState extends State<SessionSharePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(tr(context, 'Передать аккаунты', 'Share sessions')),
+        automaticallyImplyLeading: true,
       ),
       body: Center(
         child: ConstrainedBox(
@@ -76,7 +81,7 @@ class _SessionSharePageState extends State<SessionSharePage> {
                     ),
                   )
                 : transfer == null
-                ? const CircularProgressIndicator()
+                ? const M3EProgressIndicator.circularWavy()
                 : Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -143,7 +148,7 @@ class _SessionSharePageState extends State<SessionSharePage> {
                       const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,
-                        child: FilledButton(
+                        child: CampusButton.filled(
                           onPressed: () =>
                               setState(() => _showCode = !_showCode),
                           child: Text(

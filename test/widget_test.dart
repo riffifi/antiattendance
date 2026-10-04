@@ -1,3 +1,4 @@
+import 'package:antiattendance/campus_design.dart';
 import 'package:antiattendance/accounts.dart';
 import 'package:antiattendance/app_settings.dart';
 import 'package:antiattendance/app_theme.dart';
@@ -6,15 +7,10 @@ import 'package:antiattendance/main.dart';
 import 'package:antiattendance/pulse_api.dart';
 import 'package:antiattendance/schedule_api.dart';
 import 'package:antiattendance/settings_page.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-const delegates = [
-  GlobalMaterialLocalizations.delegate,
-  GlobalWidgetsLocalizations.delegate,
-  GlobalCupertinoLocalizations.delegate,
-];
+const delegates = GlobalMaterialLocalizations.delegates;
 
 const qr =
     'https://pulse.mirea.ru/lessons/visiting-logs/self-approve?token=abc';
@@ -121,6 +117,7 @@ void main() {
     expect(find.text('Посещаемость'), findsNWidgets(2));
     expect(find.text('Сканировать QR'), findsOneWidget);
     expect(find.text('Режим очереди'), findsNothing);
+    await tester.scrollUntilVisible(find.text('Аккаунты'), 200);
     expect(find.text('Аккаунты'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -177,13 +174,15 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Борис'), 200);
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -120));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Борис'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Selected: 1'), -200);
     expect(find.text('Selected: 1'), findsOneWidget);
     await tester.tap(find.text('Assign group'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'ИНБО');
+    await tester.enterText(find.byType(CampusTextField), 'ИНБО');
     await tester.tap(find.byIcon(Icons.arrow_forward_rounded));
     await tester.pumpAndSettle();
     await tester.tap(find.text('ИНБО-10-23'));
@@ -214,7 +213,7 @@ void main() {
     await tester.tap(find.text('Вставить ссылку'));
     await tester.pumpAndSettle();
     await tester.enterText(
-      find.byType(TextField),
+      find.byType(CampusTextField),
       'https://example.com/?token=bad',
     );
     await tester.tap(find.text('Отправить'));
@@ -232,6 +231,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Attendance'), findsNWidgets(2));
+    await tester.scrollUntilVisible(find.text('Share'), 200);
     expect(find.text('Share'), findsOneWidget);
     expect(find.text('Receive'), findsOneWidget);
   });
@@ -270,16 +270,22 @@ void main() {
     expect(find.text('AntiAttendance'), findsOneWidget);
     await tester.tap(find.byIcon(Icons.settings_outlined));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Use phone language'), 200);
+    await tester.tap(find.text('Use phone language'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Русский'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Русский'));
     await tester.pumpAndSettle();
     expect(chosen, 'ru');
     expect(settings.language, 'ru');
     await tester.scrollUntilVisible(find.text('NFC diagnostics'), 300);
     await tester.ensureVisible(find.text('NFC diagnostics'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('NFC diagnostics'));
     await tester.pumpAndSettle();
     expect(find.text('Available on Android only.'), findsOneWidget);
-    await tester.pageBack();
+    await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('About AntiAttendance'), 300);
     await tester.ensureVisible(find.text('About AntiAttendance'));
@@ -290,6 +296,45 @@ void main() {
     expect(find.textContaining('Pulse and your schedule'), findsOneWidget);
   });
 
+  testWidgets('account rows are lazy and scrolling survives a tab round trip', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: HomePage(
+          store: MemoryAccountStore([
+            for (var i = 0; i < 100; i++)
+              SavedAccount(id: '$i', label: 'Account $i', cookie: 'test-$i'),
+          ]),
+          logStore: MemoryLogStore(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Account 99'), findsNothing);
+    final scroll = find.byType(CustomScrollView);
+    await tester.drag(scroll, const Offset(0, -600));
+    await tester.pumpAndSettle();
+    final position = tester
+        .state<ScrollableState>(
+          find.descendant(of: scroll, matching: find.byType(Scrollable)).first,
+        )
+        .position;
+    final offset = position.pixels;
+    expect(offset, greaterThan(0));
+    final bar = find.byType(CampusNavigation);
+    await tester.tap(find.descendant(of: bar, matching: find.text('Schedule')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(of: bar, matching: find.text('Attendance')),
+    );
+    await tester.pumpAndSettle();
+    expect(position.pixels, offset);
+    expect(find.text('Account 99'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('navigation bar uses the app palette', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -298,13 +343,19 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    final bar = tester.widget<NavigationBar>(find.byType(NavigationBar));
-    expect(bar.backgroundColor, AppColors.paper);
-    final theme = AppTheme.light.navigationBarTheme;
-    expect(theme.indicatorColor, AppColors.blue);
+    final bar = tester.widget<CampusNavigation>(find.byType(CampusNavigation));
+    expect(bar.selectedIndex, 0);
+    expect(bar.labels, ['Attendance', 'Schedule', 'Passes']);
     expect(
-      theme.iconTheme!.resolve({WidgetState.selected})!.color,
-      Colors.white,
+      find.descendant(
+        of: find.byType(CampusNavigation),
+        matching: find.byType(BackdropFilter),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      tester.widget<Scaffold>(find.byType(Scaffold).first).extendBody,
+      isTrue,
     );
   });
 }

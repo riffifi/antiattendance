@@ -2,7 +2,7 @@ import 'package:antiattendance/accounts.dart';
 import 'package:antiattendance/attendance_queue.dart';
 import 'package:antiattendance/pulse_api.dart';
 import 'package:antiattendance/queue_scan_page.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -54,7 +54,7 @@ void main() {
             ),
           ),
         );
-        await tester.pumpAndSettle();
+        await tester.pump(const Duration(milliseconds: 500));
         final frame = tester.getRect(
           find.byKey(const ValueKey('queue-scan-frame')),
         );
@@ -66,7 +66,7 @@ void main() {
         queue.accept(
           'https://pulse.mirea.ru/lessons/visiting-logs/self-approve?token=abc',
         );
-        await tester.pumpAndSettle();
+        await tester.pump(const Duration(milliseconds: 500));
         expect(queue.remaining, 0);
         expect(find.text('All confirmed'), findsOneWidget);
         await tester.pumpWidget(const SizedBox.shrink());

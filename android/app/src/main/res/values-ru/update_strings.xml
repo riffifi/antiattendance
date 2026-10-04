@@ -1,0 +1,5 @@
+<resources>
+    <string name="updates_channel">Обновления приложения</string>
+    <string name="update_available">Доступно обновление</string>
+    <string name="update_version_available">Доступна версия %1$s. Нажмите, чтобы узнать об изменениях.</string>
+</resources>

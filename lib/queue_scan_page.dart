@@ -1,7 +1,13 @@
+import 'qr_tracking.dart';
+import 'app_theme.dart';
+import 'campus_design.dart';
+
+import 'package:material_3_expressive/material_3_expressive.dart';
+
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -36,6 +42,8 @@ class _QueueScanPageState extends State<QueueScanPage> {
     accounts: widget.accounts,
     approve: (account, token) => widget.api.approve(token, account.cookie),
   )..addListener(_updated);
+  final _tracker = QrFrameTracker();
+  final _fallbackKey = GlobalKey();
   bool _torchOn = false;
   bool _cameraError = false;
   Timer? _finishTimer;
@@ -63,6 +71,7 @@ class _QueueScanPageState extends State<QueueScanPage> {
 
   @override
   void dispose() {
+    _tracker.dispose();
     _finishTimer?.cancel();
     _queue.removeListener(_updated);
     _queue.dispose();
@@ -72,14 +81,14 @@ class _QueueScanPageState extends State<QueueScanPage> {
 
   @override
   Widget build(BuildContext context) => AnnotatedRegion<SystemUiOverlayStyle>(
-    value: const SystemUiOverlayStyle(
+    value: SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Colors.black,
+      systemNavigationBarColor: Colors.transparent,
       systemNavigationBarIconBrightness: Brightness.light,
     ),
     child: Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: context.palette.paper,
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -89,7 +98,18 @@ class _QueueScanPageState extends State<QueueScanPage> {
               if (_cameraError) setState(() => _cameraError = false);
               for (final barcode in capture.barcodes) {
                 final value = barcode.rawValue;
-                if (value != null) _queue.accept(value);
+                if (value != null) {
+                  try {
+                    attendanceTokenFromQr(value);
+                    _tracker.detect(
+                      barcode.corners,
+                      barcode.size.isEmpty ? capture.size : barcode.size,
+                    );
+                    _queue.accept(value);
+                  } on FormatException {
+                    /* Unrelated QR codes do not move the frame. */
+                  }
+                }
               }
             },
             errorBuilder: (context, error) {
@@ -98,7 +118,7 @@ class _QueueScanPageState extends State<QueueScanPage> {
                   if (mounted) setState(() => _cameraError = true);
                 });
               }
-              return const ColoredBox(color: Colors.black);
+              return ColoredBox(color: context.palette.paper);
             },
           ),
           const IgnorePointer(
@@ -118,7 +138,20 @@ class _QueueScanPageState extends State<QueueScanPage> {
               ),
             ),
           ),
+          Positioned.fill(
+            child: AnimatedBuilder(
+              animation: _queue,
+              builder: (context, _) => QrTrackingOverlay(
+                tracker: _tracker,
+                fallbackKey: _fallbackKey,
+                color: _queue.remaining == 0
+                    ? context.palette.success
+                    : context.palette.blue,
+              ),
+            ),
+          ),
           QueueScanOverlay(
+            fallbackKey: _fallbackKey,
             queue: _queue,
             accounts: widget.accounts,
             torchOn: _torchOn,
@@ -139,10 +172,12 @@ class QueueScanOverlay extends StatelessWidget {
     required this.accounts,
     required this.torchOn,
     this.cameraError = false,
+    this.fallbackKey,
     required this.onTorch,
     required this.onClose,
   });
 
+  final GlobalKey? fallbackKey;
   final AttendanceQueue queue;
   final List<SavedAccount> accounts;
   final bool torchOn;
@@ -159,44 +194,62 @@ class QueueScanOverlay extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
-              child: Row(
-                children: [
-                  IconButton.filledTonal(
-                    onPressed: onClose,
-                    icon: const Icon(Icons.close_rounded),
-                    tooltip: tr(context, 'Закрыть', 'Close'),
-                    style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xBB101F36),
-                      foregroundColor: Colors.white,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: context.palette.surface.withValues(alpha: .96),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    M3EIconButton(
+                      suppressInk: true,
+                      decoration: M3EIconButtonDecoration(
+                        backgroundColor: WidgetStatePropertyAll(
+                          context.palette.surface.withValues(alpha: .95),
+                        ),
+                        foregroundColor: WidgetStatePropertyAll(
+                          context.palette.ink,
+                        ),
+                      ),
+                      onPressed: onClose,
+                      icon: const Icon(Icons.close_rounded),
+                      tooltip: tr(context, 'Закрыть', 'Close'),
+                      variant: M3EIconButtonVariant.tonal,
                     ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      tr(context, 'Сканировать QR', 'Scan QR'),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
+                    Expanded(
+                      child: Text(
+                        tr(context, 'Сканировать QR', 'Scan QR'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: context.palette.ink,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
-                  ),
-                  IconButton.filledTonal(
-                    onPressed: cameraError ? null : onTorch,
-                    icon: Icon(
-                      torchOn
-                          ? Icons.flashlight_off_rounded
-                          : Icons.flashlight_on_rounded,
+                    M3EIconButton(
+                      suppressInk: true,
+                      decoration: M3EIconButtonDecoration(
+                        backgroundColor: WidgetStatePropertyAll(
+                          context.palette.surface.withValues(alpha: .95),
+                        ),
+                        foregroundColor: WidgetStatePropertyAll(
+                          context.palette.ink,
+                        ),
+                      ),
+                      onPressed: cameraError ? null : onTorch,
+                      icon: Icon(
+                        torchOn
+                            ? Icons.flashlight_off_rounded
+                            : Icons.flashlight_on_rounded,
+                      ),
+                      tooltip: tr(context, 'Фонарик', 'Flashlight'),
+                      variant: M3EIconButtonVariant.tonal,
                     ),
-                    tooltip: tr(context, 'Фонарик', 'Flashlight'),
-                    style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xBB101F36),
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             Expanded(
@@ -212,42 +265,38 @@ class QueueScanOverlay extends StatelessWidget {
                   return Center(
                     child: AnimatedBuilder(
                       animation: queue,
-                      builder: (context, _) => AnimatedContainer(
-                        key: const ValueKey('queue-scan-frame'),
-                        duration: const Duration(milliseconds: 180),
-                        curve: Curves.easeOut,
-                        width: size,
-                        height: size,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: cameraError
-                                ? const Color(0xFFFFC16B)
-                                : queue.remaining == 0
-                                ? const Color(0xFF95E6BD)
-                                : Colors.white,
-                            width: 3,
-                          ),
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 180),
-                          child: cameraError
-                              ? const Icon(
-                                  Icons.no_photography_rounded,
-                                  key: ValueKey('camera-error'),
-                                  color: Color(0xFFFFC16B),
-                                  size: 42,
-                                )
+                      builder: (context, _) => SizedBox(
+                        key: fallbackKey,
+                        child: CampusScanFrame(
+                          key: const ValueKey('queue-scan-frame'),
+                          size: size,
+                          color: fallbackKey != null
+                              ? Colors.transparent
+                              : cameraError
+                              ? const Color(0xFFFFC16B)
                               : queue.remaining == 0
-                              ? const Icon(
-                                  Icons.check_rounded,
-                                  key: ValueKey('scan-complete'),
-                                  color: Color(0xFF95E6BD),
-                                  size: 52,
-                                )
-                              : const SizedBox.shrink(
-                                  key: ValueKey('scan-pending'),
-                                ),
+                              ? context.palette.success
+                              : Colors.white,
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 180),
+                            child: cameraError
+                                ? const Icon(
+                                    Icons.no_photography_rounded,
+                                    key: ValueKey('camera-error'),
+                                    color: Color(0xFFFFC16B),
+                                    size: 42,
+                                  )
+                                : queue.remaining == 0
+                                ? Icon(
+                                    Icons.check_rounded,
+                                    key: ValueKey('scan-complete'),
+                                    color: context.palette.success,
+                                    size: 52,
+                                  )
+                                : const SizedBox.shrink(
+                                    key: ValueKey('scan-pending'),
+                                  ),
+                          ),
                         ),
                       ),
                     ),
@@ -265,13 +314,13 @@ class QueueScanOverlay extends StatelessWidget {
                 margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
                 decoration: BoxDecoration(
-                  color: const Color(0xF2122039),
+                  color: context.palette.surface.withValues(alpha: .96),
                   border: Border.all(
                     color: cameraError
                         ? const Color(0x99FFC16B)
                         : queue.remaining == 0
                         ? const Color(0x9995E6BD)
-                        : const Color(0x558CA6D5),
+                        : context.palette.line,
                   ),
                   borderRadius: BorderRadius.circular(20),
                 ),
@@ -301,20 +350,20 @@ class QueueScanOverlay extends StatelessWidget {
                                   ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: context.palette.ink,
                               fontSize: 17,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
                         if (queue.processing)
-                          const SizedBox(
+                          SizedBox(
                             width: 16,
                             height: 16,
-                            child: CircularProgressIndicator(
+                            child: M3EProgressIndicator.circularWavy(
                               strokeWidth: 2,
-                              color: Colors.white,
+                              color: context.palette.ink,
                             ),
                           ),
                       ],
@@ -360,8 +409,8 @@ class QueueScanOverlay extends StatelessWidget {
                         )),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white70,
+                        style: TextStyle(
+                          color: context.palette.muted,
                           fontSize: 12,
                         ),
                       ),
@@ -376,13 +425,16 @@ class QueueScanOverlay extends StatelessWidget {
                       ),
                       duration: const Duration(milliseconds: 240),
                       curve: Curves.easeOut,
-                      builder: (context, value, _) => LinearProgressIndicator(
-                        value: value,
-                        minHeight: 4,
-                        borderRadius: BorderRadius.circular(4),
-                        backgroundColor: Colors.white24,
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          Color(0xFF95E6BD),
+                      builder: (context, value, _) => TickerMode(
+                        enabled:
+                            value > 0 &&
+                            value < 1 &&
+                            !MediaQuery.disableAnimationsOf(context),
+                        child: M3EProgressIndicator.linearWavy(
+                          value: value,
+                          strokeWidth: 4,
+                          color: context.palette.success,
+                          trackColor: Colors.white24,
                         ),
                       ),
                     ),
@@ -407,8 +459,8 @@ class QueueScanOverlay extends StatelessWidget {
                                     ? Icons.check_circle_rounded
                                     : Icons.circle_outlined,
                                 color: approved
-                                    ? const Color(0xFF95E6BD)
-                                    : Colors.white70,
+                                    ? context.palette.success
+                                    : context.palette.muted,
                                 size: 18,
                               ),
                               const SizedBox(width: 9),
@@ -420,8 +472,8 @@ class QueueScanOverlay extends StatelessWidget {
                                       account.label,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: Colors.white,
+                                      style: TextStyle(
+                                        color: context.palette.ink,
                                         fontSize: 13,
                                         fontWeight: FontWeight.w700,
                                       ),
@@ -432,8 +484,8 @@ class QueueScanOverlay extends StatelessWidget {
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         color: approved
-                                            ? const Color(0xFF95E6BD)
-                                            : Colors.white70,
+                                            ? context.palette.success
+                                            : context.palette.muted,
                                         fontSize: 11,
                                       ),
                                     ),

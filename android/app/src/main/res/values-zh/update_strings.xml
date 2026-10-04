@@ -1,0 +1,5 @@
+<resources>
+    <string name="updates_channel">应用更新</string>
+    <string name="update_available">有可用更新</string>
+    <string name="update_version_available">版本 %1$s 已发布。点击查看更新说明。</string>
+</resources>

@@ -1,8 +1,13 @@
+import 'updates_page.dart';
+import 'campus_design.dart';
+import 'expressive.dart';
+
+import 'package:material_3_expressive/material_3_expressive.dart';
+
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -14,6 +19,8 @@ import 'group_picker_page.dart';
 import 'l10n.dart';
 import 'nearby_receive_page.dart';
 import 'nearby_share_page.dart';
+import 'nfc_pass.dart';
+import 'nfc_pass_page.dart';
 import 'pulse_api.dart';
 import 'pulse_login.dart';
 import 'queue_scan_page.dart';
@@ -25,20 +32,14 @@ import 'settings_page.dart';
 import 'update_service.dart';
 
 void main() {
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarColor: AppColors.paper,
-      systemNavigationBarIconBrightness: Brightness.dark,
-      systemNavigationBarDividerColor: AppColors.paper,
-    ),
-  );
-  runApp(const AntiattendanceApp());
+  WidgetsFlutterBinding.ensureInitialized().deferFirstFrame();
+  runApp(const AntiattendanceApp(holdFirstFrame: true));
 }
 
 class AntiattendanceApp extends StatefulWidget {
-  const AntiattendanceApp({super.key});
+  const AntiattendanceApp({super.key, this.holdFirstFrame = false});
+
+  final bool holdFirstFrame;
 
   @override
   State<AntiattendanceApp> createState() => _AntiattendanceAppState();
@@ -47,6 +48,10 @@ class AntiattendanceApp extends StatefulWidget {
 class _AntiattendanceAppState extends State<AntiattendanceApp>
     with WidgetsBindingObserver {
   static const _monetChannel = MethodChannel('antiattendance/monet');
+  static const _updatesChannel = MethodChannel('antiattendance/updates');
+  final _navigatorKey = GlobalKey<NavigatorState>();
+  Timer? _updateTimer;
+  bool _updatesPageOpen = false;
   final AppSettingsStore _settingsStore = AppSettingsStore();
   final UpdateController _updates = UpdateController();
   String? _language;
@@ -58,30 +63,116 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadLanguage();
-    _loadAppearance();
-    unawaited(_updates.check());
+    _updates.addListener(_notifyUpdate);
+    if (Platform.isAndroid) {
+      _updatesChannel.setMethodCallHandler((call) async {
+        if (call.method == 'openUpdates') await _openUpdates();
+      });
+    }
+    unawaited(_initialize());
+    _updateTimer = Timer.periodic(
+      const Duration(hours: 6),
+      (_) => unawaited(_updates.check(force: false)),
+    );
+  }
+
+  Future<void> _initialize() async {
+    try {
+      await Future.wait([_loadLanguage(), _loadAppearance()]);
+      unawaited(_updates.check(force: false));
+      if (Platform.isAndroid) {
+        try {
+          await _updatesChannel.invokeMethod<void>('configure', {
+            'language': _language,
+          });
+          final open =
+              await _updatesChannel.invokeMethod<bool>('takeOpenRequest') ??
+              false;
+          if (open && mounted) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) unawaited(_openUpdates());
+            });
+          }
+        } catch (_) {
+          /* Updates remain accessible when notifications are unavailable. */
+        }
+      }
+    } finally {
+      if (widget.holdFirstFrame) {
+        WidgetsBinding.instance.allowFirstFrame();
+      }
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _updateTimer?.cancel();
+    if (Platform.isAndroid) _updatesChannel.setMethodCallHandler(null);
+    _updates.removeListener(_notifyUpdate);
     _updates.dispose();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) unawaited(_loadAppearance());
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_loadAppearance());
+      unawaited(_updates.check(force: false));
+    }
+  }
+
+  void _notifyUpdate() {
+    if (!Platform.isAndroid || _updates.checking || !_updates.updateAvailable) {
+      return;
+    }
+    unawaited(
+      _updatesChannel
+          .invokeMethod<void>('notify', {'tag': _updates.release!.tag})
+          .catchError((Object _) {}),
+    );
+  }
+
+  Future<void> _openUpdates() async {
+    if (!mounted || _updatesPageOpen) return;
+    final navigator = _navigatorKey.currentState;
+    if (navigator == null) return;
+    _updatesPageOpen = true;
+    try {
+      if (Platform.isAndroid) {
+        try {
+          await nfcPassChannel.invokeMethod<void>('stop');
+        } catch (_) {}
+      }
+      if (mounted) {
+        await navigator.push<void>(
+          MaterialPageRoute(builder: (_) => UpdatesPage(updates: _updates)),
+        );
+      }
+    } finally {
+      _updatesPageOpen = false;
+    }
   }
 
   Future<void> _loadLanguage() async {
     try {
       final language = await _settingsStore.loadLanguage();
       if (mounted) setState(() => _language = language);
+      unawaited(_syncWidgetLanguage(language));
     } catch (_) {
       // A fresh install uses the phone language if settings are unavailable.
     }
+  }
+
+  Future<void> _syncWidgetLanguage(String? language) async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _updatesChannel.invokeMethod<void>('configure', {
+        'language': language,
+      });
+      await const MethodChannel('antiattendance/launcher_widget')
+          .invokeMethod<void>('setWidgetLanguage', {'language': language});
+    } catch (_) {}
   }
 
   Future<void> _loadAppearance() async {
@@ -113,6 +204,7 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
   @override
   Widget build(BuildContext context) => MaterialApp(
     title: 'AntiAttendance',
+    navigatorKey: _navigatorKey,
     debugShowCheckedModeBanner: false,
     theme: AppTheme.build(
       _themeMode,
@@ -120,17 +212,20 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
     ),
     builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
-        systemNavigationBarColor: _themeMode == AppThemeMode.amoled
-            ? Colors.black
-            : _themeMode == AppThemeMode.dark
-            ? const Color(0xFF101820)
-            : AppColors.paper,
+        systemNavigationBarColor: Colors.transparent,
         systemNavigationBarDividerColor: Colors.transparent,
         systemNavigationBarIconBrightness: _themeMode == AppThemeMode.light
             ? Brightness.dark
             : Brightness.light,
       ),
-      child: child!,
+      child: M3ETheme(
+        data: M3EThemeData.fromMaterial(Theme.of(context))
+            .copyWith(fontFamily: 'Geist'),
+        child: TickerMode(
+          enabled: !MediaQuery.disableAnimationsOf(context),
+          child: child!,
+        ),
+      ),
     ),
     locale: _language == null ? null : Locale(_language!),
     supportedLocales: const [
@@ -140,15 +235,14 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
       Locale('pt'),
       Locale('zh'),
     ],
-    localizationsDelegates: const [
-      GlobalMaterialLocalizations.delegate,
-      GlobalWidgetsLocalizations.delegate,
-      GlobalCupertinoLocalizations.delegate,
-    ],
+    localizationsDelegates: GlobalMaterialLocalizations.delegates,
     home: HomePage(
       settingsStore: _settingsStore,
       language: _language,
-      onLanguageChanged: (language) => setState(() => _language = language),
+      onLanguageChanged: (language) {
+        setState(() => _language = language);
+        unawaited(_syncWidgetLanguage(language));
+      },
       themeMode: _themeMode,
       onThemeModeChanged: (mode) => setState(() => _themeMode = mode),
       monetEnabled: _monetEnabled,
@@ -206,7 +300,25 @@ class _HomePageState extends State<HomePage> {
       widget.logStore ?? AttendanceLogStore();
   late final AppSettingsStore _settingsStore =
       widget.settingsStore ?? AppSettingsStore();
+  final _accountSearch = TextEditingController();
+  String _accountQuery = '';
   int _tab = 0;
+  bool _scheduleVisited = false;
+  var _nfcPageKey = GlobalKey<NfcPassPageState>();
+
+  void _changeTab(int index) {
+    if (index == _tab) return;
+    if (index == 1) _scheduleVisited = true;
+    if (_tab == 2 && index != 2) {
+      unawaited(
+        _nfcPageKey.currentState?.deactivateQueue() ?? Future<void>.value(),
+      );
+    }
+    if (index != 2) _nfcStartOnOpen = false;
+    if (_tab != 2 && index == 2) _nfcPageKey = GlobalKey<NfcPassPageState>();
+    setState(() => _tab = index);
+  }
+
   DateTime? _scheduleDay;
   int? _scheduleGroupId;
   final _selected = <String>{};
@@ -219,6 +331,8 @@ class _HomePageState extends State<HomePage> {
   bool _scanning = false;
   bool _submitting = false;
   bool _widgetScanPending = false;
+  bool _nfcWidgetPending = false;
+  bool _nfcStartOnOpen = false;
   bool _widgetScanScheduled = false;
   Timer? _counterRefreshTimer;
 
@@ -247,6 +361,10 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _onWidgetCall(MethodCall call) async {
     if (call.method == 'scanAll') _requestWidgetScan();
+    if (call.method == 'nfcPasses') {
+      _nfcWidgetPending = true;
+      _openPendingWidgetNfc();
+    }
   }
 
   Future<void> _takeInitialWidgetRequest() async {
@@ -255,9 +373,31 @@ class _HomePageState extends State<HomePage> {
           true) {
         _requestWidgetScan();
       }
+      if (await _widgetChannel.invokeMethod<bool>('takeNfcPassRequest') ==
+          true) {
+        _nfcWidgetPending = true;
+        _openPendingWidgetNfc();
+      }
     } catch (_) {
       // Normal app launches continue if the native widget bridge is unavailable.
     }
+  }
+
+  void _openPendingWidgetNfc() {
+    if (!_nfcWidgetPending || _loading || _loadError || _busy || !mounted) {
+      return;
+    }
+    _nfcWidgetPending = false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      if (_tab == 2 && _nfcPageKey.currentState != null) {
+        unawaited(_nfcPageKey.currentState!.startFromWidget());
+      } else {
+        _nfcStartOnOpen = true;
+        _changeTab(2);
+      }
+    });
   }
 
   void _requestWidgetScan() {
@@ -288,7 +428,7 @@ class _HomePageState extends State<HomePage> {
         );
         return;
       }
-      setState(() => _tab = 0);
+      _changeTab(0);
       unawaited(_scanQueue(overrideAccounts: List.of(_accounts)));
     });
   }
@@ -297,6 +437,7 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     if (Platform.isAndroid) _widgetChannel.setMethodCallHandler(null);
     _counterRefreshTimer?.cancel();
+    _accountSearch.dispose();
     if (widget.api == null) _api.close();
     if (widget.scheduleApi == null) _scheduleApi.close();
     super.dispose();
@@ -317,6 +458,7 @@ class _HomePageState extends State<HomePage> {
       });
       if (accounts.isNotEmpty) unawaited(_refreshMarks());
       _openPendingWidgetScan();
+      _openPendingWidgetNfc();
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -337,11 +479,12 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _message(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(trMessage(context, message))));
+    M3ESnackbar.show(context, message: trMessage(context, message));
   }
 
   Future<void> _openSettings() async {
+    await _nfcPageKey.currentState?.deactivateQueue();
+    if (!mounted) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (_) => SettingsPage(
@@ -365,7 +508,7 @@ class _HomePageState extends State<HomePage> {
     required String action,
     String? initial,
     int? maxLength,
-  }) => showDialog<String>(
+  }) => showExpressiveDialog<String>(
     context: context,
     builder: (_) => _TextInputDialog(
       title: title,
@@ -446,9 +589,48 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _rename(SavedAccount account) async {
+    if (_busy) return;
+    final label = await _askText(
+      title: tr(context, 'Переименовать аккаунт', 'Rename account'),
+      hint: tr(context, 'Имя или удобная подпись', 'Name or a useful label'),
+      action: tr(context, 'Сохранить', 'Save'),
+      initial: account.label,
+      maxLength: 48,
+    );
+    if (label == null || !mounted || label == account.label) return;
+    final next = _accounts
+        .map(
+          (item) => item.id == account.id
+              ? SavedAccount(
+                  id: item.id,
+                  label: label,
+                  cookie: item.cookie,
+                  groupId: item.groupId,
+                  groupName: item.groupName,
+                )
+              : item,
+        )
+        .toList();
+    try {
+      await _store.save(next);
+      if (mounted) setState(() => _accounts = next);
+    } catch (_) {
+      if (mounted) {
+        _message(
+          tr(
+            context,
+            'Не удалось сохранить аккаунт.',
+            'Could not save the account.',
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _remove(SavedAccount account) async {
     if (_busy) return;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showExpressiveDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
@@ -464,11 +646,11 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         actions: [
-          TextButton(
+          CampusButton.text(
             onPressed: () => Navigator.pop(context, false),
             child: Text(tr(context, 'Отмена', 'Cancel')),
           ),
-          FilledButton(
+          CampusButton.filled(
             onPressed: () => Navigator.pop(context, true),
             child: Text(tr(context, 'Удалить', 'Delete')),
           ),
@@ -478,6 +660,7 @@ class _HomePageState extends State<HomePage> {
     if (confirmed != true || !mounted) return;
     final next = _accounts.where((item) => item.id != account.id).toList();
     try {
+      await NfcPassStore().remove(account.id);
       await _store.save(next);
       if (mounted) {
         setState(() {
@@ -530,6 +713,7 @@ class _HomePageState extends State<HomePage> {
       if (mounted) {
         setState(() => _scanning = false);
         _openPendingWidgetScan();
+        _openPendingWidgetNfc();
       }
     }
     if (mounted && raw != null) await _submitLink(raw);
@@ -630,6 +814,7 @@ class _HomePageState extends State<HomePage> {
       if (mounted) {
         setState(() => _scanning = false);
         _openPendingWidgetScan();
+        _openPendingWidgetNfc();
       }
     }
   }
@@ -643,27 +828,25 @@ class _HomePageState extends State<HomePage> {
       );
       return;
     }
-    final method = await showModalBottomSheet<String>(
+    final method = await showExpressiveSheet<String>(
       context: context,
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
+            CampusListItem(
               leading: Icon(Icons.wifi_tethering_rounded),
-              title: Text(tr(context, 'Передать рядом', 'Share nearby')),
-              subtitle: Text(
-                tr(
-                  context,
-                  'Несколько телефонов в одной Wi‑Fi сети',
-                  'Multiple phones on the same Wi‑Fi',
-                ),
-              ),
+              headline: (tr(context, 'Передать рядом', 'Share nearby')),
+              supportingText: (tr(
+                context,
+                'Несколько телефонов в одной Wi‑Fi сети',
+                'Multiple phones on the same Wi‑Fi',
+              )),
               onTap: () => Navigator.pop(context, 'nearby'),
             ),
-            ListTile(
+            CampusListItem(
               leading: Icon(Icons.qr_code_rounded),
-              title: Text(tr(context, 'Передать через QR', 'Share by QR')),
+              headline: (tr(context, 'Передать через QR', 'Share by QR')),
               onTap: () => Navigator.pop(context, 'qr'),
             ),
           ],
@@ -682,29 +865,29 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _importSessions() async {
     if (_busy) return;
-    final method = await showModalBottomSheet<String>(
+    final method = await showExpressiveSheet<String>(
       context: context,
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
+            CampusListItem(
               leading: Icon(Icons.wifi_tethering_rounded),
-              title: Text(tr(context, 'Получить рядом', 'Receive nearby')),
-              subtitle: Text(
-                tr(
-                  context,
-                  'Откройте этот экран на каждом получателе',
-                  'Open this on each receiving phone',
-                ),
-              ),
+              headline: (tr(context, 'Получить рядом', 'Receive nearby')),
+              supportingText: (tr(
+                context,
+                'Откройте этот экран на каждом получателе',
+                'Open this on each receiving phone',
+              )),
               onTap: () => Navigator.pop(context, 'nearby'),
             ),
-            ListTile(
+            CampusListItem(
               leading: Icon(Icons.qr_code_scanner_rounded),
-              title: Text(
-                tr(context, 'Сканировать QR передачи', 'Scan transfer QR'),
-              ),
+              headline: (tr(
+                context,
+                'Сканировать QR передачи',
+                'Scan transfer QR',
+              )),
               onTap: () => Navigator.pop(context, 'qr'),
             ),
           ],
@@ -863,6 +1046,7 @@ class _HomePageState extends State<HomePage> {
     if (mounted) {
       setState(() => _submitting = false);
       _openPendingWidgetScan();
+      _openPendingWidgetNfc();
     }
   }
 
@@ -928,7 +1112,8 @@ class _HomePageState extends State<HomePage> {
 
   Widget _settingsButton(BuildContext context) {
     final updates = widget.updates;
-    Widget button(bool available) => IconButton(
+    Widget button(bool available) => M3EIconButton(
+      suppressInk: true,
       onPressed: _openSettings,
       tooltip: tr(context, 'Настройки', 'Settings'),
       icon: Badge(
@@ -936,6 +1121,7 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: context.palette.blue,
         child: Icon(Icons.settings_outlined),
       ),
+      variant: M3EIconButtonVariant.standard,
     );
     if (updates == null) return button(false);
     return AnimatedBuilder(
@@ -946,10 +1132,18 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final visibleAccounts = _accounts
+        .where(
+          (account) => '${account.label} ${account.groupName ?? ''}'
+              .toLowerCase()
+              .contains(_accountQuery),
+        )
+        .toList();
     final countsByAccount = _marks == null
         ? null
         : AttendanceCounts.fromMarks(_marks!);
     return Scaffold(
+      extendBody: true,
       appBar: AppBar(
         title: Row(
           children: [
@@ -959,303 +1153,430 @@ class _HomePageState extends State<HomePage> {
               height: 28,
               semanticsLabel: tr(context, 'Логотип приложения', 'App logo'),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 10),
             const Flexible(
               child: Text(
                 'AntiAttendance',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -.5,
+                ),
               ),
             ),
           ],
         ),
         actions: [_settingsButton(context), const SizedBox(width: 8)],
+        automaticallyImplyLeading: true,
       ),
-      bottomNavigationBar: NavigationBar(
-        backgroundColor: context.palette.paper,
+      bottomNavigationBar: CampusNavigation(
         selectedIndex: _tab,
-        onDestinationSelected: (index) => setState(() => _tab = index),
-        destinations: [
-          NavigationDestination(
-            icon: Icon(Icons.qr_code_scanner_rounded),
-            label: tr(context, 'Посещаемость', 'Attendance'),
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.calendar_month_rounded),
-            label: tr(context, 'Расписание', 'Schedule'),
-          ),
+        onDestinationSelected: _changeTab,
+        labels: [
+          tr(context, 'Посещаемость', 'Attendance'),
+          tr(context, 'Расписание', 'Schedule'),
+          tr(context, 'Пропуска', 'Passes'),
         ],
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
-          child: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : _loadError
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        tr(
-                          context,
-                          'Не удалось загрузить сохранённые аккаунты.',
-                          'Could not load saved accounts.',
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      FilledButton(
-                        onPressed: _load,
-                        child: Text(tr(context, 'Повторить', 'Retry')),
-                      ),
-                    ],
-                  ),
-                )
-              : AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  switchInCurve: Curves.easeOut,
-                  switchOutCurve: Curves.easeIn,
-                  transitionBuilder: (child, animation) =>
-                      FadeTransition(opacity: animation, child: child),
-                  child: _tab == 1
-                      ? SchedulePage(
-                          key: const ValueKey('schedule-tab'),
-                          accounts: _accounts,
-                          api: _scheduleApi,
-                          log: _logStore,
-                          onScanLesson: (lesson, accounts) => _scanQueue(
-                            lesson: lesson,
-                            overrideAccounts: accounts,
+      body: Builder(
+        builder: (context) => Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: _loading
+                ? const Center(child: M3EProgressIndicator.circularWavy())
+                : _loadError
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          tr(
+                            context,
+                            'Не удалось загрузить сохранённые аккаунты.',
+                            'Could not load saved accounts.',
                           ),
-                          onPasteLesson: _pasteLesson,
-                          initialDay: _scheduleDay,
-                          initialGroupId: _scheduleGroupId,
-                          onDayChanged: (day) => _scheduleDay = day,
-                          onGroupChanged: (id) => _scheduleGroupId = id,
-                        )
-                      : ListView(
-                          key: const ValueKey('attendance-tab'),
-                          padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
-                          children: [
-                            Text(
-                              tr(context, 'Посещаемость', 'Attendance'),
-                              style: TextStyle(
-                                fontSize: 30,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              tr(
-                                context,
-                                'Наведите камеру на QR-код — отметим выбранных. Если не вышло, попробуем снова.',
-                                'Scan a QR to mark selected accounts. Keep it in view for retries.',
-                              ),
-                              style: TextStyle(
-                                color: context.palette.muted,
-                                fontSize: 14,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            SizedBox(
-                              width: double.infinity,
-                              child: FilledButton.icon(
-                                onPressed: _busy ? null : _scan,
-                                icon: Icon(Icons.qr_code_scanner_rounded),
-                                label: Text(
-                                  tr(context, 'Сканировать QR', 'Scan QR'),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                onPressed: _busy ? null : _pasteLink,
-                                icon: Icon(Icons.link_rounded, size: 20),
-                                label: Text(
-                                  tr(context, 'Вставить ссылку', 'Paste link'),
-                                ),
-                              ),
-                            ),
-                            if (_submitting) ...[
-                              const SizedBox(height: 12),
-                              const LinearProgressIndicator(),
-                              const SizedBox(height: 6),
-                              Text(
-                                tr(
-                                  context,
-                                  'Отправляем отметки…',
-                                  'Submitting attendance…',
-                                ),
-                                style: TextStyle(
-                                  color: context.palette.muted,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextButton.icon(
-                                    onPressed: _busy ? null : _shareSessions,
-                                    icon: Icon(
-                                      Icons.ios_share_rounded,
-                                      size: 18,
-                                    ),
-                                    label: Text(
-                                      tr(context, 'Передать', 'Share'),
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: TextButton.icon(
-                                    onPressed: _busy ? null : _importSessions,
-                                    icon: Icon(
-                                      Icons.download_rounded,
-                                      size: 18,
-                                    ),
-                                    label: Text(
-                                      tr(context, 'Получить', 'Receive'),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 18),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    tr(context, 'Аккаунты', 'Accounts'),
-                                    style: TextStyle(
-                                      fontSize: 21,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                                TextButton.icon(
-                                  onPressed: _busy ? null : () => _login(),
-                                  icon: Icon(Icons.add_rounded, size: 19),
-                                  label: Text(tr(context, 'Добавить', 'Add')),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            if (_accounts.isEmpty)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 30,
-                                ),
-                                child: Text(
-                                  tr(
-                                    context,
-                                    'Добавьте первый аккаунт через МИРЭА.',
-                                    'Add your first account through MIREA.',
-                                  ),
-                                  style: TextStyle(
-                                    color: context.palette.muted,
-                                  ),
-                                ),
-                              ),
-                            if (_accounts.isNotEmpty) ...[
-                              Row(
+                        ),
+                        const SizedBox(height: 12),
+                        CampusButton.filled(
+                          onPressed: _load,
+                          child: Text(tr(context, 'Повторить', 'Retry')),
+                        ),
+                      ],
+                    ),
+                  )
+                : IndexedStack(
+                    index: _tab,
+                    children: [
+                      TickerMode(
+                        enabled: _tab == 0,
+                        child: CustomScrollView(
+                          key: const PageStorageKey('attendance-tab'),
+                          slivers: [
+                            SliverPadding(
+                              padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+                              sliver: SliverList.list(
                                 children: [
-                                  Text(
-                                    trf(
+                                  CampusHeader(
+                                    title: tr(
                                       context,
-                                      'Выбрано: {count}',
-                                      'Selected: {count}',
-                                      {
-                                        'count': _selected
-                                            .where(
-                                              (id) => _accounts.any(
-                                                (a) => a.id == id,
-                                              ),
-                                            )
-                                            .length,
-                                      },
+                                      'Посещаемость',
+                                      'Attendance',
                                     ),
-                                    style: TextStyle(
-                                      color: context.palette.muted,
-                                      fontSize: 12,
+                                    subtitle: tr(
+                                      context,
+                                      'Наведите камеру на QR-код — отметим выбранных. Если не вышло, попробуем снова.',
+                                      'Scan a QR to mark selected accounts. Keep it in view for retries.',
+                                    ),
+                                    icon: Icons.qr_code_scanner_rounded,
+                                  ),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: CampusButton.icon(
+                                      onPressed: _busy ? null : _scan,
+                                      icon: const Icon(
+                                        Icons.qr_code_scanner_rounded,
+                                      ),
+                                      label: Text(
+                                        tr(
+                                          context,
+                                          'Сканировать QR',
+                                          'Scan QR',
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                  const Spacer(),
-                                  TextButton(
-                                    onPressed: _busy
-                                        ? null
-                                        : () => setState(() {
-                                            if (_selected.length ==
-                                                _accounts.length) {
-                                              _selected.clear();
-                                            } else {
-                                              _selected
-                                                ..clear()
-                                                ..addAll(
-                                                  _accounts.map((a) => a.id),
-                                                );
-                                            }
-                                          }),
-                                    child: Text(
-                                      _selected.length == _accounts.length
-                                          ? tr(
-                                              context,
-                                              'Снять выбор',
-                                              'Clear selection',
-                                            )
-                                          : tr(
-                                              context,
-                                              'Выбрать все',
-                                              'Select all',
+                                  const SizedBox(height: 10),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: CampusButton.icon(
+                                      onPressed: _busy ? null : _pasteLink,
+                                      icon: const Icon(
+                                        Icons.link_rounded,
+                                        size: 20,
+                                      ),
+                                      label: Text(
+                                        tr(
+                                          context,
+                                          'Вставить ссылку',
+                                          'Paste link',
+                                        ),
+                                      ),
+                                      style: M3EButtonStyle.outlined,
+                                    ),
+                                  ),
+                                  if (_submitting) ...[
+                                    const SizedBox(height: 12),
+                                    const M3EProgressIndicator.linearWavy(),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      tr(
+                                        context,
+                                        'Отправляем отметки…',
+                                        'Submitting attendance…',
+                                      ),
+                                      style: TextStyle(
+                                        color: context.palette.muted,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: CampusButton.icon(
+                                          onPressed: _busy
+                                              ? null
+                                              : _shareSessions,
+                                          icon: Icon(
+                                            Icons.ios_share_rounded,
+                                            size: 18,
+                                          ),
+                                          label: Text(
+                                            tr(context, 'Передать', 'Share'),
+                                          ),
+                                          style: M3EButtonStyle.text,
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: CampusButton.icon(
+                                          onPressed: _busy
+                                              ? null
+                                              : _importSessions,
+                                          icon: Icon(
+                                            Icons.download_rounded,
+                                            size: 18,
+                                          ),
+                                          label: Text(
+                                            tr(context, 'Получить', 'Receive'),
+                                          ),
+                                          style: M3EButtonStyle.text,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 18),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          tr(context, 'Аккаунты', 'Accounts'),
+                                          style: TextStyle(
+                                            fontSize: 21,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                      CampusButton.icon(
+                                        onPressed: _busy
+                                            ? null
+                                            : () => _login(),
+                                        icon: Icon(Icons.add_rounded, size: 19),
+                                        label: Text(
+                                          tr(context, 'Добавить', 'Add'),
+                                        ),
+                                        style: M3EButtonStyle.text,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  if (_accounts.isEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 30,
+                                      ),
+                                      child: Text(
+                                        tr(
+                                          context,
+                                          'Добавьте первый аккаунт через МИРЭА.',
+                                          'Add your first account through MIREA.',
+                                        ),
+                                        style: TextStyle(
+                                          color: context.palette.muted,
+                                        ),
+                                      ),
+                                    ),
+                                  if (_accounts.isNotEmpty) ...[
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        Expanded(
+                                          child: CampusButton.icon(
+                                            onPressed:
+                                                _busy || _selected.isEmpty
+                                                ? null
+                                                : () => _chooseGroup(
+                                                    Set.of(_selected),
+                                                  ),
+                                            icon: Icon(
+                                              Icons.groups_rounded,
+                                              size: 18,
                                             ),
+                                            label: Text(
+                                              tr(
+                                                context,
+                                                'Назначить группу',
+                                                'Assign group',
+                                              ),
+                                            ),
+                                            style: M3EButtonStyle.outlined,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: CampusButton.text(
+                                            onPressed: _busy
+                                                ? null
+                                                : () => setState(() {
+                                                    if (_selected.length ==
+                                                        _accounts.length) {
+                                                      _selected.clear();
+                                                    } else {
+                                                      _selected
+                                                        ..clear()
+                                                        ..addAll(
+                                                          _accounts.map(
+                                                            (a) => a.id,
+                                                          ),
+                                                        );
+                                                    }
+                                                  }),
+                                            child: Text(
+                                              _selected.length ==
+                                                      _accounts.length
+                                                  ? tr(
+                                                      context,
+                                                      'Снять выбор',
+                                                      'Clear selection',
+                                                    )
+                                                  : tr(
+                                                      context,
+                                                      'Выбрать все',
+                                                      'Select all',
+                                                    ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      trf(
+                                        context,
+                                        'Выбрано: {count}',
+                                        'Selected: {count}',
+                                        {
+                                          'count': _selected
+                                              .where(
+                                                (id) => _accounts.any(
+                                                  (a) => a.id == id,
+                                                ),
+                                              )
+                                              .length,
+                                        },
+                                      ),
+                                      style: TextStyle(
+                                        color: context.palette.muted,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                  ],
+                                  if (_accounts.length > 5 ||
+                                      _accountQuery.isNotEmpty) ...[
+                                    CampusTextField(
+                                      controller: _accountSearch,
+                                      label: tr(
+                                        context,
+                                        'Найти аккаунт или группу',
+                                        'Search accounts or groups',
+                                      ),
+                                      leading: const Icon(Icons.search_rounded),
+                                      trailing: _accountQuery.isEmpty
+                                          ? null
+                                          : M3EIconButton(
+                                              suppressInk: true,
+                                              tooltip: tr(
+                                                context,
+                                                'Очистить поиск',
+                                                'Clear search',
+                                              ),
+                                              icon: const Icon(
+                                                Icons.close_rounded,
+                                              ),
+                                              onPressed: () {
+                                                _accountSearch.clear();
+                                                setState(
+                                                  () => _accountQuery = '',
+                                                );
+                                              },
+                                              variant:
+                                                  M3EIconButtonVariant.standard,
+                                            ),
+                                      onChanged: (value) => setState(
+                                        () => _accountQuery = value
+                                            .trim()
+                                            .toLowerCase(),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                  ],
+                                  if (visibleAccounts.isEmpty &&
+                                      _accountQuery.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.all(20),
+                                      child: Text(
+                                        tr(
+                                          context,
+                                          'Ничего не найдено.',
+                                          'No matches found.',
+                                        ),
+                                        style: TextStyle(
+                                          color: context.palette.muted,
+                                        ),
+                                      ),
+                                    ),
                                 ],
                               ),
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: OutlinedButton.icon(
-                                  onPressed: _busy || _selected.isEmpty
-                                      ? null
-                                      : () => _chooseGroup(Set.of(_selected)),
-                                  icon: Icon(Icons.groups_rounded, size: 18),
-                                  label: Text(
-                                    tr(
-                                      context,
-                                      'Назначить группу',
-                                      'Assign group',
-                                    ),
-                                  ),
-                                ),
+                            ),
+                            SliverPadding(
+                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                              sliver: SliverList.builder(
+                                itemCount: visibleAccounts.length,
+                                itemBuilder: (context, index) {
+                                  final account = visibleAccounts[index];
+                                  return _AccountRow(
+                                    key: ValueKey(account.id),
+                                    account: account,
+                                    counts: countsByAccount == null
+                                        ? null
+                                        : (countsByAccount[account.id] ??
+                                              AttendanceCounts.zero),
+                                    selected: _selected.contains(account.id),
+                                    busy: _submitting,
+                                    result: _results[account.id],
+                                    error: _errors[account.id],
+                                    onTap: () => setState(() {
+                                      if (!_selected.add(account.id)) {
+                                        _selected.remove(account.id);
+                                      }
+                                    }),
+                                    onReauth: () => _login(replace: account),
+                                    onRename: () => _rename(account),
+                                    onGroup: () => _chooseGroup({account.id}),
+                                    onRemove: () => _remove(account),
+                                  );
+                                },
                               ),
-                              const SizedBox(height: 10),
-                            ],
-                            for (final account in _accounts)
-                              _AccountRow(
-                                account: account,
-                                counts: countsByAccount == null
-                                    ? null
-                                    : (countsByAccount[account.id] ??
-                                          AttendanceCounts.zero),
-                                selected: _selected.contains(account.id),
-                                busy: _submitting,
-                                result: _results[account.id],
-                                error: _errors[account.id],
-                                onTap: () => setState(() {
-                                  if (!_selected.add(account.id)) {
-                                    _selected.remove(account.id);
-                                  }
-                                }),
-                                onReauth: () => _login(replace: account),
-                                onGroup: () => _chooseGroup({account.id}),
-                                onRemove: () => _remove(account),
+                            ),
+                            SliverToBoxAdapter(
+                              child: SizedBox(
+                                height:
+                                    MediaQuery.paddingOf(context).bottom + 16,
                               ),
+                            ),
                           ],
                         ),
-                ),
+                      ),
+                      TickerMode(
+                        enabled: _tab == 1,
+                        child: _scheduleVisited
+                            ? SchedulePage(
+                                key: const ValueKey('schedule-tab'),
+                                active: _tab == 1,
+                                accounts: _accounts,
+                                api: _scheduleApi,
+                                log: _logStore,
+                                onScanLesson: (lesson, accounts) => _scanQueue(
+                                  lesson: lesson,
+                                  overrideAccounts: accounts,
+                                ),
+                                onPasteLesson: _pasteLesson,
+                                initialDay: _scheduleDay,
+                                initialGroupId: _scheduleGroupId,
+                                onDayChanged: (day) => _scheduleDay = day,
+                                onGroupChanged: (id) => _scheduleGroupId = id,
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                      // NFC is deliberately disposed on exit: its queue belongs
+                      // to the visible screen and must stop when leaving it.
+                      _tab == 2
+                          ? SafeArea(
+                              top: false,
+                              child: NfcPassPage(
+                                key: _nfcPageKey,
+                                accounts: _accounts,
+                                startOnOpen: _nfcStartOnOpen,
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ],
+                  ),
+          ),
         ),
       ),
     );
@@ -1264,6 +1585,7 @@ class _HomePageState extends State<HomePage> {
 
 class _AccountRow extends StatelessWidget {
   const _AccountRow({
+    super.key,
     required this.account,
     required this.counts,
     required this.selected,
@@ -1272,6 +1594,7 @@ class _AccountRow extends StatelessWidget {
     required this.error,
     required this.onTap,
     required this.onReauth,
+    required this.onRename,
     required this.onGroup,
     required this.onRemove,
   });
@@ -1284,6 +1607,7 @@ class _AccountRow extends StatelessWidget {
   final String? error;
   final VoidCallback onTap;
   final VoidCallback onReauth;
+  final VoidCallback onRename;
   final VoidCallback onGroup;
   final VoidCallback onRemove;
 
@@ -1300,123 +1624,149 @@ class _AccountRow extends StatelessWidget {
         : context.palette.muted;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        decoration: BoxDecoration(
-          color: selected
-              ? context.palette.blue.withValues(alpha: .07)
-              : context.palette.surface,
-          border: Border.all(
+      child: CampusPressable(
+        enabled: !busy,
+        child: AnimatedContainer(
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : const Duration(milliseconds: 140),
+          curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
             color: selected
-                ? context.palette.blue.withValues(alpha: .35)
-                : context.palette.line,
+                ? context.palette.selected
+                : context.palette.surface,
+            border: Border.all(
+              color: selected
+                  ? context.palette.blue.withValues(alpha: .35)
+                  : context.palette.line,
+            ),
+            borderRadius: BorderRadius.circular(20),
           ),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(14),
-          child: InkWell(
-            onTap: busy ? null : onTap,
-            borderRadius: BorderRadius.circular(14),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 9, 4, 9),
-              child: Row(
-                children: [
-                  Icon(
-                    selected
-                        ? Icons.check_circle_rounded
-                        : Icons.circle_outlined,
-                    color: selected
-                        ? context.palette.blue
-                        : context.palette.muted,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          account.label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        if (account.groupName != null)
+          clipBehavior: Clip.antiAlias,
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+            child: InkWell(
+              onTap: busy ? null : onTap,
+              borderRadius: BorderRadius.circular(20),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 9, 4, 9),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 46,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? context.palette.blue
+                            : context.palette.paper,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        selected
+                            ? Icons.check_rounded
+                            : Icons.person_outline_rounded,
+                        color: selected
+                            ? context.palette.onBlue
+                            : context.palette.muted,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            account.groupName!,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: context.palette.muted,
-                            ),
+                            account.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontWeight: FontWeight.w600),
                           ),
-                        Text(
-                          trMessage(context, status),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 12, color: color),
+                          if (account.groupName != null)
+                            Text(
+                              account.groupName!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: context.palette.muted,
+                              ),
+                            ),
+                          Text(
+                            trMessage(context, status),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 12, color: color),
+                          ),
+                          const SizedBox(height: 5),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 2,
+                            children: [
+                              _countText(
+                                context,
+                                'Сегодня',
+                                'Today',
+                                counts?.today,
+                              ),
+                              _countText(
+                                context,
+                                'Неделя',
+                                'Week',
+                                counts?.week,
+                              ),
+                              _countText(
+                                context,
+                                'Всего',
+                                'Total',
+                                counts?.total,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    M3EMenu(
+                      entries: [
+                        M3EMenuEntry(
+                          value: 'rename',
+                          label: tr(context, 'Переименовать', 'Rename'),
                         ),
-                        const SizedBox(height: 5),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 2,
-                          children: [
-                            _countText(
-                              context,
-                              'Сегодня',
-                              'Today',
-                              counts?.today,
-                            ),
-                            _countText(context, 'Неделя', 'Week', counts?.week),
-                            _countText(
-                              context,
-                              'Всего',
-                              'Total',
-                              counts?.total,
-                            ),
-                          ],
+                        M3EMenuEntry(
+                          value: 'login',
+                          label: tr(context, 'Войти снова', 'Sign in again'),
+                        ),
+                        M3EMenuEntry(
+                          value: 'group',
+                          label: tr(context, 'Выбрать группу', 'Choose group'),
+                        ),
+                        M3EMenuEntry(
+                          value: 'remove',
+                          label: tr(context, 'Удалить', 'Delete'),
                         ),
                       ],
-                    ),
-                  ),
-                  PopupMenuButton<String>(
-                    enabled: !busy,
-                    tooltip: tr(
-                      context,
-                      'Действия с аккаунтом',
-                      'Account actions',
-                    ),
-                    icon: Icon(
-                      Icons.more_vert_rounded,
-                      color: context.palette.muted,
-                    ),
-                    onSelected: (value) {
-                      if (value == 'login') onReauth();
-                      if (value == 'group') onGroup();
-                      if (value == 'remove') onRemove();
-                    },
-                    itemBuilder: (_) => [
-                      PopupMenuItem(
-                        value: 'login',
-                        child: Text(
-                          tr(context, 'Войти снова', 'Sign in again'),
+                      onSelected: (value) {
+                        if (value == 'login') onReauth();
+                        if (value == 'rename') onRename();
+                        if (value == 'group') onGroup();
+                        if (value == 'remove') onRemove();
+                      },
+                      anchorBuilder: (context, open) => M3EIconButton(
+                        suppressInk: true,
+                        variant: M3EIconButtonVariant.standard,
+                        icon: Icon(
+                          Icons.more_vert_rounded,
+                          color: context.palette.muted,
                         ),
-                      ),
-                      PopupMenuItem(
-                        value: 'group',
-                        child: Text(
-                          tr(context, 'Выбрать группу', 'Choose group'),
+                        tooltip: tr(
+                          context,
+                          'Действия с аккаунтом',
+                          'Account actions',
                         ),
+                        onPressed: (!busy) ? open : null,
                       ),
-                      PopupMenuItem(
-                        value: 'remove',
-                        child: Text(tr(context, 'Удалить', 'Delete')),
-                      ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1464,18 +1814,19 @@ class _TextInputDialogState extends State<_TextInputDialog> {
   @override
   Widget build(BuildContext context) => AlertDialog(
     title: Text(widget.title),
-    content: TextField(
+    content: CampusTextField(
       controller: _controller,
       autofocus: true,
       maxLength: widget.maxLength,
-      decoration: InputDecoration(hintText: widget.hint),
+      label: widget.title,
+      placeholder: widget.hint,
     ),
     actions: [
-      TextButton(
+      CampusButton.text(
         onPressed: () => Navigator.pop(context),
         child: Text(tr(context, 'Отмена', 'Cancel')),
       ),
-      FilledButton(
+      CampusButton.filled(
         onPressed: () {
           final value = _controller.text.trim();
           if (value.isNotEmpty) Navigator.pop(context, value);

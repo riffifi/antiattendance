@@ -1,6 +1,8 @@
+import 'package:material_3_expressive/material_3_expressive.dart';
+
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import 'l10n.dart';
@@ -102,15 +104,12 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
       if (mounted) setState(() => _zoom = target);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              tr(
-                context,
-                'Масштаб недоступен на этом устройстве.',
-                'Zoom is unavailable on this device.',
-              ),
-            ),
+        M3ESnackbar.show(
+          context,
+          message: tr(
+            context,
+            'Масштаб недоступен на этом устройстве.',
+            'Zoom is unavailable on this device.',
           ),
         );
       }
@@ -123,11 +122,12 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
       title: Text(tr(context, 'Войти через МИРЭА', 'Sign in through MIREA')),
+      automaticallyImplyLeading: true,
     ),
     body: _error != null
         ? Center(child: Text(trMessage(context, _error!)))
         : !_ready
-        ? const Center(child: CircularProgressIndicator())
+        ? const Center(child: M3EProgressIndicator.circularWavy())
         : Column(
             children: [
               Expanded(
@@ -182,7 +182,8 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ),
-                      IconButton.filled(
+                      M3EIconButton(
+                        suppressInk: true,
                         onPressed:
                             _zooming ||
                                 !_pageReady ||
@@ -192,6 +193,7 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
                             : () => _changeZoom(_zoom - 0.15),
                         icon: const Icon(Icons.remove_rounded),
                         tooltip: tr(context, 'Уменьшить', 'Zoom out'),
+                        variant: M3EIconButtonVariant.filled,
                       ),
                       SizedBox(
                         width: 52,
@@ -201,7 +203,8 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                       ),
-                      IconButton.filled(
+                      M3EIconButton(
+                        suppressInk: true,
                         onPressed:
                             _zooming ||
                                 !_pageReady ||
@@ -211,6 +214,7 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
                             : () => _changeZoom(_zoom + 0.15),
                         icon: const Icon(Icons.add_rounded),
                         tooltip: tr(context, 'Увеличить', 'Zoom in'),
+                        variant: M3EIconButtonVariant.filled,
                       ),
                     ],
                   ),

@@ -23,10 +23,15 @@ class MainActivity : FlutterActivity() {
 
     companion object {
         const val ACTION_SCAN_ALL = "com.example.antiattendance.SCAN_ALL"
+        const val ACTION_NFC_PASSES = "com.example.antiattendance.NFC_PASSES"
     }
 
+    private var updatesChannel: MethodChannel? = null
+    private var pendingUpdateOpen = false
+    private var pendingUpdateTag: String? = null
     private var widgetChannel: MethodChannel? = null
     private var pendingWidgetScan = false
+    private var pendingNfcPassRequest = false
     private var nfcChannel: MethodChannel? = null
     private var readerRequested = false
     private var readerActive = false
@@ -36,15 +41,133 @@ class MainActivity : FlutterActivity() {
     private var fieldCallback: CardEmulation.NfcEventCallback? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        pendingUpdateOpen = intent?.action == UpdateNotifier.ACTION_OPEN
         pendingWidgetScan = intent?.action == ACTION_SCAN_ALL
+        pendingNfcPassRequest = intent?.action == ACTION_NFC_PASSES
         super.onCreate(savedInstanceState)
+        stopPassQueue()
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        updatesChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "antiattendance/updates")
+        updatesChannel?.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "configure" -> {
+                    UpdateNotifier.configure(this, call.argument<String>("language"))
+                    result.success(null)
+                }
+                "takeOpenRequest" -> {
+                    result.success(pendingUpdateOpen)
+                    pendingUpdateOpen = false
+                }
+                "notify" -> {
+                    val tag = call.argument<String>("tag")
+                    if (tag != null && UpdateNotifier.isNewer(this, tag)) {
+                        val prefs = UpdateNotifier.preferences(this)
+                        if (Build.VERSION.SDK_INT >= 33 &&
+                            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&
+                            !prefs.getBoolean("permission_requested", false)) {
+                            prefs.edit().putBoolean("permission_requested", true).apply()
+                            pendingUpdateTag = tag
+                            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 7303)
+                        } else UpdateNotifier.show(this, tag)
+                    }
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "antiattendance/nfc_pass").setMethodCallHandler { call, result ->
+            try {
+                when (call.method) {
+                    "openNfcSettings" -> {
+                        startActivity(Intent(android.provider.Settings.ACTION_NFC_SETTINGS))
+                        result.success(null)
+                    }
+                    "pinNfcWidget" -> {
+                        val manager = android.appwidget.AppWidgetManager.getInstance(this)
+                        if (Build.VERSION.SDK_INT < 26 || !manager.isRequestPinAppWidgetSupported) {
+                            result.success(false)
+                        } else {
+                            val provider = if (call.argument<Boolean>("compact") == true)
+                                NfcPassCompactWidgetProvider::class.java else NfcPassWidgetProvider::class.java
+                            result.success(manager.requestPinAppWidget(ComponentName(this, provider), null, null))
+                        }
+                    }
+                    "start" -> {
+                        val adapter = NfcAdapter.getDefaultAdapter(this)
+                        if (adapter == null) {
+                            result.error("NFC_UNAVAILABLE", "NFC is unavailable", null)
+                            return@setMethodCallHandler
+                        }
+                        if (!adapter.isEnabled) {
+                            result.error("NFC_DISABLED", "NFC is disabled", null)
+                            return@setMethodCallHandler
+                        }
+                        if (!packageManager.hasSystemFeature(PackageManager.FEATURE_NFC_HOST_CARD_EMULATION)) {
+                            result.error("NFC_HCE_UNAVAILABLE", "NFC card emulation is unavailable", null)
+                            return@setMethodCallHandler
+                        }
+                        check(!readerRequested && !turnstileRequested) { "Close NFC diagnostics first." }
+                        val raw = call.argument<List<Map<String, Any>>>("passes") ?: error("Missing passes")
+                        val values = raw.map {
+                            PassQueue.Pass(
+                                it["accountId"] as String,
+                                (it["number"] as String).toLong(),
+                                (it["expiresAt"] as Number).toLong(),
+                            )
+                        }
+                        val emulation = CardEmulation.getInstance(adapter)
+                        val service = ComponentName(this, DigitalPassService::class.java)
+                        try {
+                            check(emulation.registerAidsForService(service, CardEmulation.CATEGORY_OTHER, listOf("F222222222"))) {
+                                "Android could not register the campus NFC application."
+                            }
+                            check(emulation.setPreferredService(this, service)) {
+                                "Android could not select this app for NFC."
+                            }
+                            PassQueue.start(values, call.argument<Int>("intervalSeconds") ?: 60)
+                            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                        } catch (error: Exception) {
+                            stopPassQueue()
+                            throw error
+                        }
+                        result.success(PassQueue.status())
+                    }
+                    "status" -> result.success(PassQueue.status())
+                    "stop" -> {
+                        stopPassQueue()
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            } catch (error: Exception) {
+                result.error("NFC_PASS_ERROR", error.message, null)
+            }
+        }
         widgetChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "antiattendance/launcher_widget")
         widgetChannel?.setMethodCallHandler { call, result ->
-            if (call.method == "takeScanAllRequest") {
+            if (call.method == "setWidgetLanguage") {
+                val language = call.argument<String>("language")
+                getSharedPreferences("launcher_widgets", MODE_PRIVATE).edit().apply {
+                    if (language == null) remove("language") else putString("language", language)
+                }.apply()
+                val manager = android.appwidget.AppWidgetManager.getInstance(this)
+                val providers = listOf(
+                    ScanAllWidgetProvider(), ScanAllCompactWidgetProvider(), NfcPassWidgetProvider(), NfcPassCompactWidgetProvider(),
+                )
+                for (provider in providers) {
+                    val ids = manager.getAppWidgetIds(ComponentName(this, provider.javaClass))
+                    if (ids.isNotEmpty()) provider.onUpdate(this, manager, ids)
+                }
+                result.success(null)
+            } else if (call.method == "takeNfcPassRequest") {
+                val requested = pendingNfcPassRequest || intent?.action == ACTION_NFC_PASSES
+                pendingNfcPassRequest = false
+                if (requested) intent?.action = Intent.ACTION_MAIN
+                result.success(requested)
+            } else if (call.method == "takeScanAllRequest") {
                 val requested = pendingWidgetScan || intent?.action == ACTION_SCAN_ALL
                 pendingWidgetScan = false
                 if (requested) intent?.action = Intent.ACTION_MAIN
@@ -164,17 +287,39 @@ class MainActivity : FlutterActivity() {
     override fun onNewIntent(newIntent: Intent) {
         super.onNewIntent(newIntent)
         setIntent(newIntent)
-        if (newIntent.action != ACTION_SCAN_ALL) return
-        pendingWidgetScan = true
-        widgetChannel?.invokeMethod("scanAll", null, object : MethodChannel.Result {
+        if (newIntent.action == UpdateNotifier.ACTION_OPEN) {
+            pendingUpdateOpen = true
+            stopPassQueue()
+            updatesChannel?.invokeMethod("openUpdates", null, object : MethodChannel.Result {
+                override fun success(result: Any?) { pendingUpdateOpen = false; newIntent.action = Intent.ACTION_MAIN }
+                override fun error(code: String, message: String?, details: Any?) = Unit
+                override fun notImplemented() = Unit
+            })
+            return
+        }
+        val nfcRequest = newIntent.action == ACTION_NFC_PASSES
+        if (!nfcRequest && newIntent.action != ACTION_SCAN_ALL) return
+        pendingWidgetScan = !nfcRequest
+        pendingNfcPassRequest = nfcRequest
+        widgetChannel?.invokeMethod(if (nfcRequest) "nfcPasses" else "scanAll", null, object : MethodChannel.Result {
             override fun success(result: Any?) {
                 pendingWidgetScan = false
+                pendingNfcPassRequest = false
                 newIntent.action = Intent.ACTION_MAIN
             }
 
             override fun error(code: String, message: String?, details: Any?) = Unit
             override fun notImplemented() = Unit
         })
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 7303) {
+            val tag = pendingUpdateTag
+            pendingUpdateTag = null
+            if (tag != null && grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) UpdateNotifier.show(this, tag)
+        }
     }
 
     private fun enableDiagnosticsReader(adapter: NfcAdapter) {
@@ -300,9 +445,25 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onPause() {
+        stopPassQueue()
         disableDiagnosticsReader()
         stopTurnstileProbe()
         super.onPause()
+    }
+
+    private fun stopPassQueue() {
+        PassQueue.stop()
+        window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        NfcAdapter.getDefaultAdapter(this)?.let {
+            if (packageManager.hasSystemFeature(PackageManager.FEATURE_NFC_HOST_CARD_EMULATION)) {
+                try { CardEmulation.getInstance(it).unsetPreferredService(this) } catch (_: Exception) { }
+                try {
+                    CardEmulation.getInstance(it).removeAidsForService(
+                        ComponentName(this, DigitalPassService::class.java), CardEmulation.CATEGORY_OTHER,
+                    )
+                } catch (_: Exception) { }
+            }
+        }
     }
 
     override fun onResume() {

@@ -1,8 +1,12 @@
+import 'campus_design.dart';
+
+import 'package:material_3_expressive/material_3_expressive.dart';
+
 import 'dart:async';
 import 'dart:convert';
 
 import 'package:bonsoir/bonsoir.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'accounts.dart';
 import 'l10n.dart';
@@ -135,26 +139,25 @@ class _NearbySharePageState extends State<NearbySharePage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(tr(context, 'Передать рядом', 'Share nearby'))),
+    appBar: AppBar(
+      title: Text(tr(context, 'Передать рядом', 'Share nearby')),
+      automaticallyImplyLeading: true,
+    ),
     body: Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 600),
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            Text(
-              tr(context, 'Выберите получателей', 'Select receivers'),
-              style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              tr(
+            CampusHeader(
+              title: tr(context, 'Выберите получателей', 'Select receivers'),
+              subtitle: tr(
                 context,
                 'Откройте «Получить рядом» на других телефонах в той же Wi‑Fi сети. Сверьте код каждого устройства перед отправкой.',
                 'Open “Receive nearby” on the other phones on the same Wi‑Fi. Match each device code before sending.',
               ),
+              icon: Icons.wifi_tethering_rounded,
             ),
-            const SizedBox(height: 20),
             if (_failed)
               Text(
                 tr(
@@ -164,13 +167,15 @@ class _NearbySharePageState extends State<NearbySharePage> {
                 ),
               )
             else if (_peers.isEmpty)
-              ListTile(
+              CampusListItem(
                 leading: _ready
                     ? const Icon(Icons.wifi_find_rounded)
-                    : const CircularProgressIndicator(),
-                title: Text(
-                  tr(context, 'Ищем получателей…', 'Looking for receivers…'),
-                ),
+                    : const M3EProgressIndicator.circularWavy(),
+                headline: (tr(
+                  context,
+                  'Ищем получателей…',
+                  'Looking for receivers…',
+                )),
               ),
             for (final entry in _peers.entries)
               CheckboxListTile(
@@ -195,7 +200,7 @@ class _NearbySharePageState extends State<NearbySharePage> {
                 ),
               ),
             const SizedBox(height: 16),
-            FilledButton(
+            CampusButton.filled(
               onPressed: _selected.isEmpty || _sending ? null : _send,
               child: Text(
                 _sending

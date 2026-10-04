@@ -1,6 +1,10 @@
+import 'campus_design.dart';
+
+import 'package:material_3_expressive/material_3_expressive.dart';
+
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'accounts.dart';
 import 'l10n.dart';
@@ -49,6 +53,7 @@ class _NearbyReceivePageState extends State<NearbyReceivePage> {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
       title: Text(tr(context, 'Получить рядом', 'Receive nearby')),
+      automaticallyImplyLeading: true,
     ),
     body: Center(
       child: ConstrainedBox(
@@ -83,19 +88,19 @@ class _NearbyReceivePageState extends State<NearbyReceivePage> {
                     ),
                     const SizedBox(height: 16),
                     for (final account in _incoming!)
-                      ListTile(
+                      CampusListItem(
                         leading: const Icon(Icons.person_outline),
-                        title: Text(account.label),
+                        headline: (account.label),
                       ),
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
-                      child: FilledButton(
+                      child: CampusButton.filled(
                         onPressed: () => Navigator.of(context).pop(_incoming),
                         child: Text(tr(context, 'Импортировать', 'Import')),
                       ),
                     ),
-                    TextButton(
+                    CampusButton.text(
                       onPressed: () {
                         _receiver.clearPending();
                         setState(() => _incoming = null);
@@ -147,7 +152,7 @@ class _NearbyReceivePageState extends State<NearbyReceivePage> {
                         ),
                       )
                     else
-                      const CircularProgressIndicator(),
+                      const M3EProgressIndicator.circularWavy(),
                   ],
                 ),
         ),

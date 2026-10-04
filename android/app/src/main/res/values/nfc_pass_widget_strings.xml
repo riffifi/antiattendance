@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nfc_pass_widget_title">NFC passes</string>
+    <string name="nfc_pass_widget_wide_label">NFC passes (2×1)</string>
+    <string name="nfc_pass_widget_compact_label">NFC passes (1×1)</string>
+    <string name="nfc_pass_widget_description">Start your saved NFC pass queue</string>
+</resources>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nfc_pass_widget_title">NFC-пропуска</string>
+    <string name="nfc_pass_widget_wide_label">NFC-пропуска (2×1)</string>
+    <string name="nfc_pass_widget_compact_label">NFC-пропуска (1×1)</string>
+    <string name="nfc_pass_widget_description">Запустить сохранённую очередь NFC-пропусков</string>
+</resources>

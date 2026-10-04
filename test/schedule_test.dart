@@ -1,3 +1,6 @@
+import 'package:antiattendance/campus_design.dart';
+import 'package:material_3_expressive/material_3_expressive.dart';
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -7,7 +10,7 @@ import 'package:antiattendance/main.dart';
 import 'package:antiattendance/pulse_api.dart';
 import 'package:antiattendance/schedule_api.dart';
 import 'package:antiattendance/schedule_page.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -110,10 +113,16 @@ void main() {
     );
     await tester.pumpAndSettle();
     final rotation = find.descendant(
-      of: find.byTooltip('Refresh'),
+      of: find.byWidgetPredicate(
+        (w) => w is M3EIconButton && w.tooltip == 'Refresh',
+      ),
       matching: find.byType(RotationTransition),
     );
-    await tester.tap(find.byTooltip('Refresh'));
+    await tester.tap(
+      find.byWidgetPredicate(
+        (w) => w is M3EIconButton && w.tooltip == 'Refresh',
+      ),
+    );
     await tester.pump();
     final before = tester.widget<RotationTransition>(rotation).turns.value;
     expect(
@@ -238,7 +247,11 @@ void main() {
     expect(find.text('Mathematics'), findsOneWidget);
     expect(find.text('Anya'), findsOneWidget);
     expect(find.text('Boris'), findsNothing);
-    await tester.tap(find.byTooltip('Next week'));
+    await tester.tap(
+      find.byWidgetPredicate(
+        (w) => w is M3EIconButton && w.tooltip == 'Next week',
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.text('A free day'), findsOneWidget);
     await tester.tap(find.text('Today').last);
@@ -272,14 +285,15 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.calendar_month_rounded));
+    await tester.tap(find.byIcon(Icons.calendar_today_outlined).last);
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Mathematics'), 150);
     await tester.tap(find.text('Mathematics'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Paste link'));
     await tester.pumpAndSettle();
     await tester.enterText(
-      find.byType(TextField).last,
+      find.byType(CampusTextField).last,
       'https://pulse.mirea.ru/lessons/visiting-logs/self-approve?token=abc',
     );
     await tester.tap(find.text('Submit'));

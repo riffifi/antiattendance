@@ -1,7 +1,11 @@
+import 'campus_design.dart';
+
+import 'package:material_3_expressive/material_3_expressive.dart';
+
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
 import 'app_theme.dart';
@@ -170,6 +174,7 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(tr(context, 'Сигнал турникета', 'Turnstile signal')),
+        automaticallyImplyLeading: true,
       ),
       body: Center(
         child: ConstrainedBox(
@@ -203,14 +208,15 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
                     ),
                     if (_listening && _frames.isEmpty) ...[
                       const SizedBox(height: 16),
-                      const LinearProgressIndicator(),
+                      const M3EProgressIndicator.linearWavy(),
                     ],
                     if (_error != null && Platform.isAndroid) ...[
                       const SizedBox(height: 12),
-                      TextButton.icon(
+                      CampusButton.icon(
                         onPressed: _start,
                         icon: Icon(Icons.refresh_rounded),
                         label: Text(tr(context, 'Повторить', 'Retry')),
+                        style: M3EButtonStyle.text,
                       ),
                     ],
                   ],
@@ -252,10 +258,12 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
                         ),
                       ),
                     ),
-                    IconButton(
+                    M3EIconButton(
+                      suppressInk: true,
                       tooltip: tr(context, 'Очистить', 'Clear'),
                       onPressed: () => setState(_frames.clear),
                       icon: Icon(Icons.delete_outline_rounded),
+                      variant: M3EIconButtonVariant.standard,
                     ),
                   ],
                 ),
@@ -295,8 +303,21 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
                           const SizedBox(height: 5),
                           Text(
                             _fieldOnly
-                                ? 't = ${frame['timestampUs']} µs'
-                                : 't = ${frame['timestampUs']} µs  ·  gain = ${frame['gain']}',
+                                ? trf(
+                                    context,
+                                    'Время: {time} мкс',
+                                    'Time: {time} µs',
+                                    {'time': frame['timestampUs'] ?? '—'},
+                                  )
+                                : trf(
+                                    context,
+                                    'Время: {time} мкс · усиление: {gain}',
+                                    'Time: {time} µs · gain: {gain}',
+                                    {
+                                      'time': frame['timestampUs'] ?? '—',
+                                      'gain': frame['gain'] ?? '—',
+                                    },
+                                  ),
                             style: TextStyle(
                               color: context.palette.muted,
                               fontSize: 12,

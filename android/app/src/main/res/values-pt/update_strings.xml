@@ -1,0 +1,5 @@
+<resources>
+    <string name="updates_channel">Atualizações</string>
+    <string name="update_available">Atualização disponível</string>
+    <string name="update_version_available">A versão %1$s está disponível. Toque para ver as novidades.</string>
+</resources>

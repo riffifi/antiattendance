@@ -1,7 +1,12 @@
+import 'campus_design.dart';
+import 'expressive.dart';
+
+import 'package:material_3_expressive/material_3_expressive.dart';
+
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'accounts.dart';
 import 'app_theme.dart';
@@ -17,6 +22,7 @@ class SchedulePage extends StatefulWidget {
     required this.log,
     required this.onScanLesson,
     required this.onPasteLesson,
+    this.active = true,
     this.initialDay,
     this.initialGroupId,
     this.onDayChanged,
@@ -28,6 +34,7 @@ class SchedulePage extends StatefulWidget {
   final AttendanceLogStore log;
   final Future<void> Function(ScheduleLesson, List<SavedAccount>) onScanLesson;
   final Future<void> Function(ScheduleLesson, List<SavedAccount>) onPasteLesson;
+  final bool active;
   final DateTime? initialDay;
   final int? initialGroupId;
   final ValueChanged<DateTime>? onDayChanged;
@@ -94,7 +101,7 @@ class _SchedulePageState extends State<SchedulePage>
         ? widget.initialGroupId
         : _firstGroup();
     _clock = Timer.periodic(const Duration(minutes: 1), (_) {
-      if (mounted) setState(() {});
+      if (mounted && widget.active) setState(() {});
     });
     _refresh();
   }
@@ -113,6 +120,20 @@ class _SchedulePageState extends State<SchedulePage>
     if (_groupId == null || !ids.contains(_groupId)) {
       _groupId = _firstGroup();
       _refresh();
+    } else if (widget.active && !oldWidget.active) {
+      _reloadMarks();
+    }
+  }
+
+  Future<void> _reloadMarks() async {
+    final generation = _generation;
+    try {
+      final marks = await widget.log.load();
+      if (mounted && generation == _generation) {
+        setState(() => _marks = marks);
+      }
+    } catch (_) {
+      // Keep the last known confirmations; pull-to-refresh can retry.
     }
   }
 
@@ -181,9 +202,8 @@ class _SchedulePageState extends State<SchedulePage>
     List<SavedAccount> groupAccounts,
   ) async {
     final confirmed = _confirmed(lesson);
-    final action = await showModalBottomSheet<String>(
+    final action = await showExpressiveSheet<String>(
       context: context,
-      isScrollControlled: true,
       showDragHandle: true,
       builder: (context) => SafeArea(
         child: ConstrainedBox(
@@ -257,7 +277,7 @@ class _SchedulePageState extends State<SchedulePage>
                   const SizedBox(height: 22),
                   SizedBox(
                     width: double.infinity,
-                    child: FilledButton.icon(
+                    child: CampusButton.icon(
                       onPressed: groupAccounts.isEmpty
                           ? null
                           : () => Navigator.pop(
@@ -281,7 +301,7 @@ class _SchedulePageState extends State<SchedulePage>
                   if (Platform.isAndroid || Platform.isIOS)
                     SizedBox(
                       width: double.infinity,
-                      child: TextButton.icon(
+                      child: CampusButton.icon(
                         onPressed: groupAccounts.isEmpty
                             ? null
                             : () => Navigator.pop(context, 'paste'),
@@ -289,6 +309,7 @@ class _SchedulePageState extends State<SchedulePage>
                         label: Text(
                           tr(context, 'Вставить ссылку', 'Paste link'),
                         ),
+                        style: M3EButtonStyle.text,
                       ),
                     ),
                 ],
@@ -343,47 +364,36 @@ class _SchedulePageState extends State<SchedulePage>
     return RefreshIndicator(
       onRefresh: () => _refresh(force: true),
       child: ListView(
+        key: const PageStorageKey('schedule-scroll'),
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          18,
+          20,
+          MediaQuery.paddingOf(context).bottom + 32,
+        ),
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  tr(context, 'Расписание', 'Schedule'),
-                  style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700),
-                ),
-              ),
-              IconButton.filled(
-                onPressed: groups.isEmpty || _loading
-                    ? null
-                    : () => _refresh(force: true),
-                style: IconButton.styleFrom(
-                  disabledBackgroundColor: _loading
-                      ? context.palette.blue
-                      : context.palette.line,
-                  disabledForegroundColor: _loading
-                      ? context.palette.onBlue
-                      : context.palette.muted,
-                ),
-                icon: RotationTransition(
-                  turns: _refreshRotation,
-                  child: Icon(Icons.refresh_rounded),
-                ),
-                tooltip: tr(context, 'Обновить', 'Refresh'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 5),
-          Text(
-            tr(
+          CampusHeader(
+            title: tr(context, 'Расписание', 'Schedule'),
+            subtitle: tr(
               context,
               'Отметки Пульса с этого устройства',
               'Pulse confirmations on this device',
             ),
-            style: TextStyle(color: context.palette.muted, fontSize: 13),
+            icon: Icons.calendar_today_outlined,
+            trailing: M3EIconButton(
+              suppressInk: true,
+              onPressed: groups.isEmpty || _loading
+                  ? null
+                  : () => _refresh(force: true),
+              icon: RotationTransition(
+                turns: _refreshRotation,
+                child: const Icon(Icons.refresh_rounded),
+              ),
+              tooltip: tr(context, 'Обновить', 'Refresh'),
+              variant: M3EIconButtonVariant.standard,
+            ),
           ),
-          const SizedBox(height: 20),
           if (groups.isEmpty)
             _EmptyPanel(
               icon: Icons.group_add_outlined,
@@ -395,58 +405,64 @@ class _SchedulePageState extends State<SchedulePage>
               ),
             )
           else ...[
-            PopupMenuButton<int>(
-              onSelected: (id) {
+            M3EMenu(
+              entries: [
+                for (final entry in groups.entries)
+                  M3EMenuEntry(value: entry.key, label: entry.value),
+              ],
+              onSelected: (value) {
+                final id = value as int;
                 setState(() => _groupId = id);
                 widget.onGroupChanged?.call(id);
                 _refresh();
               },
-              itemBuilder: (_) => [
-                for (final entry in groups.entries)
-                  PopupMenuItem(value: entry.key, child: Text(entry.value)),
-              ],
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 13,
-                ),
-                decoration: BoxDecoration(
-                  color: context.palette.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: context.palette.line),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.groups_rounded,
-                      color: context.palette.blue,
-                      size: 21,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        groups[_groupId] ?? '',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontWeight: FontWeight.w700),
+              anchorBuilder: (context, open) => InkWell(
+                onTap: open,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 13,
+                  ),
+                  decoration: BoxDecoration(
+                    color: context.palette.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: context.palette.line),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.groups_rounded,
+                        color: context.palette.blue,
+                        size: 21,
                       ),
-                    ),
-                    Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      color: context.palette.muted,
-                    ),
-                  ],
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          groups[_groupId] ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: context.palette.muted,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: 16),
             Row(
               children: [
-                IconButton(
+                M3EIconButton(
+                  suppressInk: true,
                   onPressed: () =>
                       _selectDay(_day.subtract(const Duration(days: 7))),
                   icon: Icon(Icons.chevron_left_rounded),
                   tooltip: tr(context, 'Предыдущая неделя', 'Previous week'),
+                  variant: M3EIconButtonVariant.standard,
                 ),
                 Expanded(
                   child: Text(
@@ -455,11 +471,13 @@ class _SchedulePageState extends State<SchedulePage>
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
-                IconButton(
+                M3EIconButton(
+                  suppressInk: true,
                   onPressed: () =>
                       _selectDay(_day.add(const Duration(days: 7))),
                   icon: Icon(Icons.chevron_right_rounded),
                   tooltip: tr(context, 'Следующая неделя', 'Next week'),
+                  variant: M3EIconButtonVariant.standard,
                 ),
               ],
             ),
@@ -514,7 +532,7 @@ class _SchedulePageState extends State<SchedulePage>
                   ),
                 ),
                 if (!_sameDay(_day, today))
-                  TextButton(
+                  CampusButton.text(
                     onPressed: () => _selectDay(today),
                     child: Text(tr(context, 'Сегодня', 'Today')),
                   ),
@@ -523,7 +541,7 @@ class _SchedulePageState extends State<SchedulePage>
             const SizedBox(height: 14),
             if (_loading) ...[
               const SizedBox(height: 25),
-              const Center(child: CircularProgressIndicator()),
+              const Center(child: M3EProgressIndicator.circularWavy()),
             ] else if (_error != null) ...[
               _EmptyPanel(
                 icon: Icons.wifi_off_rounded,
@@ -601,60 +619,65 @@ class _DayButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 2),
-    child: Material(
-      color: selected ? context.palette.blue : Colors.transparent,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                maxLines: 1,
-                softWrap: false,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: selected
-                      ? context.palette.onBlue.withValues(alpha: .75)
-                      : context.palette.muted,
+    child: CampusPressable(
+      child: Material(
+        animationDuration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 140),
+        color: selected ? context.palette.blue : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: selected
+                        ? context.palette.onBlue.withValues(alpha: .75)
+                        : context.palette.muted,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                '${date.day}',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: selected
-                      ? context.palette.onBlue
-                      : context.palette.ink,
+                const SizedBox(height: 2),
+                Text(
+                  '${date.day}',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: selected
+                        ? context.palette.onBlue
+                        : context.palette.ink,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                width: today ? 6 : 5,
-                height: today ? 6 : 5,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: hasLessons
-                      ? (selected
-                            ? context.palette.onBlue
-                            : context.palette.blue)
-                      : (today
-                            ? (selected
-                                  ? context.palette.onBlue.withValues(
-                                      alpha: .75,
-                                    )
-                                  : context.palette.line)
-                            : Colors.transparent),
+                const SizedBox(height: 4),
+                Container(
+                  width: today ? 6 : 5,
+                  height: today ? 6 : 5,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: hasLessons
+                        ? (selected
+                              ? context.palette.onBlue
+                              : context.palette.blue)
+                        : (today
+                              ? (selected
+                                    ? context.palette.onBlue.withValues(
+                                        alpha: .75,
+                                      )
+                                    : context.palette.line)
+                              : Colors.transparent),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -712,118 +735,117 @@ class _LessonRow extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: Material(
-            color: context.palette.surface,
-            borderRadius: BorderRadius.circular(16),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: onTap,
+          child: CampusPressable(
+            child: Material(
+              color: context.palette.surface,
               borderRadius: BorderRadius.circular(16),
-              child: Ink(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: accent.withValues(alpha: isCurrent ? .18 : .08),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(16),
+                child: Ink(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isCurrent ? accent : context.palette.line,
+                    ),
+                    color: isCurrent
+                        ? context.palette.selected
+                        : context.palette.surface,
                   ),
-                  gradient: RadialGradient(
-                    center: Alignment.topLeft,
-                    radius: 1.5,
-                    colors: [
-                      accent.withValues(alpha: isCurrent ? .23 : .16),
-                      accent.withValues(alpha: isCurrent ? .07 : .04),
-                      context.palette.surface,
-                    ],
-                    stops: const [0, .55, 1],
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            lesson.subject,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              lesson.subject,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          color: context.palette.muted,
-                          size: 20,
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            color: context.palette.muted,
+                            size: 20,
+                          ),
+                        ],
+                      ),
+                      if (isCurrent) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          tr(context, '● Сейчас', '● Now'),
+                          style: TextStyle(
+                            color: context.palette.blue,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ],
-                    ),
-                    if (isCurrent) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        tr(context, '● Сейчас', '● Now'),
-                        style: TextStyle(
-                          color: context.palette.blue,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
+                      if (lesson.type.isNotEmpty ||
+                          lesson.location.isNotEmpty) ...[
+                        const SizedBox(height: 5),
+                        Text(
+                          [
+                            lesson.type,
+                            lesson.location,
+                          ].where((value) => value.isNotEmpty).join(' · '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: context.palette.muted,
+                          ),
                         ),
-                      ),
-                    ],
-                    if (lesson.type.isNotEmpty ||
-                        lesson.location.isNotEmpty) ...[
-                      const SizedBox(height: 5),
-                      Text(
-                        [
-                          lesson.type,
-                          lesson.location,
-                        ].where((value) => value.isNotEmpty).join(' · '),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: context.palette.muted,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Icon(
-                          confirmed.isEmpty
-                              ? Icons.radio_button_unchecked_rounded
-                              : Icons.check_circle_rounded,
-                          color: confirmed.isEmpty
-                              ? context.palette.muted
-                              : context.palette.success,
-                          size: 15,
-                        ),
-                        const SizedBox(width: 5),
-                        Expanded(
-                          child: Text(
+                      ],
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Icon(
                             confirmed.isEmpty
-                                ? tr(context, 'Нет отметок', 'No confirmations')
-                                : confirmed
-                                      .map((mark) => mark.accountLabel)
-                                      .join(', '),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: confirmed.isEmpty
-                                  ? context.palette.muted
-                                  : context.palette.success,
-                              fontWeight: confirmed.isEmpty
-                                  ? FontWeight.w400
-                                  : FontWeight.w600,
+                                ? Icons.radio_button_unchecked_rounded
+                                : Icons.check_circle_rounded,
+                            color: confirmed.isEmpty
+                                ? context.palette.muted
+                                : context.palette.success,
+                            size: 15,
+                          ),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(
+                              confirmed.isEmpty
+                                  ? tr(
+                                      context,
+                                      'Нет отметок',
+                                      'No confirmations',
+                                    )
+                                  : confirmed
+                                        .map((mark) => mark.accountLabel)
+                                        .join(', '),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: confirmed.isEmpty
+                                    ? context.palette.muted
+                                    : context.palette.success,
+                                fontWeight: confirmed.isEmpty
+                                    ? FontWeight.w400
+                                    : FontWeight.w600,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

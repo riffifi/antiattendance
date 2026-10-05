@@ -5,6 +5,8 @@ import 'package:antiattendance/app_theme.dart';
 import 'package:antiattendance/attendance_log.dart';
 import 'package:antiattendance/main.dart';
 import 'package:antiattendance/pulse_api.dart';
+import 'package:antiattendance/session_check.dart';
+import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:antiattendance/schedule_api.dart';
 import 'package:antiattendance/settings_page.dart';
 import 'package:material_ui/material_ui.dart';
@@ -74,6 +76,79 @@ class FakeGroupApi extends ScheduleApi {
 }
 
 void main() {
+  testWidgets('account session check persists expired status', (tester) async {
+    tester.view.physicalSize = const Size(600, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = MemoryAccountStore([
+      const SavedAccount(id: '1', label: 'User', cookie: 'one'),
+    ]);
+    var checks = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: const [Locale('ru'), Locale('en')],
+        localizationsDelegates: delegates,
+        home: HomePage(
+          store: store,
+          logStore: MemoryLogStore(),
+          sessionChecker: (_) async {
+            checks++;
+            return const SessionCheckResult(SessionCheckState.expired);
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('User'), 150);
+    await tester.tap(
+      find.byWidgetPredicate(
+        (w) => w is M3EIconButton && w.tooltip == 'Account actions',
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Check session'));
+    await tester.pumpAndSettle();
+    expect(checks, 1);
+    expect(store.accounts.single.sessionExpired, isTrue);
+    expect(find.text('Session expired. Sign in again.'), findsWidgets);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('account rows show future and expired sessions', (tester) async {
+    final expiry = DateTime.now().add(const Duration(days: 1));
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: const [Locale('ru'), Locale('en')],
+        localizationsDelegates: delegates,
+        home: HomePage(
+          store: MemoryAccountStore([
+            SavedAccount(
+              id: '1',
+              label: 'User',
+              cookie: 'one',
+              expiresAt: expiry,
+            ),
+            SavedAccount(
+              id: '2',
+              label: 'Expired user',
+              cookie: 'two',
+              expiresAt: DateTime.now().subtract(const Duration(days: 1)),
+            ),
+          ]),
+          logStore: MemoryLogStore(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Session expires:'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Expired user'), 150);
+    expect(find.text('Session expired. Sign in again.'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('appearance choices save dark mode and phone colors', (
     tester,
   ) async {

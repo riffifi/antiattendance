@@ -34,6 +34,9 @@ Future<SessionTransfer> createSessionTransfer(
           (a) => {
             'label': a.label,
             'cookie': a.cookie,
+            if (a.expiresAt != null)
+              'expiresAt': a.expiresAt!.toUtc().toIso8601String(),
+            if (a.sessionExpired) 'sessionExpired': true,
             'groupId': a.groupId,
             'groupName': a.groupName,
           },
@@ -169,6 +172,8 @@ class SessionTransferCollector {
             id: '$i',
             label: label,
             cookie: cookie,
+            expiresAt: DateTime.tryParse(entry['expiresAt'] as String? ?? ''),
+            sessionExpired: entry['sessionExpired'] == true,
             groupId: entry['groupId'] is int ? entry['groupId'] as int : null,
             groupName: entry['groupName'] is String
                 ? entry['groupName'] as String

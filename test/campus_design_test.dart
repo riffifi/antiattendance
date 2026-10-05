@@ -265,13 +265,19 @@ void main() {
   testWidgets(
     'press feedback cancels during scrolling and respects reduced motion',
     (tester) async {
+      var taps = 0;
       Widget app(bool reduce) => MaterialApp(
         home: MediaQuery(
           data: MediaQueryData(disableAnimations: reduce),
           child: Scaffold(
-            body: CampusButton.filled(
-              onPressed: () {},
-              child: const Text('Action'),
+            body: ListView(
+              children: [
+                CampusButton.filled(
+                  onPressed: () => taps++,
+                  child: const Text('Action'),
+                ),
+                const SizedBox(height: 1200),
+              ],
             ),
           ),
         ),
@@ -281,19 +287,16 @@ void main() {
         tester.getCenter(find.text('Action')),
       );
       await tester.pump(const Duration(milliseconds: 90));
-      expect(
-        tester.widget<AnimatedScale>(find.byType(AnimatedScale)).scale,
-        lessThan(1),
-      );
-      await gesture.moveBy(const Offset(0, 20));
+      await gesture.moveBy(const Offset(0, -80));
       await tester.pump();
-      expect(tester.widget<AnimatedScale>(find.byType(AnimatedScale)).scale, 1);
       await gesture.up();
+      await tester.pumpAndSettle();
+      expect(taps, 0);
       await tester.pumpWidget(app(true));
-      expect(
-        tester.widget<AnimatedScale>(find.byType(AnimatedScale)).duration,
-        Duration.zero,
-      );
+      await tester.ensureVisible(find.text('Action'));
+      await tester.tap(find.text('Action'));
+      await tester.pumpAndSettle();
+      expect(taps, 1);
       expect(tester.takeException(), isNull);
     },
   );

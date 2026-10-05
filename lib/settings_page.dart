@@ -16,6 +16,11 @@ import 'l10n.dart';
 import 'nfc_diagnostics_page.dart';
 import 'turnstile_probe_page.dart';
 import 'update_service.dart';
+import 'study_summary.dart';
+import 'study_summary_page.dart';
+import 'widget_preview.dart';
+
+import 'package:flutter/services.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({
@@ -58,6 +63,98 @@ class _SettingsPageState extends State<SettingsPage> {
   late AppThemeMode _themeMode = widget.themeMode;
   late bool _monetEnabled = widget.monetEnabled;
   bool _saving = false;
+  bool _daySummary = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.store
+        .loadDaySummaryEnabled()
+        .then((value) {
+          if (mounted) setState(() => _daySummary = value);
+        })
+        .catchError((Object _) {});
+  }
+
+  Future<void> _chooseSummary(bool enabled) async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    try {
+      if (enabled) {
+        final allowed =
+            await studySummaryChannel.invokeMethod<bool>('requestPermission') ??
+            false;
+        if (!allowed) {
+          if (mounted) {
+            M3ESnackbar.show(
+              context,
+              message: tr(
+                context,
+                'Разрешите уведомления в настройках Android.',
+                'Allow notifications in Android settings.',
+              ),
+            );
+          }
+          return;
+        }
+      }
+      await widget.store.saveDaySummaryEnabled(enabled);
+      await studySummaryChannel.invokeMethod('enable', {'enabled': enabled});
+      if (mounted) setState(() => _daySummary = enabled);
+      if (enabled) {
+        final service = StudySummaryService(settings: widget.store);
+        try {
+          await service.sync();
+        } finally {
+          service.close();
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        M3ESnackbar.show(
+          context,
+          message: tr(
+            context,
+            'Не удалось обновить расписание уведомлений. Повторите при подключении к сети.',
+            'Could not update notification schedules. Retry when online.',
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _pinScanWidget() async {
+    final compact = await showWidgetPreview(context, nfc: false);
+    if (compact == null || !mounted) return;
+    try {
+      final supported = await const MethodChannel(
+        'antiattendance/launcher_widget',
+      ).invokeMethod<bool>('pinScanWidget', {'compact': compact});
+      if (supported != true && mounted) {
+        M3ESnackbar.show(
+          context,
+          message: tr(
+            context,
+            'Добавьте виджет через меню виджетов на главном экране.',
+            'Add the widget from your home screen’s widget picker.',
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        M3ESnackbar.show(
+          context,
+          message: tr(
+            context,
+            'Не удалось добавить виджет.',
+            'Could not add the widget.',
+          ),
+        );
+      }
+    }
+  }
 
   @override
   void didUpdateWidget(covariant SettingsPage oldWidget) {
@@ -328,6 +425,56 @@ class _SettingsPageState extends State<SettingsPage> {
               style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
+            if (Platform.isAndroid) ...[
+              CampusPanel(
+                padding: EdgeInsets.zero,
+                child: M3EListItem(
+                  headline: tr(
+                    context,
+                    'Итоги учебного дня',
+                    'Study day summary',
+                  ),
+                  supportingText: tr(
+                    context,
+                    'После последнего занятия: подтверждения каждого человека и истёкшие сессии.',
+                    'After the last class: each person’s confirmations and expired sessions.',
+                  ),
+                  leading: const Icon(Icons.notifications_outlined),
+                  trailing: M3ESwitch(
+                    value: _daySummary,
+                    onChanged: _saving ? null : _chooseSummary,
+                  ),
+                  onTap: _saving ? null : () => _chooseSummary(!_daySummary),
+                ),
+              ),
+              CampusButton.text(
+                onPressed: _saving
+                    ? null
+                    : () => Navigator.of(context).push<void>(
+                        MaterialPageRoute(
+                          builder: (_) => const StudySummaryPage(),
+                        ),
+                      ),
+                child: Text(tr(context, 'Последние итоги', 'Last summary')),
+              ),
+              CampusPanel(
+                padding: EdgeInsets.zero,
+                child: M3EListItem(
+                  headline: tr(
+                    context,
+                    'Виджет отметки всех',
+                    'Mark-all widget',
+                  ),
+                  supportingText: tr(
+                    context,
+                    'Предпросмотр виджета',
+                    'Widget preview',
+                  ),
+                  leading: const Icon(Icons.widgets_outlined),
+                  onTap: _pinScanWidget,
+                ),
+              ),
+            ],
             if (widget.updates != null) ...[
               AnimatedBuilder(
                 animation: widget.updates!,

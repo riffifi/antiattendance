@@ -18,6 +18,7 @@ class AttendanceQueue extends ChangeNotifier {
   final results = <String, ApprovalResult>{};
   final errors = <String, String>{};
   final confirmed = <String>{};
+  final expiredSessions = <String>{};
 
   String? _queuedToken;
   String? _activeToken;
@@ -69,12 +70,16 @@ class AttendanceQueue extends ChangeNotifier {
           try {
             final result = await approve(account, token);
             if (_stopped) return;
+            expiredSessions.remove(account.id);
             results[account.id] = result;
             if (result.state == ApprovalState.approved) {
               confirmed.add(account.id);
             }
           } catch (error) {
             if (_stopped) return;
+            if (error is PulseApiException && error.sessionExpired) {
+              expiredSessions.add(account.id);
+            }
             errors[account.id] = error is PulseApiException
                 ? error.message
                 : 'Ошибка сети. Попробуйте снова.';

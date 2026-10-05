@@ -51,6 +51,9 @@ Future<Map<String, String>> encryptNearby(
               'cookie': a.cookie,
               'groupId': a.groupId,
               'groupName': a.groupName,
+              if (a.expiresAt != null)
+                'expiresAt': a.expiresAt!.toUtc().toIso8601String(),
+              if (a.sessionExpired) 'sessionExpired': true,
             },
           )
           .toList(),
@@ -133,6 +136,8 @@ Future<List<SavedAccount>> decryptNearby(
           id: '$i',
           label: label,
           cookie: cookie,
+          expiresAt: DateTime.tryParse(item['expiresAt'] as String? ?? ''),
+          sessionExpired: item['sessionExpired'] == true,
           groupId: item['groupId'] is int ? item['groupId'] as int : null,
           groupName: item['groupName'] is String
               ? item['groupName'] as String

@@ -14,15 +14,23 @@ import 'accounts.dart';
 import 'app_theme.dart';
 import 'l10n.dart';
 import 'nfc_pass.dart';
+import 'session_check.dart';
+import 'widget_preview.dart';
 
 class NfcPassPage extends StatefulWidget {
   const NfcPassPage({
     super.key,
     required this.accounts,
     this.startOnOpen = false,
+    this.onReauth,
+    this.onSessionExpired,
+    this.clientFactory = passClient,
   });
   final List<SavedAccount> accounts;
   final bool startOnOpen;
+  final Future<void> Function(SavedAccount)? onReauth;
+  final Future<void> Function(SavedAccount)? onSessionExpired;
+  final NfcPassClient Function(SavedAccount) clientFactory;
 
   @override
   State<NfcPassPage> createState() => NfcPassPageState();
@@ -39,7 +47,13 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
   bool _widgetStartPending = false;
   String? _ownId;
   String? _message;
+  SavedAccount? _reauthAccount;
+  String? _operationAccountId;
   bool _busy = true;
+  bool _bulkEnrolling = false;
+  bool _enrollmentSucceeded = false;
+  int _bulkIndex = 0;
+  int _bulkTotal = 0;
   bool _running = false;
   bool _polling = false;
   int _runEpoch = 0;
@@ -54,6 +68,94 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     unawaited(_load());
+  }
+
+  @override
+  void didUpdateWidget(covariant NfcPassPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final changedIds = oldWidget.accounts
+        .where(
+          (old) => !widget.accounts.any(
+            (next) => next.id == old.id && next.cookie == old.cookie,
+          ),
+        )
+        .map((a) => a.id)
+        .toSet();
+    if (changedIds.isEmpty) return;
+    _viewEpoch++;
+    _runEpoch++;
+    _numbers.removeWhere((id, _) => changedIds.contains(id));
+    _selected.removeAll(changedIds);
+    if (changedIds.contains(_reauthAccount?.id)) {
+      _reauthAccount = null;
+      _message = null;
+    }
+    if (_running) unawaited(deactivateQueue());
+  }
+
+  Future<void> _handlePassError(
+    Object error,
+    SavedAccount account,
+    String stage,
+  ) async {
+    var expired =
+        error is NfcPassTransportException && error.requiresAuthentication;
+    // Bearer-token rejection during issuance doesn't necessarily reject the cookie.
+    if (expired && stage != 'token') {
+      final checkClient = widget.clientFactory(account);
+      final SessionCheckResult check;
+      try {
+        check = await checkSession(account, client: checkClient);
+      } finally {
+        checkClient.httpClient.close();
+      }
+      if (!mounted ||
+          !widget.accounts.any(
+            (item) => item.id == account.id && item.cookie == account.cookie,
+          )) {
+        return;
+      }
+      expired = check.state == SessionCheckState.expired;
+      if (check.state == SessionCheckState.valid) {
+        if (mounted) {
+          setState(
+            () => _message = tr(
+              context,
+              'Токен пропуска отклонён. Подключите пропуск снова; сессия действительна.',
+              'Pass token rejected. Enroll the pass again; your session is valid.',
+            ),
+          );
+        }
+        return;
+      }
+      if (!expired) {
+        if (mounted) {
+          setState(
+            () => _message = tr(
+              context,
+              'Сервис недоступен. Сессию проверить не удалось.',
+              'Service unavailable. Could not check the session.',
+            ),
+          );
+        }
+        return;
+      }
+    }
+    if (expired) {
+      await widget.onSessionExpired?.call(account);
+      if (mounted) {
+        setState(() {
+          _reauthAccount = account;
+          _message = tr(
+            context,
+            'Сессия истекла. Войдите снова.',
+            'Session expired. Sign in again.',
+          );
+        });
+      }
+    } else if (mounted) {
+      setState(() => _message = _error(error));
+    }
   }
 
   Future<void> _load() async {
@@ -130,37 +232,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
   }
 
   Future<void> _addWidget() async {
-    final compact = await showExpressiveSheet<bool>(
-      context: context,
-      compact: true,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CampusListItem(
-                leading: const Icon(Icons.nfc_rounded),
-                headline: (tr(context, 'Компактный · 1×1', 'Compact · 1×1')),
-                supportingText: (tr(context, 'Только значок', 'Icon only')),
-                onTap: () => Navigator.pop(context, true),
-              ),
-              CampusListItem(
-                leading: const Icon(Icons.widgets_outlined),
-                headline: (tr(context, 'С подписью · 2×1', 'Labeled · 2×1')),
-                supportingText: (tr(
-                  context,
-                  'Значок и название',
-                  'Icon and title',
-                )),
-                onTap: () => Navigator.pop(context, false),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    final compact = await showWidgetPreview(context, nfc: true);
     if (compact == null || !mounted) return;
     try {
       final supported = await nfcPassChannel.invokeMethod<bool>(
@@ -204,18 +276,58 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
         'Could not start NFC. Close NFC diagnostics and retry.',
       );
     }
-    if (error is NfcVerificationException) {
+    if (error is NfcPassUnreachableException) {
       return tr(
         context,
-        'Неверный код или ошибка выдачи пропуска.',
-        'Incorrect code or pass issuance failed.',
+        'Сервис пропусков недоступен. Проверьте интернет и повторите позже.',
+        'Pass service unreachable. Check your connection and try later.',
+      );
+    }
+    if (error is FormatException) {
+      return tr(
+        context,
+        'Сервис вернул некорректный или просроченный токен пропуска. Повторите подключение.',
+        'The service returned an invalid or expired pass token. Restart enrollment.',
+      );
+    }
+    if (error is NfcVerificationException) {
+      if (error.failure == NfcVerificationFailure.wrongCode) {
+        return tr(
+          context,
+          'Неверный код подтверждения. Проверьте код и введите его снова.',
+          'Incorrect verification code. Check the code and enter it again.',
+        );
+      }
+      return tr(
+        context,
+        'МИРЭА не удалось выдать пропуск. Обратитесь в поддержку.',
+        'MIREA could not issue the pass. Contact support.',
       );
     }
     if (error is NfcPassTransportException) {
-      return tr(
+      if (error.requiresAuthentication) {
+        return tr(
+          context,
+          'Сессия истекла. Войдите снова.',
+          'Session expired. Sign in again.',
+        );
+      }
+      if (error.httpStatusCode == 403 || error.grpcStatus == 7) {
+        return tr(
+          context,
+          'Доступ к сервису пропусков запрещён. Обратитесь в поддержку МИРЭА.',
+          'Pass service access denied. Contact MIREA support.',
+        );
+      }
+      return trf(
         context,
-        'Ошибка сервиса пропусков. Проверьте вход в аккаунт и повторите.',
-        'Pass service failed. Check your account sign-in and retry.',
+        'Ошибка сервиса пропусков ({status}). Повторите позже.',
+        'Pass service error ({status}). Try again later.',
+        {
+          'status': error.httpStatusCode != null
+              ? 'HTTP ${error.httpStatusCode}'
+              : 'gRPC ${error.grpcStatus ?? '—'}',
+        },
       );
     }
     return tr(
@@ -228,14 +340,19 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
   Future<void> _enroll(SavedAccount account) async {
     setState(() {
       _busy = true;
+      _enrollmentSucceeded = false;
       _message = null;
+      _reauthAccount = null;
+      _operationAccountId = account.id;
     });
     final epoch = _viewEpoch;
-    final client = passClient(account);
+    final client = widget.clientFactory(account);
+    var stage = 'token';
     try {
-      final token = await client.getAccessTokenForDigitalPass();
-      passTokenExpiry(token);
+      var token = await client.getAccessTokenForDigitalPass();
+      var tokenExpiry = passTokenExpiry(token);
       if (!mounted || epoch != _viewEpoch) return;
+      stage = 'verification';
       final result = await client.sendVerificationCode(token);
       if (!mounted || epoch != _viewEpoch) return;
       if (result is NfcVerificationUnavailable) {
@@ -254,32 +371,159 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
               '${tr(context, 'Повторная отправка кода доступна:', 'You can request another code at:')} ${_formatTime(result.retryAt)}',
         );
       }
-      final code = await showExpressiveDialog<String>(
-        context: context,
-        builder: (context) => _VerificationDialog(label: account.label),
-      );
-      if (code == null || !mounted || epoch != _viewEpoch) return;
-      final number = await client.getDigitalPass(
-        bearerToken: token,
-        sixDigitCode: code,
-        deviceName: 'AntiAttendance Android NFC test',
-      );
+      stage = 'issuance';
+      String? codeError;
+      int? number;
+      while (number == null) {
+        final code = await showExpressiveDialog<String>(
+          context: context,
+          builder: (context) =>
+              _VerificationDialog(label: account.label, error: codeError),
+        );
+        if (code == null || !mounted || epoch != _viewEpoch) return;
+        try {
+          // Refresh the bearer token if the owner took longer than its lifetime.
+          if (!tokenExpiry.isAfter(
+            DateTime.now().add(const Duration(seconds: 5)),
+          )) {
+            stage = 'token';
+            token = await client.getAccessTokenForDigitalPass();
+            tokenExpiry = passTokenExpiry(token);
+          }
+          stage = 'issuance';
+          number = await client.getDigitalPass(
+            bearerToken: token,
+            sixDigitCode: code,
+            deviceName: 'AntiAttendance Android',
+          );
+        } on NfcVerificationException catch (error) {
+          if (error.failure != NfcVerificationFailure.wrongCode) rethrow;
+          codeError = _error(error);
+        }
+        if (!mounted || epoch != _viewEpoch) return;
+      }
       await _store.save(account, number);
       if (mounted) {
         setState(() {
+          _enrollmentSucceeded = true;
           _numbers[account.id] = number.toString();
           _selected.add(account.id);
         });
       }
       if (mounted) unawaited(_savePreferences());
     } catch (error) {
-      if (mounted) setState(() => _message = _error(error));
+      if (mounted && epoch == _viewEpoch) {
+        await _handlePassError(error, account, stage);
+      }
     } finally {
+      _operationAccountId = null;
       client.httpClient.close();
-      if (mounted) setState(() => _busy = false);
-      if (mounted && epoch == _viewEpoch && _widgetStartPending) {
+      if (mounted) setState(() => _busy = _bulkEnrolling);
+      if (mounted &&
+          !_bulkEnrolling &&
+          epoch == _viewEpoch &&
+          _widgetStartPending) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && epoch == _viewEpoch) unawaited(startFromWidget());
+        });
+      }
+    }
+  }
+
+  Future<void> _bulkEnroll() async {
+    if (_busy || _running) return;
+    final picked = widget.accounts
+        .where((a) => !_numbers.containsKey(a.id))
+        .map((a) => a.id)
+        .toSet();
+    if (picked.isEmpty) picked.addAll(widget.accounts.map((a) => a.id));
+    final ids = await showExpressiveSheet<Set<String>>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, update) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Text(
+                  tr(
+                    context,
+                    'Подключить пропуска вместе',
+                    'Enroll passes together',
+                  ),
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    for (final account in widget.accounts)
+                      M3EListItem(
+                        headline: account.label,
+                        supportingText: _numbers.containsKey(account.id)
+                            ? tr(
+                                context,
+                                'Существующий пропуск будет заменён после подтверждения.',
+                                'The existing pass will be replaced after verification.',
+                              )
+                            : tr(
+                                context,
+                                'Подключите пропуск',
+                                'Enroll a pass',
+                              ),
+                        leading: M3ECheckbox(
+                          value: picked.contains(account.id),
+                          onChanged: (_) => update(() {
+                            if (!picked.add(account.id)) {
+                              picked.remove(account.id);
+                            }
+                          }),
+                        ),
+                        onTap: () => update(() {
+                          if (!picked.add(account.id)) {
+                            picked.remove(account.id);
+                          }
+                        }),
+                      ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: CampusButton.filled(
+                  onPressed: picked.isEmpty
+                      ? null
+                      : () => Navigator.pop(context, Set<String>.of(picked)),
+                  child: Text(tr(context, 'Продолжить', 'Continue')),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (!mounted || ids == null) return;
+    final queue = widget.accounts.where((a) => ids.contains(a.id)).toList();
+    final epoch = _viewEpoch;
+    setState(() {
+      _bulkEnrolling = true;
+      _busy = true;
+      _bulkTotal = queue.length;
+    });
+    try {
+      for (var index = 0; index < queue.length; index++) {
+        if (!mounted || epoch != _viewEpoch) return;
+        setState(() => _bulkIndex = index + 1);
+        await _enroll(queue[index]);
+        if (!_enrollmentSucceeded) break;
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _bulkEnrolling = false;
+          _busy = false;
         });
       }
     }
@@ -320,7 +564,8 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
       );
       final passes = <Map<String, Object>>[];
       for (final account in _queue) {
-        final client = passClient(account);
+        _operationAccountId = account.id;
+        final client = widget.clientFactory(account);
         try {
           final token = await client.getAccessTokenForDigitalPass();
           passes.add({
@@ -353,8 +598,17 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
       );
     } catch (error) {
       _nfcDisabled = error is PlatformException && error.code == 'NFC_DISABLED';
-      if (mounted) setState(() => _message = _error(error));
+      if (!mounted || epoch != _runEpoch) return;
+      final account = widget.accounts
+          .where((a) => a.id == _operationAccountId)
+          .firstOrNull;
+      if (account != null) {
+        await _handlePassError(error, account, 'token');
+      } else if (mounted) {
+        setState(() => _message = _error(error));
+      }
     } finally {
+      _operationAccountId = null;
       _widgetStartPending = false;
       if (mounted) setState(() => _busy = false);
     }
@@ -600,6 +854,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final enabled =
         !_busy &&
+        !_bulkEnrolling &&
         !_running &&
         (defaultTargetPlatform == TargetPlatform.android);
     final current = _queue
@@ -614,6 +869,18 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
             children: [
+              if (_bulkEnrolling)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    trf(
+                      context,
+                      'Подключаем пропуск {current} из {total}',
+                      'Enrolling pass {current} of {total}',
+                      {'current': _bulkIndex, 'total': _bulkTotal},
+                    ),
+                  ),
+                ),
               CampusHeader(
                 title: tr(context, 'NFC-пропуска', 'NFC passes'),
                 subtitle: tr(
@@ -623,6 +890,24 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                 ),
                 icon: Icons.nfc_rounded,
               ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: CampusButton.icon(
+                  onPressed: enabled && widget.accounts.isNotEmpty
+                      ? _bulkEnroll
+                      : null,
+                  icon: const Icon(Icons.playlist_add_check_rounded),
+                  label: Text(
+                    tr(
+                      context,
+                      'Подключить пропуска вместе',
+                      'Enroll passes together',
+                    ),
+                  ),
+                  style: M3EButtonStyle.tonal,
+                ),
+              ),
+              const SizedBox(height: 12),
               _card(
                 color: context.palette.selected,
                 child: Column(
@@ -1093,6 +1378,11 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                     ),
                   ),
                 ),
+              if (_reauthAccount != null && widget.onReauth != null && !_busy)
+                CampusButton.text(
+                  onPressed: () => widget.onReauth!(_reauthAccount!),
+                  child: Text(tr(context, 'Войти снова', 'Sign in again')),
+                ),
               if (_nfcDisabled)
                 CampusButton.icon(
                   onPressed: () =>
@@ -1146,8 +1436,9 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
 }
 
 class _VerificationDialog extends StatefulWidget {
-  const _VerificationDialog({required this.label});
+  const _VerificationDialog({required this.label, this.error});
   final String label;
+  final String? error;
   @override
   State<_VerificationDialog> createState() => _VerificationDialogState();
 }
@@ -1163,20 +1454,33 @@ class _VerificationDialogState extends State<_VerificationDialog> {
   @override
   Widget build(BuildContext context) => AlertDialog(
     title: Text(widget.label),
-    content: CampusTextField(
-      controller: _code,
-      autofocus: true,
-      keyboardType: TextInputType.number,
-      inputFormatters: [
-        FilteringTextInputFormatter.digitsOnly,
-        LengthLimitingTextInputFormatter(6),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (widget.error != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              widget.error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        CampusTextField(
+          controller: _code,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(6),
+          ],
+          label: tr(
+            context,
+            'Код подтверждения (6 цифр)',
+            'Verification code (6 digits)',
+          ),
+          onChanged: (_) => setState(() {}),
+        ),
       ],
-      label: tr(
-        context,
-        'Код подтверждения (6 цифр)',
-        'Verification code (6 digits)',
-      ),
-      onChanged: (_) => setState(() {}),
     ),
     actions: [
       CampusButton.text(

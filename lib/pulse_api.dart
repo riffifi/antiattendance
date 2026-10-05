@@ -92,7 +92,10 @@ class PulseApi {
         response.statusCode == 403 ||
         response.statusCode == 302 ||
         response.statusCode == 303) {
-      throw const PulseApiException('Сессия истекла. Войдите в аккаунт снова.');
+      throw const PulseApiException(
+        'Сессия истекла. Войдите в аккаунт снова.',
+        sessionExpired: true,
+      );
     }
     if (response.statusCode != 200) {
       throw PulseApiException('Пульс вернул HTTP ${response.statusCode}.');
@@ -142,6 +145,7 @@ class PulseApi {
         grpcStatus == '16'
             ? 'Сессия истекла. Войдите в аккаунт снова.'
             : 'Пульс отклонил запрос (gRPC ${grpcStatus ?? 'формат'}).',
+        sessionExpired: grpcStatus == '16',
       );
     }
     if (message == null) {
@@ -154,7 +158,8 @@ class PulseApi {
 }
 
 class PulseApiException implements Exception {
-  const PulseApiException(this.message);
+  const PulseApiException(this.message, {this.sessionExpired = false});
+  final bool sessionExpired;
   final String message;
   @override
   String toString() => message;

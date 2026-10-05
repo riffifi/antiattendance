@@ -4,6 +4,7 @@
     android:minHeight="50dp"
     android:targetCellWidth="1"
     android:targetCellHeight="1"
+    android:previewLayout="@layout/nfc_pass_widget_compact"
     android:initialLayout="@layout/nfc_pass_widget_compact"
     android:resizeMode="none"
     android:widgetCategory="home_screen"

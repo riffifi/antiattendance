@@ -137,6 +137,13 @@ class _NearbySharePageState extends State<NearbySharePage> {
     }
   }
 
+  void _toggleReceiver(String id) {
+    if (_sending) return;
+    setState(() {
+      if (!_selected.add(id)) _selected.remove(id);
+    });
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
@@ -178,26 +185,22 @@ class _NearbySharePageState extends State<NearbySharePage> {
                 )),
               ),
             for (final entry in _peers.entries)
-              CheckboxListTile(
-                value: _selected.contains(entry.key),
-                onChanged: _sending
-                    ? null
-                    : (value) => setState(() {
-                        if (value == true) {
-                          _selected.add(entry.key);
-                        } else {
-                          _selected.remove(entry.key);
-                        }
-                      }),
-                title: Text(entry.value.service.name),
-                subtitle: Text(
-                  '${tr(context, 'Код', 'Code')}: ${entry.value.code}'
-                  '${_outcomes[entry.key] == true
-                      ? tr(context, ' · Отправлено', ' · Sent')
-                      : _outcomes[entry.key] == false
-                      ? tr(context, ' · Ошибка отправки', ' · Send failed')
-                      : ''}',
+              M3EListItem(
+                headline: entry.value.service.name,
+                supportingText:
+                    '${tr(context, 'Код', 'Code')}: ${entry.value.code}'
+                    '${_outcomes[entry.key] == true
+                        ? tr(context, ' · Отправлено', ' · Sent')
+                        : _outcomes[entry.key] == false
+                        ? tr(context, ' · Ошибка отправки', ' · Send failed')
+                        : ''}',
+                leading: M3ECheckbox(
+                  value: _selected.contains(entry.key),
+                  onChanged: _sending
+                      ? null
+                      : (_) => _toggleReceiver(entry.key),
                 ),
+                onTap: _sending ? null : () => _toggleReceiver(entry.key),
               ),
             const SizedBox(height: 16),
             CampusButton.filled(

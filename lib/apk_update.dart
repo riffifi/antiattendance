@@ -14,8 +14,28 @@ class ApkUpdateDownloader {
   ApkUpdateDownloader({http.Client? client})
     : _client = client ?? http.Client();
   final http.Client _client;
+  static bool _downloadActive = false;
 
   Future<File> download(
+    AppRelease release, {
+    Directory? cacheDirectory,
+    void Function(int received, int? total)? onProgress,
+  }) async {
+    if (_downloadActive)
+      throw StateError('An update download is already running.');
+    _downloadActive = true;
+    try {
+      return await _download(
+        release,
+        cacheDirectory: cacheDirectory,
+        onProgress: onProgress,
+      );
+    } finally {
+      _downloadActive = false;
+    }
+  }
+
+  Future<File> _download(
     AppRelease release, {
     Directory? cacheDirectory,
     void Function(int received, int? total)? onProgress,
@@ -32,10 +52,12 @@ class ApkUpdateDownloader {
         .send(http.Request('GET', url))
         .timeout(const Duration(seconds: 20));
     if (response.statusCode != 200) {
+      await response.stream.listen(null).cancel();
       throw HttpException('APK download returned HTTP ${response.statusCode}');
     }
     final expectedSize = release.apkSize ?? response.contentLength;
     if (expectedSize != null && expectedSize > _maxApkBytes) {
+      await response.stream.listen(null).cancel();
       throw const FormatException('Release APK is too large.');
     }
 

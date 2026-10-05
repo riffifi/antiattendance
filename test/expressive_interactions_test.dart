@@ -130,21 +130,9 @@ void main() {
     await tester.tap(find.text('Actions'));
     await tester.pumpAndSettle();
     expect(find.text('Rename'), findsOneWidget);
-    final observer = tester.state(
-      find.byType(PredictiveBackSurface),
-    ) as WidgetsBindingObserver;
-    final event = PredictiveBackEvent.fromMap({
-      'progress': .5,
-      'swipeEdge': 0,
-      'touchOffset': [0.0, 300.0],
-    });
-    expect(observer.handleStartBackGesture(event), isTrue);
-    await tester.pump();
-    observer.handleCancelBackGesture();
-    await tester.pumpAndSettle();
-    expect(find.text('Rename'), findsOneWidget);
-    expect(observer.handleStartBackGesture(event), isTrue);
-    observer.handleCommitBackGesture();
+    expect(find.byType(M3EMenu), findsOneWidget);
+    expect(find.byType(PopupMenuItem<M3EMenuEntry>), findsNothing);
+    await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(find.text('Rename'), findsNothing);
     await tester.tap(find.text('Actions'));

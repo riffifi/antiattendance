@@ -30,6 +30,10 @@ class MainActivity : FlutterActivity() {
     private var pendingUpdateOpen = false
     private var pendingUpdateTag: String? = null
     private var widgetChannel: MethodChannel? = null
+    private var summaryPermissionResult: MethodChannel.Result? = null
+    private var summaryChannel: MethodChannel? = null
+    private var pendingSummaryOpen = false
+    private var pendingInstallPath: String? = null
     private var pendingWidgetScan = false
     private var pendingNfcPassRequest = false
     private var nfcChannel: MethodChannel? = null
@@ -41,15 +45,43 @@ class MainActivity : FlutterActivity() {
     private var fieldCallback: CardEmulation.NfcEventCallback? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        pendingSummaryOpen = intent?.action == StudySummaryScheduler.ACTION_OPEN
         pendingUpdateOpen = intent?.action == UpdateNotifier.ACTION_OPEN
         pendingWidgetScan = intent?.action == ACTION_SCAN_ALL
         pendingNfcPassRequest = intent?.action == ACTION_NFC_PASSES
+        pendingInstallPath = savedInstanceState?.getString("pendingInstallPath")
         super.onCreate(savedInstanceState)
         stopPassQueue()
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        summaryChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "antiattendance/study_summary")
+        summaryChannel?.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "enable" -> {
+                    StudySummaryScheduler.configure(this, call.argument<Boolean>("enabled") == true, null)
+                    result.success(null)
+                }
+                "configure" -> {
+                    if (call.argument<Boolean>("enabled") == true && !StudySummaryScheduler.prefs(this).getBoolean("enabled", false)) {
+                        result.success(null)
+                        return@setMethodCallHandler
+                    }
+                    StudySummaryScheduler.configure(this, call.argument<Boolean>("enabled") == true, call.argument<List<*>>("tasks"))
+                    result.success(null)
+                }
+                "requestPermission" -> {
+                    if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                        summaryPermissionResult = result
+                        requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 7403)
+                    } else result.success(androidx.core.app.NotificationManagerCompat.from(this).areNotificationsEnabled())
+                }
+                "last" -> result.success(StudySummaryScheduler.prefs(this).getString("last", null))
+                "takeOpenRequest" -> { result.success(pendingSummaryOpen); pendingSummaryOpen = false }
+                else -> result.notImplemented()
+            }
+        }
         updatesChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "antiattendance/updates")
         updatesChannel?.setMethodCallHandler { call, result ->
             when (call.method) {
@@ -92,7 +124,11 @@ class MainActivity : FlutterActivity() {
                         } else {
                             val provider = if (call.argument<Boolean>("compact") == true)
                                 NfcPassCompactWidgetProvider::class.java else NfcPassWidgetProvider::class.java
-                            result.success(manager.requestPinAppWidget(ComponentName(this, provider), null, null))
+                            result.success(manager.requestPinAppWidget(ComponentName(this, provider), Bundle().apply {
+                                putParcelable(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_PREVIEW,
+                                    android.widget.RemoteViews(packageName,
+                                        if (call.argument<Boolean>("compact") == true) R.layout.nfc_pass_widget_compact else R.layout.nfc_pass_widget))
+                            }, null))
                         }
                     }
                     "start" -> {
@@ -148,6 +184,18 @@ class MainActivity : FlutterActivity() {
         }
         widgetChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "antiattendance/launcher_widget")
         widgetChannel?.setMethodCallHandler { call, result ->
+            if (call.method == "pinScanWidget") {
+                val manager = android.appwidget.AppWidgetManager.getInstance(this)
+                if (Build.VERSION.SDK_INT < 26 || !manager.isRequestPinAppWidgetSupported) result.success(false)
+                else {
+                    val compact = call.argument<Boolean>("compact") == true
+                    val provider = if (compact) ScanAllCompactWidgetProvider::class.java else ScanAllWidgetProvider::class.java
+                    val preview = Bundle().apply { putParcelable(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_PREVIEW,
+                        android.widget.RemoteViews(packageName, if (compact) R.layout.scan_all_widget_compact else R.layout.scan_all_widget)) }
+                    result.success(manager.requestPinAppWidget(ComponentName(this, provider), preview, null))
+                }
+                return@setMethodCallHandler
+            }
             if (call.method == "setWidgetLanguage") {
                 val language = call.argument<String>("language")
                 getSharedPreferences("launcher_widgets", MODE_PRIVATE).edit().apply {
@@ -254,17 +302,14 @@ class MainActivity : FlutterActivity() {
                         apk.name != "antiattendance-update.apk") {
                         throw IllegalArgumentException("Invalid update file")
                     }
-                    val uri = FileProvider.getUriForFile(
-                        this,
-                        "$packageName.update_provider",
-                        apk,
-                    )
-                    val intent = Intent(Intent.ACTION_VIEW).apply {
-                        setDataAndType(uri, "application/vnd.android.package-archive")
-                        clipData = ClipData.newRawUri("update", uri)
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    if (Build.VERSION.SDK_INT >= 26 && !packageManager.canRequestPackageInstalls()) {
+                        pendingInstallPath = apk.path
+                        startActivity(Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                            android.net.Uri.parse("package:$packageName")))
+                        result.error("INSTALL_PERMISSION_REQUIRED", "Allow installation from this app", null)
+                        return@setMethodCallHandler
                     }
-                    startActivity(intent)
+                    launchUpdateInstaller(apk)
                     result.success(null)
                 } catch (error: Exception) {
                     result.error("INSTALLER_UNAVAILABLE", error.message, null)
@@ -284,9 +329,36 @@ class MainActivity : FlutterActivity() {
             }
     }
 
+    private fun launchUpdateInstaller(apk: File) {
+        val archive = packageManager.getPackageArchiveInfo(apk.path, 0)
+            ?: throw IllegalArgumentException("Invalid APK")
+        require(archive.packageName == packageName) { "This APK belongs to another app" }
+        val uri = FileProvider.getUriForFile(this, "$packageName.update_provider", apk)
+        startActivity(Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "application/vnd.android.package-archive")
+            clipData = ClipData.newRawUri("update", uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        })
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putString("pendingInstallPath", pendingInstallPath)
+        super.onSaveInstanceState(outState)
+    }
+
     override fun onNewIntent(newIntent: Intent) {
         super.onNewIntent(newIntent)
         setIntent(newIntent)
+        if (newIntent.action == StudySummaryScheduler.ACTION_OPEN) {
+            pendingSummaryOpen = true
+            stopPassQueue()
+            summaryChannel?.invokeMethod("openSummary", null, object : MethodChannel.Result {
+                override fun success(result: Any?) { pendingSummaryOpen = false; newIntent.action = Intent.ACTION_MAIN }
+                override fun error(code: String, message: String?, details: Any?) = Unit
+                override fun notImplemented() = Unit
+            })
+            return
+        }
         if (newIntent.action == UpdateNotifier.ACTION_OPEN) {
             pendingUpdateOpen = true
             stopPassQueue()
@@ -315,6 +387,10 @@ class MainActivity : FlutterActivity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 7403) {
+            summaryPermissionResult?.success(grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED)
+            summaryPermissionResult = null
+        }
         if (requestCode == 7303) {
             val tag = pendingUpdateTag
             pendingUpdateTag = null
@@ -468,6 +544,16 @@ class MainActivity : FlutterActivity() {
 
     override fun onResume() {
         super.onResume()
+        pendingInstallPath?.let { path ->
+            if (Build.VERSION.SDK_INT < 26 || packageManager.canRequestPackageInstalls()) {
+                pendingInstallPath = null
+                runCatching {
+                    val apk = File(path).canonicalFile
+                    require(apk.parentFile == File(cacheDir, "updates").canonicalFile && apk.name == "antiattendance-update.apk" && apk.isFile)
+                    launchUpdateInstaller(apk)
+                }
+            }
+        }
         if (readerRequested) {
             NfcAdapter.getDefaultAdapter(this)?.takeIf { it.isEnabled }?.let {
                 enableDiagnosticsReader(it)

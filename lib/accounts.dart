@@ -7,12 +7,20 @@ class SavedAccount {
     required this.id,
     required this.label,
     required this.cookie,
+    this.expiresAt,
+    this.sessionExpired = false,
     this.groupId,
     this.groupName,
   });
   final String id;
   final String label;
   final String cookie;
+  final DateTime? expiresAt;
+  final bool sessionExpired;
+
+  bool isExpiredAt(DateTime now) =>
+      sessionExpired || (expiresAt != null && !now.isBefore(expiresAt!));
+
   final int? groupId;
   final String? groupName;
 
@@ -20,6 +28,8 @@ class SavedAccount {
     'id': id,
     'label': label,
     'cookie': cookie,
+    if (expiresAt != null) 'expiresAt': expiresAt!.toUtc().toIso8601String(),
+    if (sessionExpired) 'sessionExpired': true,
     if (groupId != null) 'groupId': groupId,
     if (groupName != null) 'groupName': groupName,
   };
@@ -28,6 +38,8 @@ class SavedAccount {
     id: json['id'] as String,
     label: json['label'] as String,
     cookie: json['cookie'] as String,
+    expiresAt: DateTime.tryParse(json['expiresAt'] as String? ?? ''),
+    sessionExpired: json['sessionExpired'] == true,
     groupId: json['groupId'] as int?,
     groupName: json['groupName'] as String?,
   );

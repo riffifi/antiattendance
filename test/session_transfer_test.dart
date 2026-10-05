@@ -19,6 +19,8 @@ void main() {
       SavedAccount(
         id: '$i',
         label: 'Friend $i',
+        expiresAt: DateTime.utc(2026, 12, 1),
+        sessionExpired: i == 0,
         groupId: 769,
         groupName: 'ИНБО-10-23',
         cookie:
@@ -45,6 +47,14 @@ void main() {
       expect(imported.map((a) => a.label), accounts.map((a) => a.label));
       expect(imported.map((a) => a.cookie), accounts.map((a) => a.cookie));
       expect(imported.map((a) => a.groupId), everyElement(769));
+      expect(
+        imported.map((a) => a.expiresAt),
+        accounts.map((a) => a.expiresAt),
+      );
+      expect(
+        imported.map((a) => a.sessionExpired),
+        accounts.map((a) => a.sessionExpired),
+      );
     },
   );
 

@@ -163,35 +163,21 @@ class CampusButton extends StatelessWidget {
   final M3EButtonStyle style;
 
   @override
-  Widget build(BuildContext context) {
-    final content = icon == null
+  Widget build(BuildContext context) => M3EButton(
+    onPressed: onPressed,
+    style: style,
+    child: icon == null
         ? child
         : Row(
             mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               icon!,
               const SizedBox(width: 9),
               Flexible(child: child),
             ],
-          );
-    return CampusPressable(
-      enabled: onPressed != null,
-      child: switch (style) {
-        M3EButtonStyle.text => ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.sizeOf(context).width * .48,
           ),
-          child: TextButton(onPressed: onPressed, child: content),
-        ),
-        M3EButtonStyle.outlined => OutlinedButton(
-          onPressed: onPressed,
-          child: content,
-        ),
-        _ => FilledButton(onPressed: onPressed, child: content),
-      },
-    );
-  }
+    splashFactory: NoSplash.splashFactory,
+  );
 }
 
 class CampusNavigation extends StatefulWidget {
@@ -393,60 +379,15 @@ class CampusListItem extends StatelessWidget {
   final bool selected;
   final M3EExpandableExpanded? expanded;
   @override
-  Widget build(BuildContext context) {
-    if (expanded != null) {
-      return ExpansionTile(
-        title: Text(headline),
-        leading: leading,
-        shape: const Border(),
-        collapsedShape: const Border(),
-        childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-        children: [expanded!.child],
-      );
-    }
-    return CampusPressable(
-      enabled: onTap != null,
-      child: ListTile(
-        title: Text(
-          headline,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            letterSpacing: -.2,
-          ),
-        ),
-        subtitle: supportingText == null
-            ? null
-            : Padding(
-                padding: const EdgeInsets.only(top: 5),
-                child: Text(
-                  supportingText!,
-                  style: TextStyle(
-                    color: context.palette.muted,
-                    fontSize: 12,
-                    height: 1.45,
-                  ),
-                ),
-              ),
-        leading: leading == null
-            ? null
-            : Container(
-                width: 40,
-                height: 40,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: context.palette.paper,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: leading,
-              ),
-        trailing: trailing,
-        onTap: onTap,
-        selected: selected,
-        selectedColor: context.palette.ink,
-      ),
-    );
-  }
+  Widget build(BuildContext context) => M3EListItem(
+    headline: headline,
+    supportingText: supportingText,
+    leading: leading,
+    trailing: trailing,
+    onTap: onTap,
+    selected: selected,
+    expanded: expanded,
+  );
 }
 
 class CampusTextField extends StatelessWidget {
@@ -484,7 +425,7 @@ class CampusTextField extends StatelessWidget {
   final TextAlign textAlign;
   final String? suffixText;
   @override
-  Widget build(BuildContext context) => TextField(
+  Widget build(BuildContext context) => M3ETextField(
     controller: controller,
     autofocus: autofocus,
     enabled: enabled,
@@ -495,13 +436,11 @@ class CampusTextField extends StatelessWidget {
     onSubmitted: onSubmitted,
     textCapitalization: textCapitalization,
     textAlign: textAlign,
-    decoration: InputDecoration(
-      labelText: label,
-      hintText: placeholder,
-      prefixIcon: leading,
-      suffixIcon: trailing,
-      suffixText: suffixText,
-    ),
+    label: label,
+    placeholder: placeholder,
+    leading: leading,
+    trailing: trailing,
+    suffixText: suffixText,
   );
 }
 

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:material_3_expressive/material_3_expressive.dart';
 
 import 'apk_update.dart';
@@ -29,6 +30,9 @@ class UpdatesPage extends StatefulWidget {
 class _UpdatesPageState extends State<UpdatesPage> {
   bool _downloading = false;
   double? _downloadProgress;
+  File? _downloadedApk;
+  String? _downloadedTag;
+  String? _downloadError;
   @override
   void initState() {
     super.initState();
@@ -56,26 +60,35 @@ class _UpdatesPageState extends State<UpdatesPage> {
     setState(() {
       _downloading = true;
       _downloadProgress = null;
+      _downloadError = null;
     });
     try {
-      final apk = await (widget.downloadApk ?? _downloadApk)(release, (
-        received,
-        total,
-      ) {
-        if (!mounted) return;
-        final next = total == null || total == 0
-            ? null
-            : (received / total).clamp(0.0, 1.0);
-        if (next == null && _downloadProgress == null ||
-            next != null &&
-                _downloadProgress != null &&
-                (next * 100).floor() == (_downloadProgress! * 100).floor()) {
-          return;
-        }
-        setState(() {
-          _downloadProgress = next;
-        });
-      });
+      final apk =
+          _downloadedTag == release.tag &&
+              _downloadedApk != null &&
+              await _downloadedApk!.exists()
+          ? _downloadedApk!
+          : await (widget.downloadApk ?? _downloadApk)(release, (
+              received,
+              total,
+            ) {
+              if (!mounted) return;
+              final next = total == null || total == 0
+                  ? null
+                  : (received / total).clamp(0.0, 1.0);
+              if (next == null && _downloadProgress == null ||
+                  next != null &&
+                      _downloadProgress != null &&
+                      (next * 100).floor() ==
+                          (_downloadProgress! * 100).floor()) {
+                return;
+              }
+              setState(() {
+                _downloadProgress = next;
+              });
+            });
+      _downloadedApk = apk;
+      _downloadedTag = release.tag;
       if (!mounted) return;
       await (widget.installApk ?? openAndroidInstaller)(apk);
       if (!mounted) return;
@@ -87,15 +100,35 @@ class _UpdatesPageState extends State<UpdatesPage> {
           'Confirm installation in Android.',
         ),
       );
+    } on PlatformException catch (error) {
+      if (!mounted) return;
+      setState(
+        () => _downloadError = error.code == 'INSTALL_PERMISSION_REQUIRED'
+            ? tr(
+                context,
+                'Разрешите установку из этого приложения в Android, затем вернитесь.',
+                'Allow installs from this app in Android, then return.',
+              )
+            : tr(
+                context,
+                'APK скачан. Повторите установку.',
+                'APK downloaded. Retry installation.',
+              ),
+      );
     } catch (_) {
       if (!mounted) return;
-      M3ESnackbar.show(
-        context,
-        message: tr(
-          context,
-          'Не удалось скачать или установить обновление.',
-          'Could not download or install the update.',
-        ),
+      setState(
+        () => _downloadError = _downloadedTag == release.tag
+            ? tr(
+                context,
+                'APK скачан. Повторите установку.',
+                'APK downloaded. Retry installation.',
+              )
+            : tr(
+                context,
+                'Не удалось скачать обновление. Повторите.',
+                'Could not download the update. Retry.',
+              ),
       );
     } finally {
       if (mounted) {
@@ -161,7 +194,8 @@ class _UpdatesPageState extends State<UpdatesPage> {
         appBar: AppBar(
           title: Text(tr(context, 'Обновления', 'Updates')),
           actions: [
-            IconButton(
+            M3EIconButton(
+              suppressInk: true,
               onPressed: updates.checking ? null : () => updates.check(),
               tooltip: tr(context, 'Обновить', 'Refresh'),
               icon: const Icon(Icons.refresh_rounded),
@@ -180,16 +214,31 @@ class _UpdatesPageState extends State<UpdatesPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (_downloading) ...[
-                      LinearProgressIndicator(value: _downloadProgress),
+                      M3EProgressIndicator.linearWavy(value: _downloadProgress),
                       const SizedBox(height: 12),
                     ],
+                    if (_downloadError != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Semantics(
+                          liveRegion: true,
+                          child: Text(
+                            _downloadError!,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
+                        ),
+                      ),
                     SizedBox(
                       width: double.infinity,
                       child: CampusButton.icon(
                         onPressed: _downloading || updates.checking
                             ? null
                             : available
-                            ? Platform.isAndroid && release.apk != null
+                            ? (Platform.isAndroid ||
+                                          widget.downloadApk != null) &&
+                                      release.apk != null
                                   ? () => _downloadAndInstall(release)
                                   : () => _openRelease(release.page)
                             : () => updates.check(),
@@ -212,7 +261,9 @@ class _UpdatesPageState extends State<UpdatesPage> {
                                         },
                                       )
                               : available
-                              ? Platform.isAndroid && release.apk != null
+                              ? (Platform.isAndroid ||
+                                            widget.downloadApk != null) &&
+                                        release.apk != null
                                     ? tr(
                                         context,
                                         'Установить обновление',
@@ -269,7 +320,9 @@ class _UpdatesPageState extends State<UpdatesPage> {
                         const SizedBox(
                           width: 32,
                           height: 32,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: M3EProgressIndicator.circularWavy(
+                            strokeWidth: 2,
+                          ),
                         )
                       else
                         Icon(

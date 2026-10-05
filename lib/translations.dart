@@ -1,6 +1,227 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  "Study day summary": (
+    "Bilan de la journée de cours",
+    "Resumo do dia de aulas",
+    "学习日总结",
+  ),
+  "These are confirmations recorded by this app.": (
+    "Ce sont les confirmations enregistrées par cette application.",
+    "Estas são as confirmações registadas por esta aplicação.",
+    "这些是此应用记录的确认信息。",
+  ),
+  "Could not load the summary.": (
+    "Impossible de charger le bilan.",
+    "Não foi possível carregar o resumo.",
+    "无法加载总结。",
+  ),
+  "The summary appears after the last class.": (
+    "Le bilan apparaît après le dernier cours.",
+    "O resumo aparece após a última aula.",
+    "总结将在最后一节课结束后显示。",
+  ),
+  "Allow notifications in Android settings.": (
+    "Autorisez les notifications dans les réglages Android.",
+    "Permita as notificações nas definições do Android.",
+    "请在 Android 设置中允许通知。",
+  ),
+  "Could not update notification schedules. Retry when online.": (
+    "Impossible de mettre à jour les notifications. Réessayez avec une connexion Internet.",
+    "Não foi possível atualizar o agendamento das notificações. Tente com ligação à Internet.",
+    "无法更新通知计划。请联网后重试。",
+  ),
+  "Could not add the widget.": (
+    "Impossible d’ajouter le widget.",
+    "Não foi possível adicionar o widget.",
+    "无法添加小组件。",
+  ),
+  "After the last class: each person’s confirmations and expired sessions.": (
+    "Après le dernier cours : confirmations de chaque personne et sessions expirées.",
+    "Após a última aula: confirmações de cada pessoa e sessões expiradas.",
+    "最后一节课后：每个人的确认记录及过期会话。",
+  ),
+  "Last summary": ("Dernier bilan", "Último resumo", "最近的总结"),
+  "Mark-all widget": (
+    "Widget de pointage collectif",
+    "Widget de registo de todos",
+    "全员签到小组件",
+  ),
+  "Widget preview": ("Aperçu du widget", "Pré-visualização do widget", "小组件预览"),
+  "Enroll passes together": (
+    "Enregistrer plusieurs badges",
+    "Registar passes em conjunto",
+    "批量注册通行证",
+  ),
+  "The existing pass will be replaced after verification.": (
+    "Le badge existant sera remplacé après vérification.",
+    "O passe existente será substituído após a verificação.",
+    "验证后将替换现有通行证。",
+  ),
+  "Enrolling pass {current} of {total}": (
+    "Enregistrement du badge {current} sur {total}",
+    "A registar o passe {current} de {total}",
+    "正在注册通行证 {current}/{total}",
+  ),
+  "Allow installs from this app in Android, then return.": (
+    "Autorisez les installations depuis cette application dans Android, puis revenez.",
+    "Permita as instalações desta aplicação no Android e depois regresse.",
+    "请在 Android 中允许此应用安装应用，然后返回。",
+  ),
+  "APK downloaded. Retry installation.": (
+    "APK téléchargé. Réessayez l’installation.",
+    "APK descarregado. Tente instalar novamente.",
+    "APK 已下载。请重试安装。",
+  ),
+  "Could not download the update. Retry.": (
+    "Impossible de télécharger la mise à jour. Réessayez.",
+    "Não foi possível descarregar a atualização. Tente novamente.",
+    "无法下载更新。请重试。",
+  ),
+  "Mark all": ("Pointer tout le monde", "Registar todos", "全员签到"),
+  "Confirmed": ("Confirmé", "Confirmado", "已确认"),
+  "Not recorded": ("Non enregistré", "Não registado", "未记录"),
+  "Assign a group to include classes.": (
+    "Attribuez un groupe pour inclure les cours.",
+    "Atribua um grupo para incluir as aulas.",
+    "请分配分组以包含课程。",
+  ),
+  "No classes today": ("Aucun cours aujourd’hui", "Sem aulas hoje", "今天没有课程"),
+  "Could not confirm the new sign-in. Your saved account is kept; try again later.":
+      (
+        "Impossible de confirmer la nouvelle connexion. Le compte enregistré est conservé ; réessayez plus tard.",
+        "Não foi possível confirmar o novo início de sessão. A conta guardada é mantida; tente mais tarde.",
+        "无法确认新的登录。已保留原账户；请稍后重试。",
+      ),
+  "Could not save the new sign-in. Retry this account.": (
+    "Impossible d’enregistrer la nouvelle connexion. Réessayez pour ce compte.",
+    "Não foi possível guardar o novo início de sessão. Tente novamente para esta conta.",
+    "无法保存新的登录。请重试此账户。",
+  ),
+  "Sign-in restored": ("Connexion rétablie", "Sessão restaurada", "登录已恢复"),
+  "Skipped — resume later": (
+    "Ignoré — reprenez plus tard",
+    "Ignorado — retome mais tarde",
+    "已跳过 — 可稍后继续",
+  ),
+  "Sign-in needed": (
+    "Connexion requise",
+    "Início de sessão necessário",
+    "需要登录",
+  ),
+  "Service access denied": (
+    "Accès au service refusé",
+    "Acesso ao serviço negado",
+    "服务访问被拒绝",
+  ),
+  "Restore sessions": ("Rétablir les sessions", "Restaurar sessões", "恢复会话"),
+  "Ready: {valid} · Need sign-in: {expired}": (
+    "Prêts : {valid} · Connexion requise : {expired}",
+    "Prontas: {valid} · Precisam de início de sessão: {expired}",
+    "就绪：{valid} · 需要登录：{expired}",
+  ),
+  "Check selected accounts and restore only expired sessions. Names, groups, and history stay saved. Close a login to skip its owner. NFC passes are enrolled separately when needed.":
+      (
+        "Vérifiez les comptes sélectionnés et rétablissez uniquement les sessions expirées. Les noms, groupes et historiques sont conservés. Fermez une connexion pour ignorer son titulaire. Les badges NFC sont enregistrés séparément si nécessaire.",
+        "Verifique as contas selecionadas e restaure apenas as sessões expiradas. Os nomes, grupos e histórico são mantidos. Feche um início de sessão para ignorar o titular. Os passes NFC são registados separadamente quando necessário.",
+        "检查所选账户，仅恢复已过期的会话。名称、分组和历史记录均会保留。关闭登录即可跳过该用户。需要时单独注册 NFC 通行证。",
+      ),
+  "Restore sign-ins: {count}": (
+    "Rétablir les connexions : {count}",
+    "Restaurar sessões: {count}",
+    "恢复登录：{count}",
+  ),
+  "Check again": ("Vérifier à nouveau", "Verificar novamente", "再次检查"),
+  "Sign in with QR": (
+    "Se connecter par QR code",
+    "Iniciar sessão com QR",
+    "使用二维码登录",
+  ),
+  "Scan with another device and confirm your MIREA sign-in. This app will wait for confirmation.":
+      (
+        "Scannez avec un autre appareil et confirmez votre connexion MIREA. Cette application attendra la confirmation.",
+        "Leia com outro dispositivo e confirme o início de sessão na MIREA. Esta aplicação aguardará a confirmação.",
+        "使用另一台设备扫描并确认您的 MIREA 登录。此应用将等待确认。",
+      ),
+  "MIREA sign-in QR code": (
+    "QR code de connexion MIREA",
+    "Código QR de início de sessão na MIREA",
+    "MIREA 登录二维码",
+  ),
+  "Refresh QR code": ("Actualiser le QR code", "Atualizar código QR", "刷新二维码"),
+  "Other sign-in options": (
+    "Autres options de connexion",
+    "Outras opções de início de sessão",
+    "其他登录方式",
+  ),
+  "Pass token rejected. Enroll the pass again; your session is valid.": (
+    "Jeton du badge refusé. Enregistrez à nouveau le badge ; votre session est valide.",
+    "Token do passe rejeitado. Registe o passe novamente; a sua sessão é válida.",
+    "通行证令牌被拒绝。请重新注册通行证；您的会话仍有效。",
+  ),
+  "Pass service unreachable. Check your connection and try later.": (
+    "Service des badges inaccessible. Vérifiez votre connexion et réessayez plus tard.",
+    "Serviço de passes inacessível. Verifique a ligação e tente mais tarde.",
+    "无法连接通行证服务。请检查网络连接并稍后重试。",
+  ),
+  "The service returned an invalid or expired pass token. Restart enrollment.":
+      (
+        "Le service a renvoyé un jeton de badge invalide ou expiré. Recommencez l’enregistrement.",
+        "O serviço devolveu um token de passe inválido ou expirado. Reinicie o registo.",
+        "服务返回了无效或已过期的通行证令牌。请重新开始注册。",
+      ),
+  "Incorrect verification code. Check the code and enter it again.": (
+    "Code de vérification incorrect. Vérifiez le code et saisissez-le à nouveau.",
+    "Código de verificação incorreto. Verifique o código e introduza-o novamente.",
+    "验证码错误。请检查验证码并重新输入。",
+  ),
+  "MIREA could not issue the pass. Contact support.": (
+    "MIREA n’a pas pu délivrer le badge. Contactez l’assistance.",
+    "A MIREA não conseguiu emitir o passe. Contacte o suporte.",
+    "MIREA 无法签发通行证。请联系支持。",
+  ),
+  "Pass service access denied. Contact MIREA support.": (
+    "Accès au service des badges refusé. Contactez l’assistance MIREA.",
+    "Acesso ao serviço de passes negado. Contacte o suporte da MIREA.",
+    "通行证服务访问被拒绝。请联系 MIREA 支持。",
+  ),
+  "Pass service error ({status}). Try again later.": (
+    "Erreur du service des badges ({status}). Réessayez plus tard.",
+    "Erro do serviço de passes ({status}). Tente mais tarde.",
+    "通行证服务错误（{status}）。请稍后重试。",
+  ),
+  "Checking session…": (
+    "Vérification de la session…",
+    "A verificar a sessão…",
+    "正在检查会话…",
+  ),
+  "Session is valid": ("La session est valide", "A sessão é válida", "会话有效"),
+  "Service unavailable. Could not check the session.": (
+    "Service indisponible. Impossible de vérifier la session.",
+    "Serviço indisponível. Não foi possível verificar a sessão.",
+    "服务不可用。无法检查会话。",
+  ),
+  "Invalid service response. Could not check the session.": (
+    "Réponse du service invalide. Impossible de vérifier la session.",
+    "Resposta do serviço inválida. Não foi possível verificar a sessão.",
+    "服务响应无效。无法检查会话。",
+  ),
+  "Could not check the session.": (
+    "Impossible de vérifier la session.",
+    "Não foi possível verificar a sessão.",
+    "无法检查会话。",
+  ),
+  "Check session": ("Vérifier la session", "Verificar sessão", "检查会话"),
+  'Session expiry unknown': (
+    'Expiration de session inconnue',
+    'Validade da sessão desconhecida',
+    '会话到期时间未知',
+  ),
+  'Session expires: {date}': (
+    'Expiration de session : {date}',
+    'A sessão expira: {date}',
+    '会话到期时间：{date}',
+  ),
   'What’s new': ('Nouveautés', 'Novidades', '更新内容'),
   'No release notes were provided.': (
     'Aucune note de version fournie.',

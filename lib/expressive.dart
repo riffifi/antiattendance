@@ -59,8 +59,8 @@ class AppPassPicker extends StatelessWidget {
             child: Text(hint, style: Theme.of(context).textTheme.titleLarge),
           ),
           for (final item in items)
-            ListTile(
-              title: Text(item.label),
+            M3EListItem(
+              headline: item.label,
               selected: item.selected,
               trailing: item.selected ? const Icon(Icons.check_rounded) : null,
               onTap: () => Navigator.pop(context, item),
@@ -72,12 +72,8 @@ class AppPassPicker extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => OutlinedButton(
+  Widget build(BuildContext context) => M3EButton.outlined(
     onPressed: enabled ? () => _open(context) : null,
-    style: OutlinedButton.styleFrom(
-      alignment: Alignment.centerLeft,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    ),
     child: Row(
       children: [
         Expanded(
@@ -156,8 +152,8 @@ class _PredictiveBackSurfaceState extends State<PredictiveBackSurface>
   Widget build(BuildContext context) => widget.child;
 }
 
-/// A route-backed action menu, so back dismisses the menu before its page.
-class AppActionMenu extends StatefulWidget {
+/// Shared Expressive action menu with anchored motion and back dismissal.
+class AppActionMenu extends StatelessWidget {
   const AppActionMenu({
     super.key,
     required this.entries,
@@ -169,49 +165,10 @@ class AppActionMenu extends StatefulWidget {
   final ValueChanged<Object?> onSelected;
 
   @override
-  State<AppActionMenu> createState() => _AppActionMenuState();
-}
-
-class _AppActionMenuState extends State<AppActionMenu> {
-  bool _open = false;
-
-  Future<void> _show() async {
-    if (_open || widget.entries.isEmpty) return;
-    final anchor = context.findRenderObject()! as RenderBox;
-    final overlay =
-        Navigator.of(context).overlay!.context.findRenderObject()! as RenderBox;
-    final rect = Rect.fromPoints(
-      anchor.localToGlobal(Offset.zero, ancestor: overlay),
-      anchor.localToGlobal(
-        anchor.size.bottomRight(Offset.zero),
-        ancestor: overlay,
-      ),
-    );
-    _open = true;
-    try {
-      final entry = await showMenu<M3EMenuEntry>(
-        context: context,
-        position: RelativeRect.fromRect(rect, Offset.zero & overlay.size),
-        items: [
-          for (final (index, entry) in widget.entries.indexed)
-            PopupMenuItem<M3EMenuEntry>(
-              value: entry,
-              enabled: entry.enabled,
-              child: index == 0
-                  ? PredictiveBackSurface(child: Text(entry.label))
-                  : Text(entry.label),
-            ),
-        ],
-      );
-      if (entry != null && mounted) {
-        entry.onPressed?.call();
-        widget.onSelected(entry.value);
-      }
-    } finally {
-      _open = false;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => widget.anchorBuilder(context, _show);
+  Widget build(BuildContext context) => M3EMenu.entries(
+    entries: entries,
+    anchorBuilder: anchorBuilder,
+    onSelected: onSelected,
+    position: M3EMenuAnchorPosition.bottomEnd,
+  );
 }

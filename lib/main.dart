@@ -12,6 +12,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import 'accounts.dart';
+import 'session_check.dart';
+import 'session_recovery_page.dart';
 import 'app_settings.dart';
 import 'app_theme.dart';
 import 'attendance_log.dart';
@@ -30,6 +32,11 @@ import 'session_import_page.dart';
 import 'session_share_page.dart';
 import 'settings_page.dart';
 import 'update_service.dart';
+import 'study_summary.dart';
+import 'study_summary_page.dart';
+
+@pragma('vm:entry-point')
+Future<void> studySummaryBackground() => runStudySummaryBackground();
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized().deferFirstFrame();
@@ -65,6 +72,13 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
     WidgetsBinding.instance.addObserver(this);
     _updates.addListener(_notifyUpdate);
     if (Platform.isAndroid) {
+      studySummaryChannel.setMethodCallHandler((call) async {
+        if (call.method == 'openSummary') {
+          await _navigatorKey.currentState?.push<void>(
+            MaterialPageRoute(builder: (_) => const StudySummaryPage()),
+          );
+        }
+      });
       _updatesChannel.setMethodCallHandler((call) async {
         if (call.method == 'openUpdates') await _openUpdates();
       });
@@ -85,6 +99,16 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
           await _updatesChannel.invokeMethod<void>('configure', {
             'language': _language,
           });
+          final openSummary =
+              await studySummaryChannel.invokeMethod<bool>('takeOpenRequest') ??
+              false;
+          if (openSummary) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _navigatorKey.currentState?.push<void>(
+                MaterialPageRoute(builder: (_) => const StudySummaryPage()),
+              );
+            });
+          }
           final open =
               await _updatesChannel.invokeMethod<bool>('takeOpenRequest') ??
               false;
@@ -242,6 +266,10 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
       onLanguageChanged: (language) {
         setState(() => _language = language);
         unawaited(_syncWidgetLanguage(language));
+        final service = StudySummaryService();
+        unawaited(
+          service.sync().catchError((Object _) {}).whenComplete(service.close),
+        );
       },
       themeMode: _themeMode,
       onThemeModeChanged: (mode) => setState(() => _themeMode = mode),
@@ -270,8 +298,10 @@ class HomePage extends StatefulWidget {
     this.monetAvailable = false,
     this.onMonetChanged,
     this.updates,
+    this.sessionChecker = checkSession,
   });
 
+  final Future<SessionCheckResult> Function(SavedAccount) sessionChecker;
   final AccountStore? store;
   final PulseApi? api;
   final ScheduleApi? scheduleApi;
@@ -324,6 +354,8 @@ class _HomePageState extends State<HomePage> {
   final _selected = <String>{};
   final _results = <String, ApprovalResult>{};
   final _errors = <String, String>{};
+  final _sessionChecks = <String, String>{};
+  final _checkingSessions = <String>{};
   List<SavedAccount> _accounts = [];
   List<AttendanceMark>? _marks;
   bool _loading = true;
@@ -335,6 +367,26 @@ class _HomePageState extends State<HomePage> {
   bool _nfcStartOnOpen = false;
   bool _widgetScanScheduled = false;
   Timer? _counterRefreshTimer;
+  Timer? _sessionRefreshTimer;
+
+  Timer? _summarySyncTimer;
+  void _scheduleSummarySync() {
+    _summarySyncTimer?.cancel();
+    _summarySyncTimer = Timer(const Duration(seconds: 2), () async {
+      if (!Platform.isAndroid) return;
+      final service = StudySummaryService(
+        api: _scheduleApi,
+        accounts: _store,
+        log: _logStore,
+        settings: _settingsStore,
+      );
+      try {
+        await service.sync();
+      } catch (_) {
+        /* Existing cached schedules remain armed if offline. */
+      }
+    });
+  }
 
   bool get _busy => _scanning || _submitting;
 
@@ -346,6 +398,9 @@ class _HomePageState extends State<HomePage> {
       unawaited(_takeInitialWidgetRequest());
     }
     _scheduleCounterRefresh();
+    _sessionRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
     _load();
   }
 
@@ -437,6 +492,8 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     if (Platform.isAndroid) _widgetChannel.setMethodCallHandler(null);
     _counterRefreshTimer?.cancel();
+    _sessionRefreshTimer?.cancel();
+    _summarySyncTimer?.cancel();
     _accountSearch.dispose();
     if (widget.api == null) _api.close();
     if (widget.scheduleApi == null) _scheduleApi.close();
@@ -473,6 +530,7 @@ class _HomePageState extends State<HomePage> {
     try {
       final marks = await _logStore.load();
       if (mounted) setState(() => _marks = marks);
+      _scheduleSummarySync();
     } catch (_) {
       if (mounted) setState(() => _marks = null);
     }
@@ -500,6 +558,7 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
+    _scheduleSummarySync();
   }
 
   Future<String?> _askText({
@@ -519,6 +578,46 @@ class _HomePageState extends State<HomePage> {
     ),
   );
 
+  Future<void> _recoverSessions() async {
+    if (_busy) return;
+    final accounts = _accounts.where((a) => _selected.contains(a.id)).toList();
+    if (accounts.isEmpty) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => SessionRecoveryPage(
+          accounts: accounts,
+          checker: widget.sessionChecker,
+          onExpired: _markSessionExpired,
+          onSave: (old, next) async {
+            if (!_accounts.any(
+              (a) => a.id == old.id && a.cookie == old.cookie,
+            )) {
+              throw StateError('Account changed during recovery');
+            }
+            if (_accounts.any(
+              (a) => a.id != old.id && a.cookie == next.cookie,
+            )) {
+              throw StateError('Account already saved');
+            }
+            final updated = _accounts
+                .map((a) => a.id == old.id ? next : a)
+                .toList();
+            await _store.save(updated);
+            _scheduleSummarySync();
+            if (mounted) {
+              setState(() {
+                _accounts = updated;
+                _errors.remove(old.id);
+                _results.remove(old.id);
+                _sessionChecks.remove(old.id);
+              });
+            }
+          },
+        ),
+      ),
+    );
+  }
+
   Future<void> _login({SavedAccount? replace}) async {
     if (_busy) return;
     if (!Platform.isAndroid && !Platform.isIOS) {
@@ -531,17 +630,26 @@ class _HomePageState extends State<HomePage> {
       );
       return;
     }
-    final cookie = await Navigator.of(
-      context,
-    ).push<String>(MaterialPageRoute(builder: (_) => const PulseLoginPage()));
-    if (!mounted || cookie == null) return;
-    final label = await _askText(
-      title: tr(context, 'Имя аккаунта', 'Account name'),
-      hint: tr(context, 'Например, имя друга', 'For example, a friend’s name'),
-      action: tr(context, 'Сохранить', 'Save'),
-      initial: replace?.label,
-      maxLength: 60,
+    final session = await Navigator.of(context).push<SavedAccount>(
+      MaterialPageRoute(
+        builder: (_) => PulseLoginPage(accountLabel: replace?.label),
+      ),
     );
+    if (!mounted || session == null) return;
+    final cookie = session.cookie;
+    final label =
+        replace?.label ??
+        await _askText(
+          title: tr(context, 'Имя аккаунта', 'Account name'),
+          hint: tr(
+            context,
+            'Например, имя друга',
+            'For example, a friend’s name',
+          ),
+          action: tr(context, 'Сохранить', 'Save'),
+          initial: replace?.label,
+          maxLength: 60,
+        );
     if (!mounted || label == null) return;
     if (_accounts.any(
       (item) => item.id != replace?.id && item.cookie == cookie,
@@ -562,18 +670,21 @@ class _HomePageState extends State<HomePage> {
         id: id,
         label: label,
         cookie: cookie,
+        expiresAt: session.expiresAt,
         groupId: replace?.groupId,
         groupName: replace?.groupName,
       ),
     ];
     try {
       await _store.save(next);
+      _scheduleSummarySync();
       if (mounted) {
         setState(() {
           _accounts = next;
           _selected.add(id);
           _results.remove(id);
           _errors.remove(id);
+          _sessionChecks.remove(id);
         });
       }
     } catch (_) {
@@ -606,6 +717,8 @@ class _HomePageState extends State<HomePage> {
                   id: item.id,
                   label: label,
                   cookie: item.cookie,
+                  expiresAt: item.expiresAt,
+                  sessionExpired: item.sessionExpired,
                   groupId: item.groupId,
                   groupName: item.groupName,
                 )
@@ -614,6 +727,7 @@ class _HomePageState extends State<HomePage> {
         .toList();
     try {
       await _store.save(next);
+      _scheduleSummarySync();
       if (mounted) setState(() => _accounts = next);
     } catch (_) {
       if (mounted) {
@@ -662,6 +776,7 @@ class _HomePageState extends State<HomePage> {
     try {
       await NfcPassStore().remove(account.id);
       await _store.save(next);
+      _scheduleSummarySync();
       if (mounted) {
         setState(() {
           _accounts = next;
@@ -749,6 +864,7 @@ class _HomePageState extends State<HomePage> {
       _errors.clear();
     });
     final recorded = <String>{};
+    final expiredRecorded = <String>{};
     try {
       await Navigator.of(context).push<void>(
         MaterialPageRoute<void>(
@@ -757,6 +873,10 @@ class _HomePageState extends State<HomePage> {
             api: _api,
             onUpdate: (queue) {
               for (final account in accounts) {
+                if (queue.expiredSessions.contains(account.id) &&
+                    expiredRecorded.add(account.id)) {
+                  unawaited(_markSessionExpired(account));
+                }
                 final result = queue.results[account.id];
                 if (result?.state == ApprovalState.approved &&
                     recorded.add(account.id)) {
@@ -901,6 +1021,8 @@ class _HomePageState extends State<HomePage> {
           id: '${base}_${added.length}',
           label: account.label,
           cookie: account.cookie,
+          expiresAt: account.expiresAt,
+          sessionExpired: account.sessionExpired,
           groupId: account.groupId,
           groupName: account.groupName,
         ),
@@ -919,6 +1041,7 @@ class _HomePageState extends State<HomePage> {
     final next = [..._accounts, ...added];
     try {
       await _store.save(next);
+      _scheduleSummarySync();
       if (!mounted) return;
       setState(() {
         _accounts = next;
@@ -1009,6 +1132,9 @@ class _HomePageState extends State<HomePage> {
           }
           if (mounted) setState(() => _results[account.id] = result);
         } catch (error) {
+          if (error is PulseApiException && error.sessionExpired) {
+            await _markSessionExpired(account);
+          }
           if (mounted) {
             setState(
               () => _errors[account.id] = error is PulseApiException
@@ -1025,6 +1151,121 @@ class _HomePageState extends State<HomePage> {
       setState(() => _submitting = false);
       _openPendingWidgetScan();
       _openPendingWidgetNfc();
+    }
+  }
+
+  Future<void> _checkAccountSession(SavedAccount account) async {
+    if (!_checkingSessions.add(account.id)) return;
+    setState(
+      () => _sessionChecks[account.id] = tr(
+        context,
+        'Проверяем сессию…',
+        'Checking session…',
+      ),
+    );
+    try {
+      final result = await widget.sessionChecker(account);
+      if (!mounted ||
+          !_accounts.any(
+            (item) => item.id == account.id && item.cookie == account.cookie,
+          )) {
+        return;
+      }
+      if (result.state == SessionCheckState.expired) {
+        await _markSessionExpired(account);
+      } else if (result.state == SessionCheckState.valid &&
+          account.isExpiredAt(DateTime.now())) {
+        final next = _accounts
+            .map(
+              (item) => item.id == account.id
+                  ? SavedAccount(
+                      id: item.id,
+                      label: item.label,
+                      cookie: item.cookie,
+                      groupId: item.groupId,
+                      groupName: item.groupName,
+                      expiresAt:
+                          item.expiresAt != null &&
+                              item.expiresAt!.isAfter(DateTime.now())
+                          ? item.expiresAt
+                          : null,
+                    )
+                  : item,
+            )
+            .toList();
+        setState(() => _accounts = next);
+        await _store.save(next);
+        _scheduleSummarySync();
+      }
+      if (!mounted) return;
+      setState(
+        () => _sessionChecks[account.id] = switch (result.state) {
+          SessionCheckState.valid => tr(
+            context,
+            'Сессия действительна',
+            'Session is valid',
+          ),
+          SessionCheckState.expired => tr(
+            context,
+            'Сессия истекла. Войдите снова.',
+            'Session expired. Sign in again.',
+          ),
+          SessionCheckState.forbidden => tr(
+            context,
+            'Доступ к сервису пропусков запрещён. Обратитесь в поддержку МИРЭА.',
+            'Pass service access denied. Contact MIREA support.',
+          ),
+          SessionCheckState.unavailable => tr(
+            context,
+            'Сервис недоступен. Сессию проверить не удалось.',
+            'Service unavailable. Could not check the session.',
+          ),
+          SessionCheckState.invalidResponse => tr(
+            context,
+            'Некорректный ответ сервиса. Сессию проверить не удалось.',
+            'Invalid service response. Could not check the session.',
+          ),
+        },
+      );
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _sessionChecks[account.id] = tr(
+            context,
+            'Не удалось проверить сессию.',
+            'Could not check the session.',
+          ),
+        );
+      }
+    } finally {
+      _checkingSessions.remove(account.id);
+      if (mounted) setState(() {});
+    }
+  }
+
+  Future<void> _markSessionExpired(SavedAccount account) async {
+    if (!mounted) return;
+    final next = _accounts
+        .map(
+          (item) => item.id == account.id && item.cookie == account.cookie
+              ? SavedAccount(
+                  id: item.id,
+                  label: item.label,
+                  cookie: item.cookie,
+                  groupId: item.groupId,
+                  groupName: item.groupName,
+                  expiresAt: item.expiresAt,
+                  sessionExpired: true,
+                )
+              : item,
+        )
+        .toList();
+    setState(() => _accounts = next);
+    try {
+      await _store.save(next);
+      _scheduleSummarySync();
+    } catch (_) {
+      // Keep the known expired status in memory if storage is unavailable.
     }
   }
 
@@ -1070,6 +1311,8 @@ class _HomePageState extends State<HomePage> {
                   id: item.id,
                   label: item.label,
                   cookie: item.cookie,
+                  expiresAt: item.expiresAt,
+                  sessionExpired: item.sessionExpired,
                   groupId: group.id,
                   groupName: group.name,
                 )
@@ -1078,6 +1321,7 @@ class _HomePageState extends State<HomePage> {
         .toList();
     try {
       await _store.save(next);
+      _scheduleSummarySync();
       if (mounted) setState(() => _accounts = next);
     } catch (_) {
       if (mounted) {
@@ -1337,6 +1581,26 @@ class _HomePageState extends State<HomePage> {
                                       ),
                                     ),
                                   if (_accounts.isNotEmpty) ...[
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: CampusButton.icon(
+                                        onPressed: _busy || _selected.isEmpty
+                                            ? null
+                                            : _recoverSessions,
+                                        icon: const Icon(
+                                          Icons.refresh_rounded,
+                                          size: 18,
+                                        ),
+                                        label: Text(
+                                          tr(
+                                            context,
+                                            'Восстановить вход',
+                                            'Restore sessions',
+                                          ),
+                                        ),
+                                        style: M3EButtonStyle.text,
+                                      ),
+                                    ),
                                     Row(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.center,
@@ -1502,6 +1766,12 @@ class _HomePageState extends State<HomePage> {
                                         _selected.remove(account.id);
                                       }
                                     }),
+                                    sessionCheck: _sessionChecks[account.id],
+                                    checkingSession: _checkingSessions.contains(
+                                      account.id,
+                                    ),
+                                    onCheckSession: () =>
+                                        _checkAccountSession(account),
                                     onReauth: () => _login(replace: account),
                                     onRename: () => _rename(account),
                                     onGroup: () => _chooseGroup({account.id}),
@@ -1549,6 +1819,8 @@ class _HomePageState extends State<HomePage> {
                                 key: _nfcPageKey,
                                 accounts: _accounts,
                                 startOnOpen: _nfcStartOnOpen,
+                                onReauth: (account) => _login(replace: account),
+                                onSessionExpired: _markSessionExpired,
                               ),
                             )
                           : const SizedBox.shrink(),
@@ -1572,6 +1844,9 @@ class _AccountRow extends StatelessWidget {
     required this.error,
     required this.onTap,
     required this.onReauth,
+    required this.onCheckSession,
+    this.sessionCheck,
+    this.checkingSession = false,
     required this.onRename,
     required this.onGroup,
     required this.onRemove,
@@ -1585,16 +1860,37 @@ class _AccountRow extends StatelessWidget {
   final String? error;
   final VoidCallback onTap;
   final VoidCallback onReauth;
+  final VoidCallback onCheckSession;
+  final String? sessionCheck;
+  final bool checkingSession;
   final VoidCallback onRename;
   final VoidCallback onGroup;
   final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
+    final expired = account.isExpiredAt(DateTime.now());
+    final expiry = account.expiresAt?.toLocal();
+    final date = expiry == null
+        ? null
+        : '${MaterialLocalizations.of(context).formatMediumDate(expiry)} ${MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(expiry), alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context))}';
+    final sessionStatus = expired
+        ? tr(
+            context,
+            'Сессия истекла. Войдите снова.',
+            'Session expired. Sign in again.',
+          )
+        : date == null
+        ? tr(
+            context,
+            'Срок действия сессии неизвестен',
+            'Session expiry unknown',
+          )
+        : trf(context, 'Сессия истекает: {date}', 'Session expires: {date}', {
+            'date': date,
+          });
     final status =
-        error ??
-        result?.message ??
-        (busy && selected ? 'Отправка…' : 'Сессия сохранена');
+        error ?? result?.message ?? (busy && selected ? 'Отправка…' : null);
     final color = error != null || result?.state == ApprovalState.rejected
         ? Theme.of(context).colorScheme.error
         : result?.state == ApprovalState.approved
@@ -1669,12 +1965,31 @@ class _AccountRow extends StatelessWidget {
                                 color: context.palette.muted,
                               ),
                             ),
+                          if (status != null)
+                            Text(
+                              trMessage(context, status),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 12, color: color),
+                            ),
                           Text(
-                            trMessage(context, status),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 12, color: color),
+                            sessionStatus,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: expired
+                                  ? Theme.of(context).colorScheme.error
+                                  : context.palette.muted,
+                            ),
                           ),
+                          if (sessionCheck != null &&
+                              sessionCheck != sessionStatus)
+                            Text(
+                              sessionCheck!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: context.palette.muted,
+                              ),
+                            ),
                           const SizedBox(height: 5),
                           Wrap(
                             spacing: 10,
@@ -1706,6 +2021,14 @@ class _AccountRow extends StatelessWidget {
                     AppActionMenu(
                       entries: [
                         M3EMenuEntry(
+                          value: 'checkSession',
+                          label: tr(
+                            context,
+                            'Проверить сессию',
+                            'Check session',
+                          ),
+                        ),
+                        M3EMenuEntry(
                           value: 'rename',
                           label: tr(context, 'Переименовать', 'Rename'),
                         ),
@@ -1723,6 +2046,9 @@ class _AccountRow extends StatelessWidget {
                         ),
                       ],
                       onSelected: (value) {
+                        if (value == 'checkSession' && !checkingSession) {
+                          onCheckSession();
+                        }
                         if (value == 'login') onReauth();
                         if (value == 'rename') onRename();
                         if (value == 'group') onGroup();

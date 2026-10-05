@@ -6,6 +6,8 @@ import 'package:antiattendance/about_page.dart';
 import 'package:antiattendance/external_links.dart';
 import 'package:antiattendance/update_service.dart';
 import 'package:antiattendance/settings_page.dart';
+import 'package:antiattendance/updates_page.dart';
+import 'package:flutter/services.dart';
 import 'package:antiattendance/app_settings.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -183,6 +185,63 @@ void main() {
     expect(find.text('Could not open GitHub. Link copied.'), findsOneWidget);
   });
 
+  testWidgets('installation permission retry reuses the downloaded APK', (
+    tester,
+  ) async {
+    final folder = await Directory.systemTemp.createTemp('installer-test');
+    addTearDown(() => folder.delete(recursive: true));
+    final apk = File('${folder.path}/update.apk');
+    await apk.writeAsBytes([0x50, 0x4b, 0x03, 0x04]);
+    final release = AppRelease(
+      tag: 'v4.0.0',
+      page: Uri.parse(releasesPage),
+      apk: Uri.parse(
+        'https://github.com/riffifi/antiattendance/releases/download/v4.0.0/app-release.apk',
+      ),
+    );
+    final controller = UpdateController(
+      service: FakeReleases(release),
+      packageInfo: () async => PackageInfo(
+        appName: 'App',
+        packageName: 'app',
+        version: '3.0.0',
+        buildNumber: '1',
+      ),
+    );
+    addTearDown(controller.dispose);
+    await controller.check();
+    var downloads = 0;
+    var installs = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: UpdatesPage(
+          updates: controller,
+          downloadApk: (_, progress) async {
+            downloads++;
+            return apk;
+          },
+          installApk: (_) async {
+            installs++;
+            if (installs == 1)
+              throw PlatformException(code: 'INSTALL_PERMISSION_REQUIRED');
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Install update'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Allow installs from this app in Android, then return.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Install update'));
+    await tester.pumpAndSettle();
+    expect(downloads, 1);
+    expect(installs, 2);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   test('version comparison checks release tag and installed build', () {
     expect(isNewerRelease('v1.2.0', '1.1.0', '2'), isTrue);
     expect(isNewerRelease('v1.1.0', '1.1.0', '2'), isFalse);
@@ -251,6 +310,8 @@ void main() {
       200,
     );
     expect(find.text('Version v1.2.0 is available'), findsOneWidget);
+    await tester.ensureVisible(find.text('Version v1.2.0 is available'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Version v1.2.0 is available'));
     await tester.pumpAndSettle();
     expect(find.text('Open release'), findsOneWidget);

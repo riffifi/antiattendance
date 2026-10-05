@@ -6,6 +6,11 @@ class AppSettingsStore {
   AppSettingsStore({FlutterSecureStorage? storage})
     : _storage = storage ?? const FlutterSecureStorage();
 
+  Future<bool> loadDaySummaryEnabled() async =>
+      await _storage.read(key: 'day_summary_v1') == 'true';
+  Future<void> saveDaySummaryEnabled(bool enabled) =>
+      _storage.write(key: 'day_summary_v1', value: '$enabled');
+
   final FlutterSecureStorage _storage;
   static const _languageKey = 'app_language_v1';
   static const _themeKey = 'app_theme_v1';

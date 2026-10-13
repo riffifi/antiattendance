@@ -33,6 +33,7 @@ class SettingsPage extends StatefulWidget {
     this.themeMode = AppThemeMode.light,
     this.onThemeModeChanged,
     this.monetEnabled = false,
+    this.monetSeed,
     this.monetAvailable = false,
     this.onMonetChanged,
     this.updates,
@@ -46,6 +47,7 @@ class SettingsPage extends StatefulWidget {
   final AppThemeMode themeMode;
   final ValueChanged<AppThemeMode>? onThemeModeChanged;
   final bool monetEnabled;
+  final Color? monetSeed;
   final bool monetAvailable;
   final ValueChanged<bool>? onMonetChanged;
   final UpdateController? updates;
@@ -64,6 +66,14 @@ class _SettingsPageState extends State<SettingsPage> {
   late String? _language = widget.language;
   late AppThemeMode _themeMode = widget.themeMode;
   late bool _monetEnabled = widget.monetEnabled;
+  Color? _previewSeed;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _previewSeed ??= widget.monetSeed ?? Theme.of(context).colorScheme.primary;
+  }
+
   bool _saving = false;
   bool _daySummary = false;
 
@@ -309,7 +319,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           title: title,
                           selected: mode == _themeMode,
                           seed: _monetEnabled
-                              ? Theme.of(context).colorScheme.primary
+                              ? widget.monetSeed ?? _previewSeed
                               : null,
                           onTap: _saving ? null : () => _chooseTheme(mode),
                         ),
@@ -319,7 +329,8 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             const SizedBox(height: 12),
-            if (Platform.isAndroid || widget.monetAvailable)
+            if (Theme.of(context).platform == TargetPlatform.android ||
+                widget.monetAvailable)
               CampusPanel(
                 padding: EdgeInsets.zero,
                 child: CampusListItem(
@@ -450,7 +461,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             const SizedBox(height: 16),
-            if (Platform.isAndroid) ...[
+            if (Theme.of(context).platform == TargetPlatform.android) ...[
               CampusPanel(
                 padding: EdgeInsets.zero,
                 child: M3EListItem(
@@ -464,7 +475,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     'После последнего занятия: подтверждения каждого человека и истёкшие сессии.',
                     'After the last class: each person’s confirmations and expired sessions.',
                   ),
-                  leading: const CampusIcon(Icons.notifications_outlined),
+                  leading: CampusIcon(
+                    Icons.notifications_outlined,
+                    color: context.palette.blue,
+                  ),
                   trailing: M3ESwitch(
                     value: _daySummary,
                     onChanged: _saving ? null : _chooseSummary,
@@ -495,7 +509,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     'Предпросмотр виджета',
                     'Widget preview',
                   ),
-                  leading: const CampusIcon(Icons.widgets_outlined),
+                  leading: CampusIcon(
+                    Icons.widgets_outlined,
+                    color: context.palette.blue,
+                  ),
                   onTap: _pinScanWidget,
                 ),
               ),
@@ -635,8 +652,7 @@ class _ThemePreview extends StatelessWidget {
       button: true,
       child: CampusPressable(
         enabled: onTap != null,
-        child: AnimatedContainer(
-          duration: duration,
+        child: Container(
           decoration: BoxDecoration(
             color: selected
                 ? context.palette.selected

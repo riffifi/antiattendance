@@ -390,39 +390,41 @@ class _SchedulePageState extends State<SchedulePage>
           MediaQuery.paddingOf(context).bottom + 32,
         ),
         children: [
-          CampusHeader(
-            title: tr(context, 'Расписание', 'Schedule'),
-            subtitle: tr(
-              context,
-              'Отметки Пульса с этого устройства',
-              'Pulse confirmations on this device',
-            ),
-            icon: Icons.calendar_today_outlined,
-            trailing: M3EIconButton(
-              suppressInk: true,
-              onPressed: groups.isEmpty || _loading
-                  ? null
-                  : () => _refresh(force: true),
-              icon: RotationTransition(
-                turns: _refreshRotation,
-                child: const CampusIcon(Icons.refresh_rounded),
-              ),
-              tooltip: tr(context, 'Обновить', 'Refresh'),
-              variant: M3EIconButtonVariant.standard,
-            ),
-          ),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: CampusButton.icon(
-              style: M3EButtonStyle.text,
-              onPressed: () => Navigator.of(context).push<void>(
-                MaterialPageRoute(
-                  builder: (_) => CampusMapsPage(lessons: dailyLessons),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  tr(context, 'Расписание', 'Schedule'),
+                  style: Theme.of(context).textTheme.headlineLarge,
                 ),
               ),
-              icon: const CampusIcon(Icons.map_outlined),
-              label: Text(tr(context, 'Карты кампусов', 'Campus maps')),
-            ),
+              M3EIconButton(
+                suppressInk: true,
+                tooltip: tr(context, 'Карты кампусов', 'Campus maps'),
+                icon: CampusIcon(
+                  Icons.map_outlined,
+                  color: context.palette.blue,
+                ),
+                variant: M3EIconButtonVariant.standard,
+                onPressed: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute(
+                    builder: (_) => CampusMapsPage(lessons: dailyLessons),
+                  ),
+                ),
+              ),
+              M3EIconButton(
+                suppressInk: true,
+                tooltip: tr(context, 'Обновить', 'Refresh'),
+                onPressed: groups.isEmpty || _loading
+                    ? null
+                    : () => _refresh(force: true),
+                icon: RotationTransition(
+                  turns: _refreshRotation,
+                  child: const CampusIcon(Icons.refresh_rounded),
+                ),
+                variant: M3EIconButtonVariant.standard,
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           if (groups.isEmpty)
@@ -484,7 +486,7 @@ class _SchedulePageState extends State<SchedulePage>
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             Row(
               children: [
                 M3EIconButton(
@@ -496,6 +498,8 @@ class _SchedulePageState extends State<SchedulePage>
                   variant: M3EIconButtonVariant.standard,
                 ),
                 M3EIconButton(
+                  suppressInk: true,
+                  variant: M3EIconButtonVariant.standard,
                   icon: const CampusIcon(Icons.date_range_outlined),
                   tooltip: tr(context, 'Выбрать дату', 'Choose date'),
                   onPressed: () async {
@@ -548,7 +552,7 @@ class _SchedulePageState extends State<SchedulePage>
                   ),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -653,6 +657,14 @@ class _SchedulePageState extends State<SchedulePage>
                       !now.isBefore(dailyLessons[index].start) &&
                       now.isBefore(dailyLessons[index].end),
                   onTap: () => _openLesson(dailyLessons[index], groupAccounts),
+                  onRoom: () => Navigator.of(context).push<void>(
+                    MaterialPageRoute(
+                      builder: (_) => CampusMapsPage(
+                        room: dailyLessons[index].location,
+                        lessons: dailyLessons,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ],
@@ -699,10 +711,8 @@ class _DayButton extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 2),
     child: CampusPressable(
       child: Material(
-        animationDuration: MediaQuery.disableAnimationsOf(context)
-            ? Duration.zero
-            : const Duration(milliseconds: 140),
-        color: selected ? context.palette.blue : Colors.transparent,
+        animationDuration: Duration.zero,
+        color: selected ? context.palette.selectionSurface : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
         child: InkWell(
           borderRadius: BorderRadius.circular(10),
@@ -720,7 +730,7 @@ class _DayButton extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     color: selected
-                        ? context.palette.onBlue.withValues(alpha: .75)
+                        ? context.palette.blue.withValues(alpha: .75)
                         : context.palette.muted,
                   ),
                 ),
@@ -731,7 +741,7 @@ class _DayButton extends StatelessWidget {
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                     color: selected
-                        ? context.palette.onBlue
+                        ? context.palette.blue
                         : context.palette.ink,
                   ),
                 ),
@@ -743,11 +753,11 @@ class _DayButton extends StatelessWidget {
                     shape: BoxShape.circle,
                     color: hasLessons
                         ? (selected
-                              ? context.palette.onBlue
+                              ? context.palette.blue
                               : context.palette.blue)
                         : (today
                               ? (selected
-                                    ? context.palette.onBlue.withValues(
+                                    ? context.palette.blue.withValues(
                                         alpha: .75,
                                       )
                                     : context.palette.line)
@@ -771,6 +781,7 @@ class _LessonRow extends StatelessWidget {
     required this.endTime,
     required this.isCurrent,
     required this.onTap,
+    required this.onRoom,
   });
   final ScheduleLesson lesson;
   final List<AttendanceMark> confirmed;
@@ -778,6 +789,7 @@ class _LessonRow extends StatelessWidget {
   final String endTime;
   final bool isCurrent;
   final VoidCallback onTap;
+  final VoidCallback onRoom;
 
   @override
   Widget build(BuildContext context) {
@@ -877,22 +889,35 @@ class _LessonRow extends StatelessWidget {
                           ),
                         ),
                       ],
-                      if (lesson.type.isNotEmpty ||
-                          lesson.location.isNotEmpty) ...[
-                        const SizedBox(height: 5),
-                        Text(
-                          [
-                            lesson.type,
-                            lesson.location,
-                          ].where((value) => value.isNotEmpty).join(' · '),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: context.palette.muted,
-                          ),
+                      if (lesson.type.isNotEmpty || lesson.location.isNotEmpty)
+                        Wrap(
+                          spacing: 6,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            if (lesson.type.isNotEmpty)
+                              Text(
+                                lesson.type,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: context.palette.muted,
+                                ),
+                              ),
+                            if (lesson.location.isNotEmpty)
+                              TextButton(
+                                onPressed: onRoom,
+                                style: TextButton.styleFrom(
+                                  minimumSize: const Size(48, 48),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                  ),
+                                ),
+                                child: Text(
+                                  lesson.location,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                          ],
                         ),
-                      ],
                       const SizedBox(height: 10),
                       Row(
                         children: [

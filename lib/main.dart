@@ -241,6 +241,16 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
     title: 'AntiAttendance',
     navigatorKey: _navigatorKey,
     debugShowCheckedModeBanner: false,
+    themeAnimationDuration:
+        (MediaQuery.maybeOf(context)?.disableAnimations ??
+            WidgetsBinding
+                .instance
+                .platformDispatcher
+                .accessibilityFeatures
+                .disableAnimations)
+        ? Duration.zero
+        : const Duration(milliseconds: 320),
+    themeAnimationCurve: Curves.easeInOutCubic,
     theme: AppTheme.build(
       _themeMode,
       monetSeed: _monetEnabled ? _monetSeed : null,
@@ -285,6 +295,7 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
       themeMode: _themeMode,
       onThemeModeChanged: (mode) => setState(() => _themeMode = mode),
       monetEnabled: _monetEnabled,
+      monetSeed: _monetSeed,
       monetAvailable: _monetSeed != null,
       onMonetChanged: (value) => setState(() => _monetEnabled = value),
       updates: _updates,
@@ -306,6 +317,7 @@ class HomePage extends StatefulWidget {
     this.themeMode = AppThemeMode.light,
     this.onThemeModeChanged,
     this.monetEnabled = false,
+    this.monetSeed,
     this.monetAvailable = false,
     this.onMonetChanged,
     this.updates,
@@ -323,6 +335,7 @@ class HomePage extends StatefulWidget {
   final AppThemeMode themeMode;
   final ValueChanged<AppThemeMode>? onThemeModeChanged;
   final bool monetEnabled;
+  final Color? monetSeed;
   final bool monetAvailable;
   final ValueChanged<bool>? onMonetChanged;
   final UpdateController? updates;
@@ -588,6 +601,7 @@ class _HomePageState extends State<HomePage> {
           themeMode: widget.themeMode,
           onThemeModeChanged: widget.onThemeModeChanged ?? (_) {},
           monetEnabled: widget.monetEnabled,
+          monetSeed: widget.monetSeed,
           monetAvailable: widget.monetAvailable,
           onMonetChanged: widget.onMonetChanged ?? (_) {},
           updates: widget.updates,
@@ -1565,7 +1579,7 @@ class _HomePageState extends State<HomePage> {
         ? null
         : AttendanceCounts.fromMarks(_marks!);
     return Scaffold(
-      extendBody: true,
+      extendBody: false,
       appBar: AppBar(
         title: CampusBrand(
           width: 74,
@@ -1575,13 +1589,59 @@ class _HomePageState extends State<HomePage> {
         actions: [_settingsButton(context), const SizedBox(width: 8)],
         automaticallyImplyLeading: true,
       ),
-      bottomNavigationBar: CampusNavigation(
-        selectedIndex: _tab,
-        onDestinationSelected: _changeTab,
-        labels: [
-          tr(context, 'Посещаемость', 'Attendance'),
-          tr(context, 'Расписание', 'Schedule'),
-          tr(context, 'Пропуска', 'Passes'),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_tab == 0 && !_loading && !_loadError)
+            Center(
+              heightFactor: 1,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 640),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: CampusButton.icon(
+                          onPressed: _busy || _selected.isEmpty ? null : _scan,
+                          icon: const CampusIcon(Icons.qr_code_scanner_rounded),
+                          label: Text(
+                            trf(
+                              context,
+                              'Сканировать QR · {count}',
+                              'Scan QR · {count}',
+                              {'count': _selected.length},
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      M3EIconButton(
+                        suppressInk: true,
+                        tooltip: tr(context, 'Вставить ссылку', 'Paste link'),
+                        onPressed: _busy || _selected.isEmpty
+                            ? null
+                            : _pasteLink,
+                        icon: CampusIcon(
+                          Icons.link_rounded,
+                          color: context.palette.blue,
+                        ),
+                        variant: M3EIconButtonVariant.standard,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          CampusNavigation(
+            selectedIndex: _tab,
+            onDestinationSelected: _changeTab,
+            labels: [
+              tr(context, 'Посещаемость', 'Attendance'),
+              tr(context, 'Расписание', 'Schedule'),
+              tr(context, 'Пропуска', 'Passes'),
+            ],
+          ),
         ],
       ),
       body: Builder(
@@ -1630,45 +1690,10 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                     subtitle: tr(
                                       context,
-                                      'Наведите камеру на QR-код — отметим выбранных. Если не вышло, попробуем снова.',
-                                      'Scan a QR to mark selected accounts. Keep it in view for retries.',
+                                      'Выберите аккаунты и сканируйте QR-код.',
+                                      'Choose accounts, then scan a QR.',
                                     ),
                                     icon: Icons.qr_code_scanner_rounded,
-                                  ),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: CampusButton.icon(
-                                      onPressed: _busy ? null : _scan,
-                                      icon: const CampusIcon(
-                                        Icons.qr_code_scanner_rounded,
-                                      ),
-                                      label: Text(
-                                        tr(
-                                          context,
-                                          'Сканировать QR',
-                                          'Scan QR',
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: CampusButton.icon(
-                                      onPressed: _busy ? null : _pasteLink,
-                                      icon: const CampusIcon(
-                                        Icons.link_rounded,
-                                        size: 20,
-                                      ),
-                                      label: Text(
-                                        tr(
-                                          context,
-                                          'Вставить ссылку',
-                                          'Paste link',
-                                        ),
-                                      ),
-                                      style: M3EButtonStyle.outlined,
-                                    ),
                                   ),
                                   if (_submitting) ...[
                                     const SizedBox(height: 12),
@@ -1686,42 +1711,6 @@ class _HomePageState extends State<HomePage> {
                                       ),
                                     ),
                                   ],
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: CampusButton.icon(
-                                          onPressed: _busy
-                                              ? null
-                                              : _shareSessions,
-                                          icon: CampusIcon(
-                                            Icons.ios_share_rounded,
-                                            size: 18,
-                                          ),
-                                          label: Text(
-                                            tr(context, 'Передать', 'Share'),
-                                          ),
-                                          style: M3EButtonStyle.text,
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: CampusButton.icon(
-                                          onPressed: _busy
-                                              ? null
-                                              : _importSessions,
-                                          icon: CampusIcon(
-                                            Icons.download_rounded,
-                                            size: 18,
-                                          ),
-                                          label: Text(
-                                            tr(context, 'Получить', 'Receive'),
-                                          ),
-                                          style: M3EButtonStyle.text,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 18),
                                   Row(
                                     children: [
                                       Expanded(
@@ -1747,6 +1736,17 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                   const SizedBox(height: 8),
                                   if (_accounts.isEmpty)
+                                    CampusButton.icon(
+                                      onPressed: _busy ? null : _importSessions,
+                                      icon: const CampusIcon(
+                                        Icons.download_rounded,
+                                      ),
+                                      label: Text(
+                                        tr(context, 'Получить', 'Receive'),
+                                      ),
+                                      style: M3EButtonStyle.text,
+                                    ),
+                                  if (_accounts.isEmpty)
                                     Padding(
                                       padding: const EdgeInsets.symmetric(
                                         vertical: 30,
@@ -1763,51 +1763,80 @@ class _HomePageState extends State<HomePage> {
                                       ),
                                     ),
                                   if (_accounts.isNotEmpty) ...[
-                                    Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: CampusButton.icon(
-                                        onPressed: _busy || _selected.isEmpty
-                                            ? null
-                                            : _recoverSessions,
-                                        icon: const CampusIcon(
-                                          Icons.refresh_rounded,
-                                          size: 18,
-                                        ),
-                                        label: Text(
-                                          tr(
-                                            context,
-                                            'Восстановить вход',
-                                            'Restore sessions',
-                                          ),
-                                        ),
-                                        style: M3EButtonStyle.text,
-                                      ),
-                                    ),
                                     Row(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.center,
                                       children: [
-                                        Expanded(
-                                          child: CampusButton.icon(
-                                            onPressed:
-                                                _busy || _selected.isEmpty
-                                                ? null
-                                                : () => _chooseGroup(
-                                                    Set.of(_selected),
-                                                  ),
-                                            icon: CampusIcon(
-                                              Icons.groups_rounded,
-                                              size: 18,
-                                            ),
-                                            label: Text(
-                                              tr(
+                                        AppActionMenu(
+                                          entries: [
+                                            M3EMenuEntry(
+                                              value: 'share',
+                                              label: tr(
                                                 context,
-                                                'Назначить группу',
-                                                'Assign group',
+                                                'Передать',
+                                                'Share',
                                               ),
                                             ),
-                                            style: M3EButtonStyle.outlined,
-                                          ),
+                                            M3EMenuEntry(
+                                              value: 'receive',
+                                              label: tr(
+                                                context,
+                                                'Получить',
+                                                'Receive',
+                                              ),
+                                            ),
+                                            if (_selected.isNotEmpty)
+                                              M3EMenuEntry(
+                                                value: 'group',
+                                                label: tr(
+                                                  context,
+                                                  'Назначить группу',
+                                                  'Assign group',
+                                                ),
+                                              ),
+                                            if (_accounts.any(
+                                              (a) =>
+                                                  _selected.contains(a.id) &&
+                                                  a.isExpiredAt(DateTime.now()),
+                                            ))
+                                              M3EMenuEntry(
+                                                value: 'restore',
+                                                label: tr(
+                                                  context,
+                                                  'Восстановить вход',
+                                                  'Restore sessions',
+                                                ),
+                                              ),
+                                          ],
+                                          onSelected: (value) {
+                                            if (value == 'share') {
+                                              _shareSessions();
+                                            }
+                                            if (value == 'receive') {
+                                              _importSessions();
+                                            }
+                                            if (value == 'group') {
+                                              _chooseGroup(Set.of(_selected));
+                                            }
+                                            if (value == 'restore') {
+                                              _recoverSessions();
+                                            }
+                                          },
+                                          anchorBuilder: (context, open) =>
+                                              CampusButton.icon(
+                                                onPressed: _busy ? null : open,
+                                                icon: const CampusIcon(
+                                                  Icons.more_horiz_rounded,
+                                                ),
+                                                label: Text(
+                                                  tr(
+                                                    context,
+                                                    'Управление',
+                                                    'Manage',
+                                                  ),
+                                                ),
+                                                style: M3EButtonStyle.text,
+                                              ),
                                         ),
                                         const SizedBox(width: 8),
                                         Expanded(
@@ -2084,49 +2113,42 @@ class _AccountRow extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: CampusPressable(
         enabled: !busy,
-        child: AnimatedContainer(
-          duration: MediaQuery.disableAnimationsOf(context)
-              ? Duration.zero
-              : const Duration(milliseconds: 140),
-          curve: Curves.easeOutCubic,
+        child: Container(
           decoration: BoxDecoration(
-            color: selected
-                ? context.palette.selectionSurface
-                : context.palette.surface,
+            color: selected ? context.palette.surface : context.palette.surface,
             border: Border.all(
               color: selected
                   ? context.palette.blue.withValues(alpha: .35)
                   : context.palette.line,
             ),
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(16),
           ),
           clipBehavior: Clip.antiAlias,
           child: Material(
             color: Colors.transparent,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(16),
             child: InkWell(
               onTap: busy ? null : onTap,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(16),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 6, 12),
                 child: Row(
                   children: [
                     Container(
-                      width: 40,
-                      height: 40,
+                      width: 28,
+                      height: 28,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: selected
-                            ? context.palette.blue
+                            ? context.palette.selectionSurface
                             : context.palette.paper,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: CampusIcon(
-                        selected
-                            ? Icons.check_rounded
-                            : Icons.person_outline_rounded,
+                        selected ? Icons.check_rounded : Icons.circle_outlined,
+                        size: 18,
                         color: selected
-                            ? context.palette.onBlue
+                            ? context.palette.blue
                             : context.palette.muted,
                       ),
                     ),
@@ -2156,15 +2178,14 @@ class _AccountRow extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(fontSize: 12, color: color),
                             ),
-                          Text(
-                            sessionStatus,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: expired
-                                  ? Theme.of(context).colorScheme.error
-                                  : context.palette.muted,
+                          if (expired)
+                            Text(
+                              sessionStatus,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).colorScheme.error,
+                              ),
                             ),
-                          ),
                           if (sessionCheck != null &&
                               sessionCheck != sessionStatus)
                             Text(
@@ -2174,36 +2195,15 @@ class _AccountRow extends StatelessWidget {
                                 color: context.palette.muted,
                               ),
                             ),
-                          const SizedBox(height: 5),
-                          Wrap(
-                            spacing: 10,
-                            runSpacing: 2,
-                            children: [
-                              _countText(
-                                context,
-                                'Сегодня',
-                                'Today',
-                                counts?.today,
-                              ),
-                              _countText(
-                                context,
-                                'Неделя',
-                                'Week',
-                                counts?.week,
-                              ),
-                              _countText(
-                                context,
-                                'Всего',
-                                'Total',
-                                counts?.total,
-                              ),
-                            ],
-                          ),
                         ],
                       ),
                     ),
                     AppActionMenu(
                       entries: [
+                        M3EMenuEntry(
+                          value: 'details',
+                          label: tr(context, 'Подробнее', 'Details'),
+                        ),
                         M3EMenuEntry(
                           value: 'checkSession',
                           label: tr(
@@ -2230,6 +2230,54 @@ class _AccountRow extends StatelessWidget {
                         ),
                       ],
                       onSelected: (value) {
+                        if (value == 'details') {
+                          showExpressiveSheet<void>(
+                            context: context,
+                            compact: true,
+                            builder: (context) => Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    account.label,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(sessionStatus),
+                                  const SizedBox(height: 16),
+                                  Wrap(
+                                    spacing: 16,
+                                    runSpacing: 8,
+                                    children: [
+                                      _countText(
+                                        context,
+                                        'Сегодня',
+                                        'Today',
+                                        counts?.today,
+                                      ),
+                                      _countText(
+                                        context,
+                                        'Неделя',
+                                        'Week',
+                                        counts?.week,
+                                      ),
+                                      _countText(
+                                        context,
+                                        'Всего',
+                                        'Total',
+                                        counts?.total,
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
                         if (value == 'checkSession' && !checkingSession) {
                           onCheckSession();
                         }

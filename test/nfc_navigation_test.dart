@@ -46,7 +46,7 @@ void main() {
     await tester.tap(find.descendant(of: bar, matching: find.text('Passes')));
     await tester.pumpAndSettle();
     expect(find.text('NFC passes'), findsOneWidget);
-    expect(find.text('Start queue'), findsOneWidget);
+    expect(find.text('Enroll passes'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.tap(
       find.descendant(of: bar, matching: find.text('Attendance')),

@@ -65,7 +65,7 @@ class CampusHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 24),
+    padding: const EdgeInsets.only(bottom: 16),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -251,7 +251,7 @@ class _CampusNavigationState extends State<CampusNavigation> {
   Widget build(BuildContext context) => SafeArea(
     top: false,
     child: Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
       child: Center(
         heightFactor: 1,
         child: ConstrainedBox(
@@ -323,9 +323,7 @@ class _CampusNavigationState extends State<CampusNavigation> {
                                 child: DecoratedBox(
                                   key: const ValueKey('navigation-pill'),
                                   decoration: BoxDecoration(
-                                    color: context.palette.selected.withValues(
-                                      alpha: .9,
-                                    ),
+                                    color: context.palette.selectionSurface,
                                     borderRadius: BorderRadius.circular(19),
                                   ),
                                 ),
@@ -349,7 +347,7 @@ class _CampusNavigationState extends State<CampusNavigation> {
                                         child: Padding(
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 4,
-                                            vertical: 12,
+                                            vertical: 8,
                                           ),
                                           child: Column(
                                             mainAxisSize: MainAxisSize.min,

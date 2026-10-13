@@ -1,6 +1,24 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  'Choose accounts, then scan a QR.': (
+    'Choisissez les comptes, puis scannez un QR.',
+    'Escolha as contas e leia um QR.',
+    '选择账号，然后扫描二维码。',
+  ),
+  'Scan QR · {count}': (
+    'Scanner QR · {count}',
+    'Ler QR · {count}',
+    '扫描二维码 · {count}',
+  ),
+  'Manage': ('Gérer', 'Gerir', '管理'),
+  'Details': ('Détails', 'Detalhes', '详情'),
+  'Enroll passes': ('Activer les badges', 'Registar passes', '注册通行证'),
+  'Enroll passes for your selected accounts.': (
+    'Activez les badges des comptes sélectionnés.',
+    'Registe passes para as contas selecionadas.',
+    '为所选账号注册通行证。',
+  ),
   "Pulse is open, but the session is not confirmed yet. Retry the check; the saved account has not been replaced.":
       (
         "Pulse est ouvert, mais la session n’est pas encore confirmée. Réessayez ; le compte enregistré reste inchangé.",

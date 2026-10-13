@@ -44,7 +44,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    final menu = find.byType(M3EMenu);
+    final menu = find.byWidgetPredicate(
+      (w) => w is M3EIconButton && w.tooltip == 'Account actions',
+    );
     await tester.scrollUntilVisible(
       menu,
       150,
@@ -107,11 +109,11 @@ void main() {
   );
 
   for (final (locale, startLabel) in [
-    ('en', 'Start queue'),
-    ('ru', 'Запустить очередь'),
-    ('fr', 'Démarrer la file'),
-    ('pt', 'Iniciar fila'),
-    ('zh', '启动队列'),
+    ('en', 'Enroll passes'),
+    ('ru', 'Подключить пропуска'),
+    ('fr', 'Activer les badges'),
+    ('pt', 'Registar passes'),
+    ('zh', '注册通行证'),
   ]) {
     testWidgets('$locale NFC controls fit a small screen with large text', (
       tester,

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
@@ -73,7 +74,19 @@ extension AppPaletteContext on BuildContext {
 abstract final class AppTheme {
   static ThemeData get light => build(AppThemeMode.light);
 
+  static final _cache = <(AppThemeMode, Color?, TargetPlatform), ThemeData>{};
+
   static ThemeData build(AppThemeMode mode, {Color? monetSeed}) {
+    final key = (mode, monetSeed, defaultTargetPlatform);
+    final cached = _cache[key];
+    if (cached != null) return cached;
+    final theme = _build(mode, monetSeed: monetSeed);
+    // Wallpaper changes should not retain an unlimited number of palettes.
+    if (_cache.length >= 12) _cache.remove(_cache.keys.first);
+    return _cache[key] = theme;
+  }
+
+  static ThemeData _build(AppThemeMode mode, {Color? monetSeed}) {
     final isDark = mode != AppThemeMode.light;
     final amoled = mode == AppThemeMode.amoled;
     final generated = ColorScheme.fromSeed(

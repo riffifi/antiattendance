@@ -821,12 +821,8 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
       child: CampusPressable(
         enabled: enabled && enrolled,
         child: Material(
-          animationDuration: MediaQuery.disableAnimationsOf(context)
-              ? Duration.zero
-              : const Duration(milliseconds: 140),
-          color: selected
-              ? context.palette.selectionSurface
-              : context.palette.surface,
+          animationDuration: Duration.zero,
+          color: context.palette.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
             side: BorderSide(
@@ -981,47 +977,50 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                       ),
                 icon: Icons.nfc_rounded,
               ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: CampusButton.icon(
-                        style: _single
-                            ? M3EButtonStyle.tonal
-                            : M3EButtonStyle.filled,
-                        onPressed: enabled
-                            ? () {
-                                setState(() => _single = false);
-                                unawaited(_savePreferences());
-                              }
-                            : null,
-                        icon: const CampusIcon(Icons.queue_outlined),
-                        label: Text(tr(context, 'Очередь', 'Queue')),
+              if (_numbers.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: CampusButton.icon(
+                          style: _single
+                              ? M3EButtonStyle.outlined
+                              : M3EButtonStyle.tonal,
+                          onPressed: enabled
+                              ? () {
+                                  setState(() => _single = false);
+                                  unawaited(_savePreferences());
+                                }
+                              : null,
+                          icon: const CampusIcon(Icons.queue_outlined),
+                          label: Text(tr(context, 'Очередь', 'Queue')),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: CampusButton.icon(
-                        style: _single
-                            ? M3EButtonStyle.filled
-                            : M3EButtonStyle.tonal,
-                        onPressed: enabled
-                            ? () {
-                                setState(() {
-                                  _single = true;
-                                  _singleId ??= _numbers.keys.firstOrNull;
-                                });
-                                unawaited(_savePreferences());
-                              }
-                            : null,
-                        icon: const CampusIcon(Icons.badge_outlined),
-                        label: Text(tr(context, 'Один пропуск', 'Single pass')),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: CampusButton.icon(
+                          style: _single
+                              ? M3EButtonStyle.tonal
+                              : M3EButtonStyle.outlined,
+                          onPressed: enabled
+                              ? () {
+                                  setState(() {
+                                    _single = true;
+                                    _singleId ??= _numbers.keys.firstOrNull;
+                                  });
+                                  unawaited(_savePreferences());
+                                }
+                              : null,
+                          icon: const CampusIcon(Icons.badge_outlined),
+                          label: Text(
+                            tr(context, 'Один пропуск', 'Single pass'),
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
               if (_bulkEnrolling)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
@@ -1034,26 +1033,29 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                     ),
                   ),
                 ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: CampusButton.icon(
-                  onPressed: enabled && widget.accounts.isNotEmpty
-                      ? _bulkEnroll
-                      : null,
-                  icon: const CampusIcon(Icons.playlist_add_check_rounded),
-                  label: Text(
-                    tr(
-                      context,
-                      'Подключить пропуска вместе',
-                      'Enroll passes together',
+              if (_numbers.isNotEmpty)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: CampusButton.icon(
+                    onPressed: enabled && widget.accounts.isNotEmpty
+                        ? _bulkEnroll
+                        : null,
+                    icon: const CampusIcon(Icons.playlist_add_check_rounded),
+                    label: Text(
+                      tr(
+                        context,
+                        'Подключить пропуска вместе',
+                        'Enroll passes together',
+                      ),
                     ),
+                    style: M3EButtonStyle.tonal,
                   ),
-                  style: M3EButtonStyle.tonal,
                 ),
-              ),
               const SizedBox(height: 12),
               _card(
-                color: context.palette.selected,
+                color: _running
+                    ? context.palette.selected
+                    : context.palette.surface,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1067,7 +1069,9 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                           ),
                           child: CampusIcon(
                             Icons.nfc_rounded,
-                            color: scheme.onPrimaryContainer,
+                            color: (_running
+                                ? scheme.onPrimaryContainer
+                                : context.palette.ink),
                             size: 28,
                           ),
                         ),
@@ -1098,7 +1102,9 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                                     'Ready for the gate',
                                   ),
                             style: TextStyle(
-                              color: scheme.onPrimaryContainer,
+                              color: (_running
+                                  ? scheme.onPrimaryContainer
+                                  : context.palette.ink),
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
                             ),
@@ -1130,7 +1136,9 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                                 {'count': _selected.length},
                               ),
                         style: TextStyle(
-                          color: scheme.onPrimaryContainer,
+                          color: (_running
+                              ? scheme.onPrimaryContainer
+                              : context.palette.ink),
                           fontSize: 24,
                           fontWeight: FontWeight.w700,
                         ),
@@ -1157,6 +1165,12 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                                     'Поднесите телефон к турникету',
                                     'Hold your phone against the gate',
                                   )
+                          : _numbers.isEmpty
+                          ? tr(
+                              context,
+                              'Подключите пропуска выбранных аккаунтов.',
+                              'Enroll passes for your selected accounts.',
+                            )
                           : _single
                           ? tr(
                               context,
@@ -1169,7 +1183,11 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                               'Choose people below, then start the queue.',
                             ),
                       style: TextStyle(
-                        color: scheme.onPrimaryContainer.withValues(alpha: .8),
+                        color:
+                            (_running
+                                    ? scheme.onPrimaryContainer
+                                    : context.palette.ink)
+                                .withValues(alpha: .8),
                         fontSize: 13,
                       ),
                     ),
@@ -1187,7 +1205,9 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                           {'count': presented, 'total': _queue.length},
                         ),
                         style: TextStyle(
-                          color: scheme.onPrimaryContainer,
+                          color: (_running
+                              ? scheme.onPrimaryContainer
+                              : context.palette.ink),
                           fontSize: 12,
                         ),
                       ),
@@ -1196,127 +1216,6 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                 ),
               ),
               const SizedBox(height: 16),
-              if (!_single)
-                _card(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        tr(context, 'Настройка очереди', 'Queue settings'),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          CampusIcon(
-                            Icons.timer_outlined,
-                            color: context.palette.muted,
-                            size: 22,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  tr(
-                                    context,
-                                    'Между пропусками',
-                                    'Between passes',
-                                  ),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  tr(
-                                    context,
-                                    'От 1 до 300 секунд',
-                                    'From 1 to 300 seconds',
-                                  ),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: context.palette.muted,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          SizedBox(
-                            width: 86,
-                            child: CampusTextField(
-                              controller: _seconds,
-                              enabled: enabled,
-                              textAlign: TextAlign.center,
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(3),
-                              ],
-                              suffixText: tr(context, 'с', 's'),
-                              onChanged: (_) {
-                                _preferencesTimer?.cancel();
-                                _preferencesTimer = Timer(
-                                  const Duration(milliseconds: 400),
-                                  () => unawaited(_savePreferences()),
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        child: Divider(height: 1, color: context.palette.line),
-                      ),
-                      AppPassPicker(
-                        key: ValueKey(_ownId),
-                        enabled: enabled,
-                        hint: tr(context, 'Ваш аккаунт', 'Your account'),
-                        items: [
-                          M3EDropdownItem(
-                            value: '',
-                            label: tr(context, 'Не выбран', 'Not selected'),
-                            selected: _ownId == null,
-                          ),
-                          for (final account in widget.accounts)
-                            M3EDropdownItem(
-                              value: account.id,
-                              label: account.label,
-                              selected: account.id == _ownId,
-                            ),
-                        ],
-                        onChanged: (items) {
-                          final value = items.isEmpty ? '' : items.first.value;
-                          setState(() {
-                            _ownId = value == '' ? null : value;
-                            if (_numbers.containsKey(_ownId)) {
-                              _selected.add(_ownId!);
-                            }
-                          });
-                          unawaited(_savePreferences());
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        tr(
-                          context,
-                          'Ваш пропуск автоматически окажется в конце.',
-                          'Your pass is automatically placed last.',
-                        ),
-                        style: TextStyle(
-                          color: context.palette.muted,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               const SizedBox(height: 22),
               Row(
                 children: [
@@ -1417,6 +1316,134 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                           : orderPassQueue(widget.accounts, _ownId))
                       .where((a) => a.label.toLowerCase().contains(_query)))
                 _accountCard(account, enabled),
+              if (!_single && _numbers.isNotEmpty)
+                ExpansionTile(
+                  key: const PageStorageKey('nfc-queue-options'),
+                  tilePadding: EdgeInsets.zero,
+                  title: Text(
+                    tr(context, 'Настройка очереди', 'Queue settings'),
+                  ),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              CampusIcon(
+                                Icons.timer_outlined,
+                                color: context.palette.muted,
+                                size: 22,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      tr(
+                                        context,
+                                        'Между пропусками',
+                                        'Between passes',
+                                      ),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      tr(
+                                        context,
+                                        'От 1 до 300 секунд',
+                                        'From 1 to 300 seconds',
+                                      ),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: context.palette.muted,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              SizedBox(
+                                width: 86,
+                                child: CampusTextField(
+                                  controller: _seconds,
+                                  enabled: enabled,
+                                  textAlign: TextAlign.center,
+                                  keyboardType: TextInputType.number,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                    LengthLimitingTextInputFormatter(3),
+                                  ],
+                                  suffixText: tr(context, 'с', 's'),
+                                  onChanged: (_) {
+                                    _preferencesTimer?.cancel();
+                                    _preferencesTimer = Timer(
+                                      const Duration(milliseconds: 400),
+                                      () => unawaited(_savePreferences()),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            child: Divider(
+                              height: 1,
+                              color: context.palette.line,
+                            ),
+                          ),
+                          AppPassPicker(
+                            key: ValueKey(_ownId),
+                            enabled: enabled,
+                            hint: tr(context, 'Ваш аккаунт', 'Your account'),
+                            items: [
+                              M3EDropdownItem(
+                                value: '',
+                                label: tr(context, 'Не выбран', 'Not selected'),
+                                selected: _ownId == null,
+                              ),
+                              for (final account in widget.accounts)
+                                M3EDropdownItem(
+                                  value: account.id,
+                                  label: account.label,
+                                  selected: account.id == _ownId,
+                                ),
+                            ],
+                            onChanged: (items) {
+                              final value = items.isEmpty
+                                  ? ''
+                                  : items.first.value;
+                              setState(() {
+                                _ownId = value == '' ? null : value;
+                                if (_numbers.containsKey(_ownId)) {
+                                  _selected.add(_ownId!);
+                                }
+                              });
+                              unawaited(_savePreferences());
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            tr(
+                              context,
+                              'Ваш пропуск автоматически окажется в конце.',
+                              'Your pass is automatically placed last.',
+                            ),
+                            style: TextStyle(
+                              color: context.palette.muted,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               if (_busy)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
@@ -1549,6 +1576,10 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                 child: CampusButton.icon(
                   onPressed: _running
                       ? _stop
+                      : enabled &&
+                            _numbers.isEmpty &&
+                            widget.accounts.isNotEmpty
+                      ? _bulkEnroll
                       : enabled && _activeIds.isNotEmpty
                       ? _start
                       : null,
@@ -1574,6 +1605,8 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                                   'Deactivate pass',
                                 )
                               : tr(context, 'Остановить очередь', 'Stop queue'))
+                        : _numbers.isEmpty
+                        ? tr(context, 'Подключить пропуска', 'Enroll passes')
                         : (_single
                               ? tr(
                                   context,
@@ -1588,22 +1621,24 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                _single
-                    ? tr(
-                        context,
-                        'Не закрывайте вкладку, пока пропуск активен.',
-                        'Keep this tab open while the pass is active.',
-                      )
-                    : tr(
-                        context,
-                        'Не закрывайте вкладку, пока очередь работает.',
-                        'Keep this tab open while the queue runs.',
-                      ),
-                textAlign: TextAlign.center,
-                style: TextStyle(color: context.palette.muted, fontSize: 11),
-              ),
+              if (_numbers.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  _single
+                      ? tr(
+                          context,
+                          'Не закрывайте вкладку, пока пропуск активен.',
+                          'Keep this tab open while the pass is active.',
+                        )
+                      : tr(
+                          context,
+                          'Не закрывайте вкладку, пока очередь работает.',
+                          'Keep this tab open while the queue runs.',
+                        ),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: context.palette.muted, fontSize: 11),
+                ),
+              ],
             ],
           ),
         ),

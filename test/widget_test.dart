@@ -143,7 +143,20 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    expect(find.textContaining('Session expires:'), findsNothing);
+    await tester.tap(
+      find
+          .byWidgetPredicate(
+            (w) => w is M3EIconButton && w.tooltip == 'Account actions',
+          )
+          .first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Details'));
+    await tester.pumpAndSettle();
     expect(find.textContaining('Session expires:'), findsOneWidget);
+    tester.state<NavigatorState>(find.byType(Navigator).first).pop();
+    await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Expired user'), 150);
     expect(find.text('Session expired. Sign in again.'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
@@ -190,7 +203,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Посещаемость'), findsNWidgets(2));
-    expect(find.text('Сканировать QR'), findsOneWidget);
+    expect(find.text('Сканировать QR · 0'), findsOneWidget);
     expect(find.text('Режим очереди'), findsNothing);
     await tester.scrollUntilVisible(find.text('Аккаунты'), 200);
     expect(find.text('Аккаунты'), findsOneWidget);
@@ -219,11 +232,21 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Сканировать QR'));
+    await tester.tap(find.text('Сканировать QR · 2'));
     await tester.pumpAndSettle();
     expect(api.calls, containsAll(['abc:one', 'abc:two']));
     await tester.scrollUntilVisible(find.text('Аня'), 200);
     expect(find.text('Отметка подтверждена'), findsWidgets);
+    await tester.tap(
+      find
+          .byWidgetPredicate(
+            (w) => w is M3EIconButton && w.tooltip == 'Действия с аккаунтом',
+          )
+          .first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Подробнее'));
+    await tester.pumpAndSettle();
     expect(find.text('Сегодня 1'), findsWidgets);
     expect(find.text('Неделя 1'), findsWidgets);
     expect(find.text('Всего 1'), findsWidgets);
@@ -255,6 +278,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Selected: 1'), -200);
     expect(find.text('Selected: 1'), findsOneWidget);
+    await tester.tap(find.text('Manage'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Assign group'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(CampusTextField), 'ИНБО');
@@ -285,7 +310,11 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Вставить ссылку'));
+    await tester.tap(
+      find.byWidgetPredicate(
+        (w) => w is M3EIconButton && w.tooltip == 'Вставить ссылку',
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byType(CampusTextField),
@@ -306,8 +335,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Attendance'), findsNWidgets(2));
-    await tester.scrollUntilVisible(find.text('Share'), 200);
-    expect(find.text('Share'), findsOneWidget);
+    expect(find.text('Add'), findsOneWidget);
     expect(find.text('Receive'), findsOneWidget);
   });
 
@@ -430,7 +458,7 @@ void main() {
     );
     expect(
       tester.widget<Scaffold>(find.byType(Scaffold).first).extendBody,
-      isTrue,
+      isFalse,
     );
   });
 }

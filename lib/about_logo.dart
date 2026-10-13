@@ -93,9 +93,6 @@ class _AboutLogoState extends State<AboutLogo>
       Theme.of(context).colorScheme.surfaceContainerHigh,
       .12,
     )!;
-    final depths = back
-        ? [3.0, 1.5, 0.0, -1.5, -3.0]
-        : [-3.0, -1.5, 0.0, 1.5, 3.0];
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -143,24 +140,19 @@ class _AboutLogoState extends State<AboutLogo>
                         height: 144,
                         child: Stack(
                           children: [
-                            for (final depth in depths)
-                              Positioned.fill(
-                                child: Transform(
-                                  alignment: Alignment.center,
-                                  transform: rotation.clone()
-                                    ..translateByDouble(0, 0, depth, 1),
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      color: Color.lerp(
-                                        palette.line,
-                                        palette.ink,
-                                        .12,
-                                      ),
-                                      borderRadius: BorderRadius.circular(30),
-                                    ),
-                                  ),
+                            Positioned.fill(
+                              child: CustomPaint(
+                                key: const ValueKey('about-logo-solid-body'),
+                                painter: _BadgeBodyPainter(
+                                  rotation: rotation,
+                                  color: Color.lerp(
+                                    palette.line,
+                                    palette.ink,
+                                    .18,
+                                  )!,
                                 ),
                               ),
+                            ),
                             Positioned.fill(
                               child: Transform(
                                 alignment: Alignment.center,
@@ -237,4 +229,77 @@ class _AboutLogoState extends State<AboutLogo>
       ],
     );
   }
+}
+
+/// Projects the silhouette of a rounded extrusion as one filled shape. The
+/// visible face is painted above it; there are no intermediate plates or seams.
+class _BadgeBodyPainter extends CustomPainter {
+  const _BadgeBodyPainter({required this.rotation, required this.color});
+
+  final Matrix4 rotation;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    const radius = 30.0;
+    final halfWidth = size.width / 2;
+    final halfHeight = size.height / 2;
+    final points = <Offset>[];
+    final matrix = rotation.storage;
+    for (final depth in [-3.0, 3.0]) {
+      for (var corner = 0; corner < 4; corner++) {
+        final cx = (corner == 0 || corner == 3 ? 1 : -1) * (halfWidth - radius);
+        final cy = (corner < 2 ? 1 : -1) * (halfHeight - radius);
+        for (var step = 0; step <= 16; step++) {
+          final angle = (corner + step / 16) * math.pi / 2;
+          final x = cx + radius * math.cos(angle);
+          final y = cy + radius * math.sin(angle);
+          final w =
+              matrix[3] * x + matrix[7] * y + matrix[11] * depth + matrix[15];
+          points.add(
+            center +
+                Offset(
+                  (matrix[0] * x +
+                          matrix[4] * y +
+                          matrix[8] * depth +
+                          matrix[12]) /
+                      w,
+                  (matrix[1] * x +
+                          matrix[5] * y +
+                          matrix[9] * depth +
+                          matrix[13]) /
+                      w,
+                ),
+          );
+        }
+      }
+    }
+    // Both rounded faces bound a convex solid. Their projected convex hull
+    // includes the continuous side wall even when the face is exactly edge-on.
+    points.sort((a, b) {
+      final byX = a.dx.compareTo(b.dx);
+      return byX == 0 ? a.dy.compareTo(b.dy) : byX;
+    });
+    double cross(Offset a, Offset b, Offset c) =>
+        (b.dx - a.dx) * (c.dy - a.dy) - (b.dy - a.dy) * (c.dx - a.dx);
+    List<Offset> boundary(Iterable<Offset> ordered) {
+      final edge = <Offset>[];
+      for (final point in ordered) {
+        while (edge.length >= 2 &&
+            cross(edge[edge.length - 2], edge.last, point) <= 0) {
+          edge.removeLast();
+        }
+        edge.add(point);
+      }
+      return edge..removeLast();
+    }
+
+    final hull = [...boundary(points), ...boundary(points.reversed)];
+    canvas.drawPath(Path()..addPolygon(hull, true), Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(_BadgeBodyPainter oldDelegate) =>
+      rotation != oldDelegate.rotation || color != oldDelegate.color;
 }

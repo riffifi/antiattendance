@@ -58,6 +58,22 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "antiattendance/debug")
+            .setMethodCallHandler { call, result ->
+                if (call.method != "snapshot") {
+                    result.notImplemented()
+                } else {
+                    try {
+                        result.success(DebugDiagnostics.snapshot(this) + mapOf(
+                            "nfc_reader_requested" to readerRequested,
+                            "nfc_reader_active" to readerActive,
+                            "turnstile_probe_active" to turnstileActive,
+                        ))
+                    } catch (_: Exception) {
+                        result.error("DIAGNOSTICS_UNAVAILABLE", "Could not read device diagnostics", null)
+                    }
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "antiattendance/batch_login")
             .setMethodCallHandler { call, result ->
                 if (call.method == "supported") {

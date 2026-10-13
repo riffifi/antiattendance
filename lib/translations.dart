@@ -1,6 +1,30 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  'Debug menu': ('Menu de débogage', 'Menu de depuração', '调试菜单'),
+  'Copy report': ('Copier le rapport', 'Copiar relatório', '复制报告'),
+  'Report copied.': ('Rapport copié.', 'Relatório copiado.', '报告已复制。'),
+  'Could not copy report.': (
+    'Impossible de copier le rapport.',
+    'Não foi possível copiar o relatório.',
+    '无法复制报告。',
+  ),
+  'Could not load diagnostics.': (
+    'Impossible de charger le diagnostic.',
+    'Não foi possível carregar o diagnóstico.',
+    '无法加载诊断信息。',
+  ),
+  'Diagnostic tools': (
+    'Outils de diagnostic',
+    'Ferramentas de diagnóstico',
+    '诊断工具',
+  ),
+  'App diagnostics. Credentials and pass numbers are excluded from the report.':
+      (
+        'Diagnostic de l’application. Les identifiants et numéros de badge sont exclus du rapport.',
+        'Diagnóstico da aplicação. As credenciais e os números dos passes são excluídos do relatório.',
+        '应用诊断。报告不包含凭据和通行证号码。',
+      ),
   'Choose accounts, then scan a QR.': (
     'Choisissez les comptes, puis scannez un QR.',
     'Escolha as contas e leia um QR.',

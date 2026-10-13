@@ -1,4 +1,5 @@
 import 'icons/campus_icon.dart';
+import 'debug_menu_page.dart';
 import 'server_sessions.dart';
 import 'session_server_sync.dart';
 import 'session_server_page.dart';
@@ -75,6 +76,7 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _updates.addListener(_notifyUpdate);
+    DebugFrameMonitor.start();
     if (Platform.isAndroid) {
       studySummaryChannel.setMethodCallHandler((call) async {
         if (call.method == 'openSummary') {
@@ -139,6 +141,7 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
     if (Platform.isAndroid) _updatesChannel.setMethodCallHandler(null);
     _updates.removeListener(_notifyUpdate);
     _updates.dispose();
+    DebugFrameMonitor.stop();
     super.dispose();
   }
 
@@ -587,6 +590,87 @@ class _HomePageState extends State<HomePage> {
 
   void _message(String message) {
     M3ESnackbar.show(context, message: trMessage(context, message));
+  }
+
+  bool _debugMenuOpen = false;
+
+  Future<void> _openDebugMenu() async {
+    if (_debugMenuOpen) return;
+    _debugMenuOpen = true;
+    try {
+      await _nfcPageKey.currentState?.deactivateQueue();
+      if (!mounted) return;
+      final collector = DebugReportCollector();
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => DebugMenuPage(
+            updates: widget.updates,
+            loadReport: (debugContext) {
+              final media = MediaQuery.of(debugContext);
+              final theme = Theme.of(debugContext);
+              String hex(Color color) =>
+                  '#${color.toARGB32().toRadixString(16).padLeft(8, '0')}';
+              return collector.collect(
+                accounts: List.of(_accounts),
+                selected: Set.of(_selected),
+                settings: _settingsStore,
+                updates: widget.updates,
+                appState: {
+                  'active_tab': ['attendance', 'schedule', 'passes'][_tab],
+                  'accounts_loading': _loading,
+                  'accounts_load_failed': _loadError,
+                  'scanning': _scanning,
+                  'submitting': _submitting,
+                  'attendance_log_loaded': _marks != null,
+                  'attendance_records': _marks?.length,
+                  'approval_results': {
+                    for (final state in ApprovalState.values)
+                      state.name: _results.values
+                          .where((r) => r.state == state)
+                          .length,
+                  },
+                  'attendance_errors': _errors.length,
+                  'session_checks_in_progress': _checkingSessions.length,
+                  'completed_session_checks': _sessionChecks.length,
+                  'schedule_visited': _scheduleVisited,
+                  'schedule_day': _scheduleDay?.toIso8601String(),
+                  'schedule_group_assigned': _scheduleGroupId != null,
+                  'pending_scan_widget_request': _widgetScanPending,
+                  'pending_nfc_widget_request': _nfcWidgetPending,
+                  'appearance': widget.themeMode.name,
+                  'brightness': theme.brightness.name,
+                  'monet_enabled': widget.monetEnabled,
+                  'monet_available': widget.monetAvailable,
+                  'accent_argb': hex(theme.colorScheme.primary),
+                  'surface_argb': hex(theme.colorScheme.surface),
+                  'language_preference': widget.language ?? 'system',
+                  'resolved_locale': Localizations.localeOf(debugContext)
+                      .toLanguageTag(),
+                  'lifecycle': WidgetsBinding.instance.lifecycleState?.name,
+                },
+                display: {
+                  'refresh_rate_hz': View.of(debugContext).display.refreshRate,
+                  'logical_width': media.size.width,
+                  'logical_height': media.size.height,
+                  'pixel_ratio': media.devicePixelRatio,
+                  'text_scale_at_16': media.textScaler.scale(16) / 16,
+                  'padding_top': media.padding.top,
+                  'padding_bottom': media.padding.bottom,
+                  'keyboard_inset': media.viewInsets.bottom,
+                  'disable_animations': media.disableAnimations,
+                  'accessible_navigation': media.accessibleNavigation,
+                  'bold_text': media.boldText,
+                  'high_contrast': media.highContrast,
+                  'platform_brightness': media.platformBrightness.name,
+                },
+              );
+            },
+          ),
+        ),
+      );
+    } finally {
+      _debugMenuOpen = false;
+    }
   }
 
   Future<void> _openSettings() async {
@@ -1581,10 +1665,17 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       extendBody: false,
       appBar: AppBar(
-        title: CampusBrand(
-          width: 74,
-          height: 34,
-          label: tr(context, 'Логотип приложения', 'App logo'),
+        title: InkWell(
+          onLongPress: _openDebugMenu,
+          borderRadius: BorderRadius.circular(12),
+          child: SizedBox(
+            height: 48,
+            child: CampusBrand(
+              width: 74,
+              height: 34,
+              label: tr(context, 'Логотип приложения', 'App logo'),
+            ),
+          ),
         ),
         actions: [_settingsButton(context), const SizedBox(width: 8)],
         automaticallyImplyLeading: true,

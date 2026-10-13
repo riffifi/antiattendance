@@ -24,11 +24,6 @@ The UI uses Geist for text, Geist Mono for times and counters, and the Geist Pix
 is not included in the APK. Icons follow the current theme and retain their original
 control semantics.
 
-In About, drag the solid logo badge to rotate it. Its reverse shows the original
-app artwork. The badge stays where you leave it; tapping flips it, and keyboard
-arrow keys also rotate it. It uses a cast shadow rather than a glow and does not
-auto-spin or spring back.
-
 ## Updates
 
 The app checks the [latest GitHub release](https://github.com/riffifi/antiattendance/releases) when it starts. A dot on Settings means a newer version is available. Settings can check again manually. On Android, **Install update** downloads the release APK into the app cache, verifies its size and GitHub SHA-256 digest when supplied, and opens the Android installer. The user must confirm installation and may need to allow installs from this app in Android settings. The release page remains available as a fallback. On iOS, **Open release** opens the release page. Until the first release is published, Settings shows **No releases yet**.

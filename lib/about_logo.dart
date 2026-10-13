@@ -19,9 +19,15 @@ class _AboutLogoState extends State<AboutLogo> {
   double _yaw = 0;
   double _pitch = -.12;
   bool _focused = false;
+  bool _portraitBack = false;
 
   void _rotate(double yaw, [double pitch = 0]) => setState(() {
+    final wasBack = math.cos(_yaw) < 0;
     _yaw = (_yaw + yaw) % (2 * math.pi);
+    // Select a face on entry, so reversing a drag while behind does not swap it.
+    if (!wasBack && math.cos(_yaw) < 0) {
+      _portraitBack = yaw < 0;
+    }
     _pitch = (_pitch + pitch).clamp(-.45, .45);
   });
 
@@ -47,12 +53,11 @@ class _AboutLogoState extends State<AboutLogo> {
         Semantics(
           button: true,
           label: tr(context, 'Логотип приложения', 'App logo'),
-          value: back ? tr(context, 'Прежний логотип', 'Original logo') : 'aa.',
-          hint: tr(
-            context,
-            'Перетащите, чтобы повернуть. Нажмите, чтобы перевернуть.',
-            'Drag to rotate. Tap to flip.',
-          ),
+          value: back
+              ? (_portraitBack
+                    ? 'Станислав Кудж'
+                    : tr(context, 'Прежний логотип', 'Original logo'))
+              : 'aa.',
           onTap: () => _rotate(math.pi),
           child: CallbackShortcuts(
             bindings: {
@@ -81,34 +86,6 @@ class _AboutLogoState extends State<AboutLogo> {
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      // A cast shadow sits below the object, rather than emitting light.
-                      Positioned(
-                        bottom: 26,
-                        child: Transform.scale(
-                          scaleX: .65 + .35 * math.cos(_yaw).abs(),
-                          child: Container(
-                            width: 136,
-                            height: 14,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(100),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(
-                                    alpha:
-                                        Theme.of(context).brightness ==
-                                            Brightness.dark
-                                        ? .4
-                                        : .16,
-                                  ),
-                                  blurRadius: 22,
-                                  spreadRadius: 4,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
                       Transform(
                         alignment: Alignment.center,
                         transform: rotation,
@@ -151,7 +128,10 @@ class _AboutLogoState extends State<AboutLogo> {
                                           ? 'about-logo-back'
                                           : 'about-logo-front',
                                     ),
-                                    padding: EdgeInsets.all(back ? 18 : 22),
+                                    padding: EdgeInsets.all(
+                                      back ? (_portraitBack ? 0 : 18) : 22,
+                                    ),
+                                    clipBehavior: Clip.antiAlias,
                                     decoration: BoxDecoration(
                                       color: back ? Colors.white : face,
                                       borderRadius: BorderRadius.circular(30),
@@ -164,16 +144,30 @@ class _AboutLogoState extends State<AboutLogo> {
                                     ),
                                     child: Center(
                                       child: back
-                                          ? SvgPicture.asset(
-                                              'icon/legacy_brand.svg',
-                                              width: 108,
-                                              height: 108,
-                                              semanticsLabel: tr(
-                                                context,
-                                                'Прежний логотип',
-                                                'Original logo',
-                                              ),
-                                            )
+                                          ? (_portraitBack
+                                                ? Image.asset(
+                                                    'assets/about/stanislav_kudzh.jpg',
+                                                    key: const ValueKey(
+                                                      'about-logo-portrait',
+                                                    ),
+                                                    width: 144,
+                                                    height: 144,
+                                                    fit: BoxFit.cover,
+                                                    alignment:
+                                                        Alignment.topCenter,
+                                                    semanticLabel:
+                                                        'Станислав Кудж',
+                                                  )
+                                                : SvgPicture.asset(
+                                                    'icon/legacy_brand.svg',
+                                                    width: 108,
+                                                    height: 108,
+                                                    semanticsLabel: tr(
+                                                      context,
+                                                      'Прежний логотип',
+                                                      'Original logo',
+                                                    ),
+                                                  ))
                                           : const CampusBrand(
                                               width: 100,
                                               height: 48,
@@ -192,10 +186,6 @@ class _AboutLogoState extends State<AboutLogo> {
               ),
             ),
           ),
-        ),
-        Text(
-          tr(context, 'Перетащите, чтобы повернуть', 'Drag to rotate'),
-          style: Theme.of(context).textTheme.bodySmall,
         ),
       ],
     );

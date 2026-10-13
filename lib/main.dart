@@ -1840,36 +1840,39 @@ class _HomePageState extends State<HomePage> {
                                         ),
                                         const SizedBox(width: 8),
                                         Expanded(
-                                          child: CampusButton.text(
-                                            onPressed: _busy
-                                                ? null
-                                                : () => setState(() {
-                                                    if (_selected.length ==
-                                                        _accounts.length) {
-                                                      _selected.clear();
-                                                    } else {
-                                                      _selected
-                                                        ..clear()
-                                                        ..addAll(
-                                                          _accounts.map(
-                                                            (a) => a.id,
-                                                          ),
-                                                        );
-                                                    }
-                                                  }),
-                                            child: Text(
-                                              _selected.length ==
-                                                      _accounts.length
-                                                  ? tr(
-                                                      context,
-                                                      'Снять выбор',
-                                                      'Clear selection',
-                                                    )
-                                                  : tr(
-                                                      context,
-                                                      'Выбрать все',
-                                                      'Select all',
-                                                    ),
+                                          child: Align(
+                                            alignment: Alignment.centerRight,
+                                            child: CampusButton.text(
+                                              onPressed: _busy
+                                                  ? null
+                                                  : () => setState(() {
+                                                      if (_selected.length ==
+                                                          _accounts.length) {
+                                                        _selected.clear();
+                                                      } else {
+                                                        _selected
+                                                          ..clear()
+                                                          ..addAll(
+                                                            _accounts.map(
+                                                              (a) => a.id,
+                                                            ),
+                                                          );
+                                                      }
+                                                    }),
+                                              child: Text(
+                                                _selected.length ==
+                                                        _accounts.length
+                                                    ? tr(
+                                                        context,
+                                                        'Снять выбор',
+                                                        'Clear selection',
+                                                      )
+                                                    : tr(
+                                                        context,
+                                                        'Выбрать все',
+                                                        'Select all',
+                                                      ),
+                                              ),
                                             ),
                                           ),
                                         ),

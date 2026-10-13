@@ -39,6 +39,7 @@ Future<SessionTransfer> createSessionTransfer(
             if (a.sessionExpired) 'sessionExpired': true,
             'groupId': a.groupId,
             'groupName': a.groupName,
+            'acsHumanId': a.acsHumanId,
           },
         )
         .toList(),
@@ -177,6 +178,9 @@ class SessionTransferCollector {
             groupId: entry['groupId'] is int ? entry['groupId'] as int : null,
             groupName: entry['groupName'] is String
                 ? entry['groupName'] as String
+                : null,
+            acsHumanId: entry['acsHumanId'] is String
+                ? entry['acsHumanId'] as String
                 : null,
           ),
         );

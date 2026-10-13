@@ -98,4 +98,17 @@ Keep the Passes tab open. Switching tabs or opening Settings stops the queue. It
 
 The native protocol was independently implemented from inspection of the installed Pulse 2.1.0+253 APK: AID `F222222222`, variable-length little-endian pass number followed by `9000`. The enrollment client is vendored from the MIT-licensed `/home/leo/university-app` repository, whose private native module is absent. See [NFC findings](docs/nfc-protocol.md) for evidence and test limits. Live enrollment and gate acceptance require testing with the university's accounts and reader.
 
+The NFC queue can verify a real gate registration through Pulse's
+`GetHumanAcsTimeline` endpoint. After login, the app requests the account's ACS
+human UUID through `GetMeInfo`; manual ACS ID configuration remains available
+as a fallback. NFC queue
+behavior is independent of ACS: after the first NFC response for a pass, the
+queue waits for the configured delay and advances as before. ACS is checked
+separately from the account menu and shows whether the latest configured
+transition indicates that the person is currently in the university. The
+rules currently match `Неконтролируемая территория` to
+`С20 1эт ЦентральныйВход` and `В78 А 2эт ЦентральныйВход`; additional campus
+entrances can be added in `lib/acs_entry_rules.dart`. The ACS ID is an account
+identifier, not the local account ID or the NFC pass number.
+
 All local UI strings and known attendance results have Russian, English, French, Portuguese and Simplified Chinese copy. `tool/check_translations.dart` audits literal UI calls and attendance-result messages; the test suite also checks translated placeholders. NFC verification retry dates follow the app language and the phone's clock format.

@@ -10,6 +10,7 @@ import 'l10n.dart';
 import 'accounts.dart';
 import 'app_theme.dart';
 import 'pulse_api.dart';
+import 'pulse_user.dart';
 import 'login_qr.dart';
 import 'campus_design.dart';
 
@@ -185,6 +186,15 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
       final session = pulseSessionCookie(values);
       if (!mounted || _finished) return;
       _finished = true;
+      String? humanId;
+      final userClient = PulseUserClient();
+      try {
+        humanId = await userClient.getHumanId(session);
+      } catch (_) {
+        // ACS remains configurable manually if this optional lookup fails.
+      } finally {
+        userClient.close();
+      }
       final expiryDates =
           cookies
               .where(
@@ -201,6 +211,7 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
           id: '',
           label: '',
           cookie: session,
+          acsHumanId: humanId,
           expiresAt: expiryDates.isEmpty
               ? null
               : DateTime.fromMillisecondsSinceEpoch(

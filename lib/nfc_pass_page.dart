@@ -622,6 +622,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
           await nfcPassChannel.invokeMapMethod<String, dynamic>('status') ?? {};
       if (!mounted || !_running) return;
       setState(() => _status = status);
+      if (!mounted || !_running) return;
       if (status['armed'] != true || status['expired'] == true) {
         final complete =
             status['total'] == _queue.length &&

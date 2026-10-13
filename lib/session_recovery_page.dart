@@ -102,6 +102,7 @@ class _SessionRecoveryPageState extends State<SessionRecoveryPage> {
               : null,
           groupId: account.groupId,
           groupName: account.groupName,
+          acsHumanId: session.acsHumanId ?? account.acsHumanId,
         );
         await _persist(() => widget.onSave(account, next));
         if (mounted) {
@@ -187,6 +188,7 @@ class _SessionRecoveryPageState extends State<SessionRecoveryPage> {
         expiresAt: session.expiresAt,
         groupId: account.groupId,
         groupName: account.groupName,
+        acsHumanId: session.acsHumanId ?? account.acsHumanId,
       );
       await widget.onSave(account, next);
       if (!mounted) return;

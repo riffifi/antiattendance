@@ -1,6 +1,14 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  "Account ACS ID": ("ID ACS du compte", "ID ACS da conta", "账户 ACS ID"),
+  "Set ACS ID": ("Configurer l’ID ACS", "Definir ID ACS", "设置 ACS ID"),
+  "Invalid ACS ID.": ("ID ACS invalide.", "ID ACS inválido.", "ACS ID 无效。"),
+  "The gate did not confirm the passage. Queue stopped.": (
+    "Le portique n’a pas confirmé le passage. La file est arrêtée.",
+    "O torniquete não confirmou a passagem. A fila foi parada.",
+    "闸机未确认通行。队列已停止。",
+  ),
   "Study day summary": (
     "Bilan de la journée de cours",
     "Resumo do dia de aulas",

@@ -38,7 +38,7 @@ class PassQueueTest {
         elapsed += 59999
         assertEquals("a", PassQueue.status()["accountId"])
         assertArrayEquals(PassQueue.encode(123), PassQueue.response(command))
-        elapsed++
+        elapsed += 60000
         assertEquals("self", PassQueue.status()["accountId"])
         assertArrayEquals(PassQueue.encode(456), PassQueue.response(command))
         elapsed += 60000

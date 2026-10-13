@@ -43,7 +43,7 @@ internal object PassQueue {
         // Pin the same pass throughout the cooldown. Pulse 2.1.0
         // responds with the identifier to all commands routed to its AID.
         responded = true
-        if (advanceAt == 0L) advanceAt = elapsedTime() + intervalMillis
+        advanceAt = elapsedTime() + intervalMillis
         return encode(pass.number)
     }
 

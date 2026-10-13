@@ -12,6 +12,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import 'accounts.dart';
+import 'acs_entry_rules.dart';
+import 'acs_timeline.dart';
 import 'session_check.dart';
 import 'session_recovery_page.dart';
 import 'app_settings.dart';
@@ -356,6 +358,9 @@ class _HomePageState extends State<HomePage> {
   final _errors = <String, String>{};
   final _sessionChecks = <String, String>{};
   final _checkingSessions = <String>{};
+  final _acsPresence = <String, AcsPresence>{};
+  final _checkingAcs = <String>{};
+  final _acs = AcsTimelineClient();
   List<SavedAccount> _accounts = [];
   List<AttendanceMark>? _marks;
   bool _loading = true;
@@ -385,7 +390,42 @@ class _HomePageState extends State<HomePage> {
       } catch (_) {
         /* Existing cached schedules remain armed if offline. */
       }
+
     });
+  }
+
+  Future<void> _checkAcsPresence(SavedAccount account) async {
+    final humanId = account.acsHumanId?.trim();
+    if (_checkingAcs.contains(account.id)) return;
+    if (humanId == null ||
+        !RegExp(
+          r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+        ).hasMatch(humanId)) {
+      _message(
+        tr(
+          context,
+          'Сначала укажите ACS ID аккаунта.',
+          'Set the account ACS ID first.',
+        ),
+      );
+      return;
+    }
+    setState(() => _checkingAcs.add(account.id));
+    try {
+      final now = DateTime.now().toUtc();
+      final events = await _acs.timeline(
+        cookie: account.cookie,
+        humanId: humanId,
+        from: now.subtract(const Duration(days: 2)),
+        to: now.add(const Duration(minutes: 1)),
+      );
+      final presence = acsPresenceMatcher.classify(events);
+      if (mounted) setState(() => _acsPresence[account.id] = presence);
+    } catch (error) {
+      if (mounted) _message(_error(error));
+    } finally {
+      if (mounted) setState(() => _checkingAcs.remove(account.id));
+    }
   }
 
   bool get _busy => _scanning || _submitting;
@@ -673,6 +713,7 @@ class _HomePageState extends State<HomePage> {
         expiresAt: session.expiresAt,
         groupId: replace?.groupId,
         groupName: replace?.groupName,
+        acsHumanId: session.acsHumanId ?? replace?.acsHumanId,
       ),
     ];
     try {
@@ -721,6 +762,7 @@ class _HomePageState extends State<HomePage> {
                   sessionExpired: item.sessionExpired,
                   groupId: item.groupId,
                   groupName: item.groupName,
+                  acsHumanId: item.acsHumanId,
                 )
               : item,
         )
@@ -736,6 +778,55 @@ class _HomePageState extends State<HomePage> {
             context,
             'Не удалось сохранить аккаунт.',
             'Could not save the account.',
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _setAcsHumanId(SavedAccount account) async {
+    if (_busy) return;
+    final value = await _askText(
+      title: tr(context, 'ACS ID аккаунта', 'Account ACS ID'),
+      hint: 'UUID из Request Payload GetHumanAcsTimeline',
+      action: tr(context, 'Сохранить', 'Save'),
+      initial: account.acsHumanId,
+      maxLength: 64,
+    );
+    if (value == null || !mounted) return;
+    final id = value.trim();
+    if (!RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+    ).hasMatch(id)) {
+      _message(tr(context, 'Некорректный ACS ID.', 'Invalid ACS ID.'));
+      return;
+    }
+    final next = _accounts
+        .map(
+          (item) => item.id == account.id
+              ? SavedAccount(
+                  id: item.id,
+                  label: item.label,
+                  cookie: item.cookie,
+                  expiresAt: item.expiresAt,
+                  sessionExpired: item.sessionExpired,
+                  groupId: item.groupId,
+                  groupName: item.groupName,
+                  acsHumanId: id,
+                )
+              : item,
+        )
+        .toList();
+    try {
+      await _store.save(next);
+      if (mounted) setState(() => _accounts = next);
+    } catch (_) {
+      if (mounted) {
+        _message(
+          tr(
+            context,
+            'Не удалось сохранить ACS ID.',
+            'Could not save the ACS ID.',
           ),
         );
       }
@@ -1025,6 +1116,7 @@ class _HomePageState extends State<HomePage> {
           sessionExpired: account.sessionExpired,
           groupId: account.groupId,
           groupName: account.groupName,
+          acsHumanId: account.acsHumanId,
         ),
       );
     }
@@ -1184,6 +1276,7 @@ class _HomePageState extends State<HomePage> {
                       cookie: item.cookie,
                       groupId: item.groupId,
                       groupName: item.groupName,
+                      acsHumanId: item.acsHumanId,
                       expiresAt:
                           item.expiresAt != null &&
                               item.expiresAt!.isAfter(DateTime.now())
@@ -1254,6 +1347,7 @@ class _HomePageState extends State<HomePage> {
                   cookie: item.cookie,
                   groupId: item.groupId,
                   groupName: item.groupName,
+                  acsHumanId: item.acsHumanId,
                   expiresAt: item.expiresAt,
                   sessionExpired: true,
                 )
@@ -1315,6 +1409,7 @@ class _HomePageState extends State<HomePage> {
                   sessionExpired: item.sessionExpired,
                   groupId: group.id,
                   groupName: group.name,
+                  acsHumanId: item.acsHumanId,
                 )
               : item,
         )
@@ -1772,8 +1867,15 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                     onCheckSession: () =>
                                         _checkAccountSession(account),
+                                    acsPresence: _acsPresence[account.id],
+                                    checkingAcs: _checkingAcs.contains(
+                                      account.id,
+                                    ),
+                                    onCheckAcs: () =>
+                                        _checkAcsPresence(account),
                                     onReauth: () => _login(replace: account),
                                     onRename: () => _rename(account),
+                                    onSetAcsId: () => _setAcsHumanId(account),
                                     onGroup: () => _chooseGroup({account.id}),
                                     onRemove: () => _remove(account),
                                   );
@@ -1847,7 +1949,11 @@ class _AccountRow extends StatelessWidget {
     required this.onCheckSession,
     this.sessionCheck,
     this.checkingSession = false,
+    this.acsPresence,
+    this.checkingAcs = false,
     required this.onRename,
+    required this.onSetAcsId,
+    required this.onCheckAcs,
     required this.onGroup,
     required this.onRemove,
   });
@@ -1863,7 +1969,11 @@ class _AccountRow extends StatelessWidget {
   final VoidCallback onCheckSession;
   final String? sessionCheck;
   final bool checkingSession;
+  final AcsPresence? acsPresence;
+  final bool checkingAcs;
   final VoidCallback onRename;
+  final VoidCallback onSetAcsId;
+  final VoidCallback onCheckAcs;
   final VoidCallback onGroup;
   final VoidCallback onRemove;
 
@@ -1990,6 +2100,41 @@ class _AccountRow extends StatelessWidget {
                                 color: context.palette.muted,
                               ),
                             ),
+                          if (acsPresence != null)
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  acsPresence == AcsPresence.inside
+                                      ? Icons.check_circle_rounded
+                                      : Icons.logout_rounded,
+                                  size: 15,
+                                  color: acsPresence == AcsPresence.inside
+                                      ? context.palette.success
+                                      : context.palette.muted,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  acsPresence == AcsPresence.inside
+                                      ? tr(context, 'В вузе', 'At university')
+                                      : tr(context, 'Не в вузе', 'Not at university'),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: acsPresence == AcsPresence.inside
+                                        ? context.palette.success
+                                        : context.palette.muted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          if (checkingAcs)
+                            Text(
+                              tr(context, 'Проверяем присутствие…', 'Checking presence…'),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: context.palette.muted,
+                              ),
+                            ),
                           const SizedBox(height: 5),
                           Wrap(
                             spacing: 10,
@@ -2033,6 +2178,22 @@ class _AccountRow extends StatelessWidget {
                           label: tr(context, 'Переименовать', 'Rename'),
                         ),
                         M3EMenuEntry(
+                          value: 'acs',
+                          label: tr(
+                            context,
+                            'Настроить ACS ID',
+                            'Set ACS ID',
+                          ),
+                        ),
+                        M3EMenuEntry(
+                          value: 'checkAcs',
+                          label: tr(
+                            context,
+                            'Проверить присутствие в вузе',
+                            'Check university presence',
+                          ),
+                        ),
+                        M3EMenuEntry(
                           value: 'login',
                           label: tr(context, 'Войти снова', 'Sign in again'),
                         ),
@@ -2051,6 +2212,8 @@ class _AccountRow extends StatelessWidget {
                         }
                         if (value == 'login') onReauth();
                         if (value == 'rename') onRename();
+                        if (value == 'acs') onSetAcsId();
+                        if (value == 'checkAcs' && !checkingAcs) onCheckAcs();
                         if (value == 'group') onGroup();
                         if (value == 'remove') onRemove();
                       },

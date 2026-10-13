@@ -38,6 +38,19 @@ The public reference repository supplies the protobuf schema, gRPC-Web transport
 
 The installed APK also calls `GetDigitalPassStatus`. The response has outcomes `no_digital_pass` (field 1), `digital_pass_available` (field 2), and `using_digital_pass_info` (field 3). The latter includes `usage_id` (field 1), `device_info` (field 2), and `in_use_since` (field 3). Pulse compares this usage ID with the `using_id` returned during enrollment. This app does not currently implement that remote binding-status check; a fresh access token alone does not prove the pass remains valid. The gate can reject a revoked or replaced pass.
 
+## Post-factum ACS status
+
+The phone's NFC response is not used as a post-factum admission claim. The
+queue keeps its original timing behavior and advances after the configured
+delay. Separately, the account menu can query Pulse's gRPC-Web
+`GetHumanAcsTimeline` endpoint and display a green `В вузе` status when the
+latest configured transition is an entry. After login, the app obtains the ACS
+human UUID through `GetMeInfo`; manual configuration remains available as a
+fallback. The
+current entry and exit rules match `Неконтролируемая территория` to
+`С20 1эт ЦентральныйВход` and `В78 А 2эт ЦентральныйВход`; additional source or
+destination locations can be added in `lib/acs_entry_rules.dart`.
+
 The vendored client retains the upstream MIT license. No decompiled Pulse source was copied into the app. The Android response encoder and queue were implemented independently.
 
 ## Queue behavior and validation limits

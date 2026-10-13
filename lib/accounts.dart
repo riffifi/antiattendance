@@ -11,6 +11,7 @@ class SavedAccount {
     this.sessionExpired = false,
     this.groupId,
     this.groupName,
+    this.acsHumanId,
   });
   final String id;
   final String label;
@@ -23,6 +24,7 @@ class SavedAccount {
 
   final int? groupId;
   final String? groupName;
+  final String? acsHumanId;
 
   Map<String, Object?> toJson() => {
     'id': id,
@@ -32,6 +34,7 @@ class SavedAccount {
     if (sessionExpired) 'sessionExpired': true,
     if (groupId != null) 'groupId': groupId,
     if (groupName != null) 'groupName': groupName,
+    if (acsHumanId != null) 'acsHumanId': acsHumanId,
   };
 
   factory SavedAccount.fromJson(Map<String, dynamic> json) => SavedAccount(
@@ -42,6 +45,7 @@ class SavedAccount {
     sessionExpired: json['sessionExpired'] == true,
     groupId: json['groupId'] as int?,
     groupName: json['groupName'] as String?,
+    acsHumanId: json['acsHumanId'] as String?,
   );
 }
 

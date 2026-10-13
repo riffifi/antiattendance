@@ -184,6 +184,68 @@ void main() {
     },
   );
 
+  testWidgets(
+    'every section can expand, collapse and reopen without storage collisions',
+    (tester) async {
+      final report = {
+        for (final section in [
+          'App',
+          'Device',
+          'Display & accessibility',
+          'Performance',
+          'Accounts & sessions',
+          'Session server',
+          'NFC & widgets',
+          'Updates',
+        ])
+          section: {'diagnostic_value': 'content for $section'},
+      };
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: DebugMenuPage(loadReport: (_) async => report),
+        ),
+      );
+      await tester.pumpAndSettle();
+      for (final section in report.keys) {
+        final tile = find.byWidgetPredicate(
+          (w) =>
+              w is ExpansionTile && w.key == PageStorageKey('debug-$section'),
+        );
+        for (var cycle = 0; cycle < 2; cycle++) {
+          await tester.scrollUntilVisible(
+            tile,
+            180,
+            scrollable: find.byType(Scrollable).first,
+          );
+          await tester.ensureVisible(tile);
+          await tester.pumpAndSettle();
+          await tester.tap(
+            find.descendant(of: tile, matching: find.text(section)),
+          );
+          await tester.pumpAndSettle();
+          expect(
+            tester.takeException(),
+            isNull,
+            reason: 'Opening $section, cycle $cycle',
+          );
+          expect(find.textContaining('content for $section'), findsOneWidget);
+          await tester.tap(
+            find.descendant(of: tile, matching: find.text(section)),
+          );
+          await tester.pumpAndSettle();
+          expect(
+            tester.takeException(),
+            isNull,
+            reason: 'Closing $section, cycle $cycle',
+          );
+        }
+      }
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+    },
+  );
+
   testWidgets('diagnostics support a narrow screen and enlarged text', (
     tester,
   ) async {

@@ -422,6 +422,9 @@ class _DebugMenuPageState extends State<DebugMenuPage> {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: SelectableText(
+                        // ExpansionTile stores a bool in PageStorage; the text's
+                        // internal scroll position needs a separate entry.
+                        key: PageStorageKey('debug-content-${section.key}'),
                         const JsonEncoder.withIndent('  ')
                             .convert(section.value),
                         style: TextStyle(

@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'app_settings.dart';
+import 'schedule_api.dart';
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
@@ -34,12 +37,51 @@ class SessionServerException implements Exception {
 }
 
 class SessionServerClient {
-  SessionServerClient(String address, {http.Client? client})
+  SessionServerClient(String address, {http.Client? client, this.groupId})
     : base = validateAddress(address),
       _http = client ?? http.Client();
   final Uri base;
   final http.Client _http;
+  int? groupId;
   Map<String, dynamic> snapshot = {};
+  void setGroupFilter(int? id) {
+    if (groupId == id) return;
+    pause();
+    groupId = id;
+    snapshot = {};
+  }
+
+  String _groupQuery([bool hasQuery = false]) =>
+      groupId == null ? '' : '${hasQuery ? '&' : '?'}group_id=$groupId';
+
+  Future<List<ScheduleGroup>> groups() async {
+    final result = await _json('/api/groups');
+    return (result['groups'] as List).map((raw) {
+      final row = raw as Map<String, dynamic>;
+      return ScheduleGroup(
+        id: row['id'] as int,
+        name: row['name'] as String? ?? '${row['id']}',
+      );
+    }).toList();
+  }
+
+  Future<void> publishGroup(
+    String id,
+    int? group,
+    String? name,
+    int expectedVersion,
+  ) async {
+    await _json(
+      '/api/accounts/$id/group',
+      method: 'PUT',
+      body: {
+        'group_id': group,
+        'group_name': name,
+        'expected_version': expectedVersion,
+      },
+    );
+  }
+
   final Map<String, String> importedIds = {};
   bool _closed = false;
   int _cursor = 0;
@@ -95,7 +137,16 @@ class SessionServerClient {
   }
 
   Future<Map<String, dynamic>> fetch() async {
-    final result = await _json('/api/accounts');
+    final requestedGroup = groupId;
+    final result = await _json('/api/accounts${_groupQuery()}');
+    if (groupId != requestedGroup) {
+      throw StateError('Group changed during sync');
+    }
+    if (requestedGroup != null && result['group_filter'] != requestedGroup) {
+      throw const FormatException(
+        'Update the server to support group filtering.',
+      );
+    }
     if (result['protocol'] != 2 || result['sync'] != 'automatic') {
       throw const FormatException(
         'Update the server to support URL-only automatic synchronization.',
@@ -116,6 +167,9 @@ class SessionServerClient {
           record['session_version'] is! int ||
           record['pass_version'] is! int) {
         throw const FormatException('Invalid server account.');
+      }
+      if (requestedGroup != null && record['group_id'] != requestedGroup) {
+        throw const FormatException('The server returned a different group.');
       }
       // Cookies are never part of this protocol; reject a server exposing them.
       if (record.containsKey('cookie') || record.containsKey('secret')) {
@@ -146,7 +200,10 @@ class SessionServerClient {
   }
 
   List<Map<String, dynamic>> get accounts =>
-      (snapshot['accounts'] as List? ?? []).cast<Map<String, dynamic>>();
+      (snapshot['accounts'] as List? ?? [])
+          .cast<Map<String, dynamic>>()
+          .where((a) => groupId == null || a['group_id'] == groupId)
+          .toList();
   String? passNumber(String id) {
     for (final record in snapshot['passes'] as List? ?? []) {
       if (record is Map && record['account_id'] == id) {
@@ -248,7 +305,7 @@ class SessionServerClient {
     while (!_closed && generation == _watchGeneration) {
       try {
         final result = await _json(
-          '/api/events?after=$_cursor&wait=25',
+          '/api/events?after=$_cursor&wait=25${_groupQuery(true)}',
           timeout: const Duration(seconds: 35),
         );
         if (_closed || generation != _watchGeneration) return;
@@ -327,7 +384,10 @@ abstract final class ServerSessions {
     final config = await _storage.read(key: 'session_server_config_v1');
     if (config == null) return;
     final data = jsonDecode(config) as Map<String, dynamic>;
-    active = SessionServerClient(data['url'] as String);
+    active = SessionServerClient(
+      data['url'] as String,
+      groupId: (await AppSettingsStore().loadMyGroup())?.id,
+    );
     // Migrate old URL/key configurations without keeping a device credential.
     if (data.containsKey('key')) {
       await _storage.write(
@@ -348,6 +408,7 @@ abstract final class ServerSessions {
   }
 
   static Future<void> connect(SessionServerClient client) async {
+    client.setGroupFilter((await AppSettingsStore().loadMyGroup())?.id);
     await client.fetch();
     await _storage.write(
       key: 'session_server_config_v1',

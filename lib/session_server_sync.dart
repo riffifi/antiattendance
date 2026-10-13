@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'accounts.dart';
+import 'app_settings.dart';
 import 'nfc_pass.dart';
 import 'server_sessions.dart';
 
@@ -67,6 +68,39 @@ abstract final class SessionAutoSync {
 
   static void install() {
     ServerSessions.syncHandler = sync;
+  }
+
+  static Future<void> groupChanges(List<SavedAccount> accounts) async {
+    final client = ServerSessions.active;
+    if (client == null) return;
+    await _journal(() async {
+      final journal = await _read(client);
+      for (final account in accounts) {
+        final id =
+            serverAccountId(account.cookie) ?? client.importedIds[account.id];
+        if (id == null) continue;
+        final remote = client.accounts.where((a) => a['id'] == id).firstOrNull;
+        if (remote == null ||
+            remote['group_id'] == account.groupId &&
+                remote['group_name'] == account.groupName) {
+          continue;
+        }
+        final key = serverAccountId(account.cookie) == null
+            ? account.id
+            : 'remote:$id';
+        final record =
+            (journal[key] as Map?)?.cast<String, dynamic>() ??
+            <String, dynamic>{};
+        final desired = {'id': account.groupId, 'name': account.groupName};
+        if (jsonEncode(record['pending_group']) != jsonEncode(desired)) {
+          record['remote_id'] = id;
+          record['pending_group'] = desired;
+          record['pending_group_version'] = remote['version'];
+          journal[key] = record;
+        }
+      }
+      await _storage.write(key: _key(client), value: jsonEncode(journal));
+    });
   }
 
   static Future<void> accountChanges(
@@ -170,6 +204,7 @@ abstract final class SessionAutoSync {
     final client = ServerSessions.active;
     if (client == null) return;
     final before = _view(client);
+    client.setGroupFilter((await AppSettingsStore().loadMyGroup())?.id);
     status.value = SessionSyncStatus(
       running: true,
       lastSuccess: status.value.lastSuccess,
@@ -180,7 +215,10 @@ abstract final class SessionAutoSync {
       final local = await AccountStore().loadLocal();
       for (final account in local) {
         if (!identical(ServerSessions.active, client)) return;
-        if (serverAccountId(account.cookie) != null) continue;
+        if (serverAccountId(account.cookie) != null ||
+            client.groupId != null && account.groupId != client.groupId) {
+          continue;
+        }
         try {
           // Only a single entry is locked, so a concurrent enrollment cannot
           // lose its pending edit while a network request is in flight.
@@ -278,6 +316,31 @@ abstract final class SessionAutoSync {
       }
       await _journal(() async {
         final journal = await _read(client);
+        for (final entry in journal.entries) {
+          final record = (entry.value as Map).cast<String, dynamic>();
+          final group = record['pending_group'] as Map?;
+          if (group == null) continue;
+          try {
+            await client.publishGroup(
+              record['remote_id'] as String,
+              group['id'] as int?,
+              group['name'] as String?,
+              record['pending_group_version'] as int,
+            );
+            record.remove('pending_group');
+            record.remove('pending_group_version');
+          } on SessionServerException catch (error) {
+            if (error.status == 409 || error.status == 404) {
+              // A newer server edit wins; never rebase an old offline assignment.
+              record.remove('pending_group');
+              record.remove('pending_group_version');
+            } else {
+              pending++;
+            }
+          } catch (_) {
+            pending++;
+          }
+        }
         for (final entry in journal.entries.where(
           (e) => e.key.startsWith('remote:'),
         )) {

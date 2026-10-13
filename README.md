@@ -16,6 +16,12 @@ Use an account’s **⋮ → Rename** menu to change its local label without sig
 
 The sign-in screen displays MIREA’s current QR challenge directly in the app. Scan it with another device and approve the login; the app checks approval in the university page’s cookie context and submits MIREA’s login continuation. Pulse cookies are checked during redirects as well as after page loads. MIREA handles MFA. **Refresh QR code** starts a new challenge; **Other sign-in options** reveals the original university page. QR challenges remain in memory and are not stored or included in transfers. The sign-in screen has **− / +** controls below the WebView to shrink or enlarge the MIREA page when a form is cut off on a phone. Settings offers Light, Dark, and Black (AMOLED) appearance. On Android 12+, **Phone colors (Monet)** applies the wallpaper accent to any of the three themes. Open the gear icon for appearance, language, and the About screen. Saved appearance and language load before the first Flutter frame, avoiding a flash of the default theme. All app screens use `material_3_expressive` 1.1.5 for navigation, app bars, buttons, fields, lists, selections, menus, dialogs, sheets, snackbars, and progress. Expressive tokens share the saved color scheme and Geist font. The pass picker integrates with Navigator back handling, sheet accessibility labels follow the app language, and the app respects reduced-motion settings. Material widgets use `material_ui`, as required by that package.
 
+Group assignments sync with the session server independently of login cookies.
+Use **Settings → My group** to fetch only that group’s accounts and passes, or
+**All groups** for the complete server list. The group selector on Attendance
+filters visible accounts and keeps bulk selection within the chosen group.
+Update the separate server repository before enabling group-only synchronization.
+
 ## Interface
 
 The UI uses Geist for text, Geist Mono for times and counters, and the Geist Pixel

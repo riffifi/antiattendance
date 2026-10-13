@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'server_sessions.dart';
 import 'session_server_sync.dart';
+import 'app_settings.dart';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -68,7 +69,10 @@ class AccountStore {
   }
 
   Future<List<SavedAccount>> load() async {
-    final local = await loadLocal();
+    final group = await AppSettingsStore().loadMyGroup();
+    final local = (await loadLocal())
+        .where((a) => group == null || a.groupId == group.id)
+        .toList();
     await ServerSessions.initialize();
     final server = ServerSessions.active;
     if (server == null) return local;
@@ -107,10 +111,35 @@ class AccountStore {
 
   Future<void> save(List<SavedAccount> accounts) async {
     final previous = await loadLocal();
+    final myGroup = await AppSettingsStore().loadMyGroup();
+    accounts = accounts
+        .map(
+          (a) =>
+              myGroup != null &&
+                  a.groupId == null &&
+                  serverAccountId(a.cookie) == null &&
+                  !previous.any((old) => old.id == a.id)
+              ? SavedAccount(
+                  id: a.id,
+                  label: a.label,
+                  cookie: a.cookie,
+                  expiresAt: a.expiresAt,
+                  sessionExpired: a.sessionExpired,
+                  groupId: myGroup.id,
+                  groupName: myGroup.name,
+                  transferredPassNumber: a.transferredPassNumber,
+                )
+              : a,
+        )
+        .toList();
+    await SessionAutoSync.groupChanges(accounts);
     // Server metadata is authoritative; local edits never replace its cookies.
     final mapped =
         ServerSessions.active?.importedIds.keys.toSet() ?? <String>{};
-    final retained = previous.where((a) => mapped.contains(a.id));
+    final retained = previous.where(
+      (a) =>
+          mapped.contains(a.id) || myGroup != null && a.groupId != myGroup.id,
+    );
     final local = accounts
         .where((a) => serverAccountId(a.cookie) == null)
         .toList();

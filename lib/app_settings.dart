@@ -1,10 +1,34 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'dart:convert';
+
 import 'app_theme.dart';
+import 'schedule_api.dart';
 
 class AppSettingsStore {
   AppSettingsStore({FlutterSecureStorage? storage})
     : _storage = storage ?? const FlutterSecureStorage();
+
+  Future<ScheduleGroup?> loadMyGroup() async {
+    final raw = await _storage.read(key: 'my_group_v1');
+    if (raw == null) return null;
+    final data = jsonDecode(raw) as Map<String, dynamic>;
+    return ScheduleGroup(id: data['id'] as int, name: data['name'] as String);
+  }
+
+  Future<void> saveMyGroup(ScheduleGroup? group) async {
+    if (group == null) {
+      await _storage.delete(key: 'my_group_v1');
+    } else {
+      if (group.id <= 0 || group.name.trim().isEmpty) {
+        throw ArgumentError('Invalid group');
+      }
+      await _storage.write(
+        key: 'my_group_v1',
+        value: jsonEncode({'id': group.id, 'name': group.name}),
+      );
+    }
+  }
 
   Future<bool> loadDaySummaryEnabled() async =>
       await _storage.read(key: 'day_summary_v1') == 'true';

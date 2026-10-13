@@ -359,6 +359,12 @@ class _HomePageState extends State<HomePage> {
       widget.settingsStore ?? AppSettingsStore();
   final _accountSearch = TextEditingController();
   String _accountQuery = '';
+  int? _attendanceGroupId;
+  bool _matchesAttendanceGroup(SavedAccount a) =>
+      _attendanceGroupId == null ||
+      (_attendanceGroupId == 0
+          ? a.groupId == null
+          : a.groupId == _attendanceGroupId);
   int _tab = 0;
   bool _scheduleVisited = false;
   var _nfcPageKey = GlobalKey<NfcPassPageState>();
@@ -523,7 +529,11 @@ class _HomePageState extends State<HomePage> {
         return;
       }
       _changeTab(0);
-      unawaited(_scanQueue(overrideAccounts: List.of(_accounts)));
+      unawaited(
+        _scanQueue(
+          overrideAccounts: _accounts.where(_matchesAttendanceGroup).toList(),
+        ),
+      );
     });
   }
 
@@ -547,6 +557,10 @@ class _HomePageState extends State<HomePage> {
       if (!mounted) return;
       setState(() {
         _accounts = accounts;
+        if (_attendanceGroupId != null &&
+            !accounts.any(_matchesAttendanceGroup)) {
+          _attendanceGroupId = null;
+        }
         _marks = accounts.isEmpty ? [] : null;
         if (preserveSelection) {
           final mappings =
@@ -561,6 +575,9 @@ class _HomePageState extends State<HomePage> {
           _selected.clear();
           _selected.addAll(accounts.map((account) => account.id));
         }
+        _selected.retainAll(
+          accounts.where(_matchesAttendanceGroup).map((a) => a.id),
+        );
         _loading = false;
         _loadError = false;
       });
@@ -680,6 +697,8 @@ class _HomePageState extends State<HomePage> {
       MaterialPageRoute(
         builder: (_) => SettingsPage(
           store: _settingsStore,
+          accounts: _accounts,
+          scheduleApi: _scheduleApi,
           language: widget.language,
           onLanguageChanged: widget.onLanguageChanged ?? (_) {},
           themeMode: widget.themeMode,
@@ -692,6 +711,7 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
+    if (mounted) await _load(preserveSelection: true);
     _scheduleSummarySync();
   }
 
@@ -1620,7 +1640,14 @@ class _HomePageState extends State<HomePage> {
     try {
       await _store.save(next);
       _scheduleSummarySync();
-      if (mounted) setState(() => _accounts = next);
+      if (mounted) {
+        setState(() {
+          _accounts = next;
+          _selected.retainAll(
+            next.where(_matchesAttendanceGroup).map((a) => a.id),
+          );
+        });
+      }
     } catch (_) {
       if (mounted) {
         _message(
@@ -1654,9 +1681,11 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final visibleAccounts = _accounts
         .where(
-          (account) => '${account.label} ${account.groupName ?? ''}'
-              .toLowerCase()
-              .contains(_accountQuery),
+          (account) =>
+              _matchesAttendanceGroup(account) &&
+              '${account.label} ${account.groupName ?? ''}'
+                  .toLowerCase()
+                  .contains(_accountQuery),
         )
         .toList();
     final countsByAccount = _marks == null
@@ -1786,6 +1815,58 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                     icon: Icons.qr_code_scanner_rounded,
                                   ),
+                                  AppPassPicker(
+                                    enabled: !_busy,
+                                    hint: tr(context, 'Группа', 'Group'),
+                                    items: [
+                                      M3EDropdownItem(
+                                        value: '',
+                                        label: tr(
+                                          context,
+                                          'Все группы',
+                                          'All groups',
+                                        ),
+                                        selected: _attendanceGroupId == null,
+                                      ),
+                                      for (final entry in {
+                                        for (final a in _accounts)
+                                          if (a.groupId != null)
+                                            a.groupId!:
+                                                a.groupName ?? '${a.groupId}',
+                                      }.entries)
+                                        M3EDropdownItem(
+                                          value: '${entry.key}',
+                                          label: entry.value,
+                                          selected:
+                                              _attendanceGroupId == entry.key,
+                                        ),
+                                      if (_accounts.any(
+                                        (a) => a.groupId == null,
+                                      ))
+                                        M3EDropdownItem(
+                                          value: '0',
+                                          label: tr(
+                                            context,
+                                            'Без группы',
+                                            'No group',
+                                          ),
+                                          selected: _attendanceGroupId == 0,
+                                        ),
+                                    ],
+                                    onChanged: (items) => setState(() {
+                                      _attendanceGroupId = int.tryParse(
+                                        items.first.value,
+                                      );
+                                      _selected
+                                        ..clear()
+                                        ..addAll(
+                                          _accounts
+                                              .where(_matchesAttendanceGroup)
+                                              .map((a) => a.id),
+                                        );
+                                    }),
+                                  ),
+                                  const SizedBox(height: 16),
                                   if (_submitting) ...[
                                     const SizedBox(height: 12),
                                     const M3EProgressIndicator.linearWavy(),
@@ -1938,21 +2019,33 @@ class _HomePageState extends State<HomePage> {
                                                   ? null
                                                   : () => setState(() {
                                                       if (_selected.length ==
-                                                          _accounts.length) {
+                                                          _accounts
+                                                              .where(
+                                                                _matchesAttendanceGroup,
+                                                              )
+                                                              .length) {
                                                         _selected.clear();
                                                       } else {
                                                         _selected
                                                           ..clear()
                                                           ..addAll(
-                                                            _accounts.map(
-                                                              (a) => a.id,
-                                                            ),
+                                                            _accounts
+                                                                .where(
+                                                                  _matchesAttendanceGroup,
+                                                                )
+                                                                .map(
+                                                                  (a) => a.id,
+                                                                ),
                                                           );
                                                       }
                                                     }),
                                               child: Text(
                                                 _selected.length ==
-                                                        _accounts.length
+                                                        _accounts
+                                                            .where(
+                                                              _matchesAttendanceGroup,
+                                                            )
+                                                            .length
                                                     ? tr(
                                                         context,
                                                         'Снять выбор',

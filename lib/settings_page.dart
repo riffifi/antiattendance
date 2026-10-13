@@ -13,6 +13,11 @@ import 'package:material_ui/material_ui.dart';
 
 import 'about_page.dart';
 import 'app_settings.dart';
+import 'accounts.dart';
+import 'server_sessions.dart';
+import 'session_server_sync.dart';
+import 'schedule_api.dart';
+import 'group_picker_page.dart';
 import 'app_theme.dart';
 import 'l10n.dart';
 import 'nfc_diagnostics_page.dart';
@@ -39,8 +44,12 @@ class SettingsPage extends StatefulWidget {
     this.updates,
     this.downloadApk,
     this.installApk,
+    this.scheduleApi,
+    this.accounts = const [],
   });
 
+  final ScheduleApi? scheduleApi;
+  final List<SavedAccount> accounts;
   final AppSettingsStore store;
   final String? language;
   final ValueChanged<String?> onLanguageChanged;
@@ -76,16 +85,115 @@ class _SettingsPageState extends State<SettingsPage> {
 
   bool _saving = false;
   bool _daySummary = false;
+  ScheduleGroup? _myGroup;
 
   @override
   void initState() {
     super.initState();
+    widget.store
+        .loadMyGroup()
+        .then((value) {
+          if (mounted) setState(() => _myGroup = value);
+        })
+        .catchError((Object _) {});
     widget.store
         .loadDaySummaryEnabled()
         .then((value) {
           if (mounted) setState(() => _daySummary = value);
         })
         .catchError((Object _) {});
+  }
+
+  Future<void> _chooseMyGroup() async {
+    final groups = <int, ScheduleGroup>{
+      for (final a in widget.accounts)
+        if (a.groupId != null)
+          a.groupId!: ScheduleGroup(
+            id: a.groupId!,
+            name: a.groupName ?? '${a.groupId}',
+          ),
+    };
+    final preferred = _myGroup;
+    if (preferred != null) {
+      groups[preferred.id] = preferred;
+    }
+    try {
+      for (final group
+          in await ServerSessions.active?.groups() ?? <ScheduleGroup>[]) {
+        groups[group.id] = group;
+      }
+    } catch (_) {
+      /* Local groups and university search remain available offline. */
+    }
+    if (!mounted) return;
+    final result = await showExpressiveSheet<Object>(
+      context: context,
+      compact: true,
+      builder: (context) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CampusSectionTitle(tr(context, 'Моя группа', 'My group')),
+            CampusListItem(
+              headline: tr(context, 'Все группы', 'All groups'),
+              selected: _myGroup == null,
+              onTap: () => Navigator.pop(context, 'all'),
+            ),
+            for (final group in groups.values)
+              CampusListItem(
+                headline: group.name,
+                selected: group.id == _myGroup?.id,
+                onTap: () => Navigator.pop(context, group),
+              ),
+            CampusListItem(
+              headline: tr(context, 'Найти группу', 'Find a group'),
+              leading: const CampusIcon(Icons.search_rounded),
+              onTap: () => Navigator.pop(context, 'search'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || result == null) return;
+    ScheduleGroup? group;
+    if (result == 'search') {
+      group = await Navigator.of(context).push<ScheduleGroup>(
+        MaterialPageRoute(
+          builder: (_) =>
+              GroupPickerPage(api: widget.scheduleApi ?? ScheduleApi()),
+        ),
+      );
+      if (!mounted || group == null) return;
+    } else if (result is ScheduleGroup) {
+      group = result;
+    }
+    setState(() => _saving = true);
+    try {
+      await widget.store.saveMyGroup(group);
+      final client = ServerSessions.active;
+      client?.setGroupFilter(group?.id);
+      if (client != null) {
+        await ServerSessions.saveSnapshot();
+        await SessionAutoSync.sync();
+        client.watch();
+        ServerSessions.notify();
+      }
+      if (mounted) setState(() => _myGroup = group);
+    } catch (_) {
+      if (mounted) {
+        M3ESnackbar.show(
+          context,
+          message: tr(
+            context,
+            'Не удалось сохранить группу.',
+            'Could not save group.',
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   Future<void> _chooseSummary(bool enabled) async {
@@ -296,6 +404,26 @@ class _SettingsPageState extends State<SettingsPage> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
           children: [
+            CampusSectionTitle(tr(context, 'Моя группа', 'My group')),
+            CampusPanel(
+              padding: EdgeInsets.zero,
+              child: CampusListItem(
+                leading: CampusIcon(
+                  Icons.groups_rounded,
+                  color: context.palette.blue,
+                ),
+                headline:
+                    _myGroup?.name ?? tr(context, 'Все группы', 'All groups'),
+                supportingText: tr(
+                  context,
+                  'С сервера загружаются только аккаунты и пропуска выбранной группы.',
+                  'Only the selected group’s accounts and passes are fetched from the server.',
+                ),
+                trailing: const CampusIcon(Icons.unfold_more_rounded),
+                onTap: _saving ? null : _chooseMyGroup,
+              ),
+            ),
+            const SizedBox(height: 28),
             CampusSectionTitle(tr(context, 'Оформление', 'Appearance')),
             IntrinsicHeight(
               child: Row(

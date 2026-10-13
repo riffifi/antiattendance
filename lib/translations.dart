@@ -1,6 +1,17 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  'My group': ('Mon groupe', 'O meu grupo', '我的班级'),
+  'All groups': ('Tous les groupes', 'Todos os grupos', '所有班级'),
+  'No group': ('Sans groupe', 'Sem grupo', '未分组'),
+  'Group': ('Groupe', 'Grupo', '班级'),
+  'Find a group': ('Trouver un groupe', 'Procurar um grupo', '查找班级'),
+  'Only the selected group’s accounts and passes are fetched from the server.': (
+    'Seuls les comptes et badges du groupe sélectionné sont téléchargés depuis le serveur.',
+    'Só são obtidas do servidor as contas e os passes do grupo selecionado.',
+    '仅从服务器获取所选班级的账号和通行证。',
+  ),
+
   'Debug menu': ('Menu de débogage', 'Menu de depuração', '调试菜单'),
   'Copy report': ('Copier le rapport', 'Copiar relatório', '复制报告'),
   'Report copied.': ('Rapport copié.', 'Relatório copiado.', '报告已复制。'),

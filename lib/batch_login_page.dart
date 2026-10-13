@@ -513,16 +513,22 @@ class _BatchLoginPageState extends State<BatchLoginPage> {
                       Expanded(
                         child: LayoutBuilder(
                           builder: (context, constraints) => GridView.builder(
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                             itemCount: _entries.length,
                             gridDelegate:
                                 SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: constraints.maxWidth >= 750
-                                      ? 3
-                                      : constraints.maxWidth >= 400
-                                      ? 2
-                                      : 1,
-                                  mainAxisExtent: 360,
+                                  crossAxisCount:
+                                      ((constraints.maxWidth - 28) / 232)
+                                          .floor()
+                                          .clamp(1, 3),
+                                  mainAxisExtent:
+                                      360 +
+                                      100 *
+                                          (MediaQuery.textScalerOf(context)
+                                                          .scale(14) /
+                                                      14 -
+                                                  1)
+                                              .clamp(0, 2),
                                   crossAxisSpacing: 12,
                                   mainAxisSpacing: 12,
                                 ),

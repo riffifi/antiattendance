@@ -173,9 +173,9 @@ class _SessionServerPageState extends State<SessionServerPage> {
       appBar: AppBar(
         title: Text(tr(context, 'Сервер сессий', 'Session server')),
       ),
-      body: SafeArea(
+      body: CampusPageBody(
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
           children: [
             CampusPanel(
               child: Column(

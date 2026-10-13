@@ -588,6 +588,7 @@ class _CampusMapsPageState extends State<CampusMapsPage>
         title: Text(tr(context, 'Карты кампусов', 'Campus maps')),
         actions: [
           M3EIconButton(
+            variant: M3EIconButtonVariant.standard,
             icon: _locating
                 ? const SizedBox(
                     width: 22,
@@ -621,6 +622,7 @@ class _CampusMapsPageState extends State<CampusMapsPage>
               }
             },
             anchorBuilder: (_, open) => M3EIconButton(
+              variant: M3EIconButtonVariant.standard,
               icon: const CampusIcon(Icons.more_vert),
               onPressed: open,
             ),
@@ -638,6 +640,7 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                 label: tr(context, 'Аудитория или место', 'Room or place'),
                 leading: const CampusIcon(Icons.search),
                 trailing: M3EIconButton(
+                  variant: M3EIconButtonVariant.standard,
                   icon: const CampusIcon(Icons.close),
                   tooltip: tr(context, 'Очистить', 'Clear'),
                   onPressed: () => setState(() {
@@ -668,6 +671,7 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                         _invalidateRoute();
                       }),
                       anchorBuilder: (_, open) => CampusButton.icon(
+                        style: M3EButtonStyle.tonal,
                         onPressed: open,
                         icon: const CampusIcon(Icons.school_outlined),
                         label: Text(_map.shortTitle),
@@ -687,6 +691,7 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                       onSelected: (value) =>
                           setState(() => _floorId = value as String),
                       anchorBuilder: (_, open) => CampusButton.icon(
+                        style: M3EButtonStyle.tonal,
                         onPressed: open,
                         icon: const CampusIcon(Icons.layers_outlined),
                         label: Text(campusFloorLabel(context, _floor)),
@@ -760,6 +765,7 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                         child: Text(tr(context, 'Настройки', 'Settings')),
                       ),
                     M3EIconButton(
+                      variant: M3EIconButtonVariant.standard,
                       icon: const CampusIcon(Icons.close),
                       onPressed: () => setState(() => _gpsError = null),
                     ),
@@ -907,6 +913,7 @@ class _CampusMapsPageState extends State<CampusMapsPage>
               ),
             ),
             M3EIconButton(
+              variant: M3EIconButtonVariant.standard,
               icon: const CampusIcon(Icons.close),
               tooltip: tr(context, 'Сбросить маршрут', 'Clear route'),
               onPressed: () => setState(() {
@@ -926,6 +933,7 @@ class _CampusMapsPageState extends State<CampusMapsPage>
               ),
             ),
             M3EIconButton(
+              variant: M3EIconButtonVariant.standard,
               icon: CampusIcon(
                 _favorites.contains(place.id) ? Icons.star : Icons.star_outline,
               ),
@@ -933,6 +941,7 @@ class _CampusMapsPageState extends State<CampusMapsPage>
               onPressed: _saving ? null : () => _favorite(place),
             ),
             M3EIconButton(
+              variant: M3EIconButtonVariant.standard,
               icon: const CampusIcon(Icons.close),
               tooltip: tr(context, 'Закрыть', 'Close'),
               onPressed: () => setState(() {

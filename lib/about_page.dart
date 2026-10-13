@@ -102,7 +102,7 @@ class _AboutPageState extends State<AboutPage> {
               child: Column(
                 children: [
                   const AboutLogo(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 8),
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(

@@ -966,6 +966,21 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
             children: [
+              CampusHeader(
+                title: tr(context, 'NFC-пропуска', 'NFC passes'),
+                subtitle: _single
+                    ? tr(
+                        context,
+                        'Выберите один пропуск ниже и активируйте его.',
+                        'Choose one pass below and activate it.',
+                      )
+                    : tr(
+                        context,
+                        'Все пропуска. Одна очередь. Ваш — последним.',
+                        'One queue for your passes. Yours goes last.',
+                      ),
+                icon: Icons.nfc_rounded,
+              ),
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: Row(
@@ -1019,15 +1034,6 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                     ),
                   ),
                 ),
-              CampusHeader(
-                title: tr(context, 'NFC-пропуска', 'NFC passes'),
-                subtitle: tr(
-                  context,
-                  'Все пропуска. Одна очередь. Ваш — последним.',
-                  'One queue for your passes. Yours goes last.',
-                ),
-                icon: Icons.nfc_rounded,
-              ),
               Align(
                 alignment: Alignment.centerLeft,
                 child: CampusButton.icon(
@@ -1100,31 +1106,37 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      _running
-                          ? current?.label ?? '—'
-                          : _single
-                          ? widget.accounts
-                                    .where((a) => a.id == _singleId)
-                                    .firstOrNull
-                                    ?.label ??
-                                tr(context, 'Выберите пропуск', 'Choose a pass')
-                          : _selected.length == 1
-                          ? tr(context, 'Выбран 1 пропуск', '1 pass selected')
-                          : trf(
-                              context,
-                              'Выбрано пропусков: {count}',
-                              '{count} passes selected',
-                              {'count': _selected.length},
-                            ),
-                      style: TextStyle(
-                        color: scheme.onPrimaryContainer,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
+                    if (_numbers.isNotEmpty || _running) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        _running
+                            ? current?.label ?? '—'
+                            : _single
+                            ? widget.accounts
+                                      .where((a) => a.id == _singleId)
+                                      .firstOrNull
+                                      ?.label ??
+                                  tr(
+                                    context,
+                                    'Выберите пропуск',
+                                    'Choose a pass',
+                                  )
+                            : _selected.length == 1
+                            ? tr(context, 'Выбран 1 пропуск', '1 pass selected')
+                            : trf(
+                                context,
+                                'Выбрано пропусков: {count}',
+                                '{count} passes selected',
+                                {'count': _selected.length},
+                              ),
+                        style: TextStyle(
+                          color: scheme.onPrimaryContainer,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 6),
+                    ],
+                    const SizedBox(height: 8),
                     Text(
                       _running
                           ? _single

@@ -119,57 +119,61 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
   Widget _loginQr() => ColoredBox(
     color: Theme.of(context).scaffoldBackgroundColor,
     child: Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              widget.accountLabel ??
-                  tr(context, 'Вход по QR-коду', 'Sign in with QR'),
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              tr(
-                context,
-                'Отсканируйте код другим устройством и подтвердите вход в МИРЭА. Приложение дождётся подтверждения.',
-                'Scan with another device and confirm your MIREA sign-in. This app will wait for confirmation.',
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 440),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                widget.accountLabel ??
+                    tr(context, 'Вход по QR-коду', 'Sign in with QR'),
+                style: Theme.of(context).textTheme.headlineSmall,
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            Semantics(
-              label: tr(
-                context,
-                'QR-код для входа в МИРЭА',
-                'MIREA sign-in QR code',
+              const SizedBox(height: 12),
+              Text(
+                tr(
+                  context,
+                  'Отсканируйте код другим устройством и подтвердите вход в МИРЭА. Приложение дождётся подтверждения.',
+                  'Scan with another device and confirm your MIREA sign-in. This app will wait for confirmation.',
+                ),
+                textAlign: TextAlign.center,
               ),
-              image: true,
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 300),
-                padding: const EdgeInsets.all(16),
-                color: Colors.white,
-                child: QrImageView(
-                  data: _qrLink!,
-                  backgroundColor: Colors.white,
+              const SizedBox(height: 24),
+              Semantics(
+                label: tr(
+                  context,
+                  'QR-код для входа в МИРЭА',
+                  'MIREA sign-in QR code',
+                ),
+                image: true,
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 300),
+                  padding: const EdgeInsets.all(16),
+                  color: Colors.white,
+                  child: QrImageView(
+                    data: _qrLink!,
+                    backgroundColor: Colors.white,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            const M3EProgressIndicator.linearWavy(),
-            const SizedBox(height: 12),
-            CampusButton.text(
-              onPressed: _refreshLogin,
-              child: Text(tr(context, 'Обновить QR-код', 'Refresh QR code')),
-            ),
-            CampusButton.text(
-              onPressed: () => setState(() => _showBrowser = true),
-              child: Text(
-                tr(context, 'Другой способ входа', 'Other sign-in options'),
+              const SizedBox(height: 20),
+              const M3EProgressIndicator.linearWavy(),
+              const SizedBox(height: 12),
+              CampusButton.text(
+                onPressed: _refreshLogin,
+                child: Text(tr(context, 'Обновить QR-код', 'Refresh QR code')),
               ),
-            ),
-          ],
+              CampusButton.text(
+                onPressed: () => setState(() => _showBrowser = true),
+                child: Text(
+                  tr(context, 'Другой способ входа', 'Other sign-in options'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     ),

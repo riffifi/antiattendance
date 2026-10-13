@@ -110,51 +110,53 @@ class _NearbyReceivePageState extends State<NearbyReceivePage> {
                     ),
                   ],
                 )
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const CampusIcon(Icons.wifi_tethering_rounded, size: 64),
-                    const SizedBox(height: 20),
-                    Text(
-                      _ready
-                          ? tr(
-                              context,
-                              'Ждём отправителя',
-                              'Waiting for sender',
-                            )
-                          : tr(
-                              context,
-                              'Готовим соединение…',
-                              'Starting receiver…',
-                            ),
-                      style: const TextStyle(
-                        fontSize: 23,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      tr(
-                        context,
-                        'Оба телефона должны быть в одной Wi‑Fi сети. На телефоне отправителя выберите это устройство и проверьте код.',
-                        'Both phones must be on the same Wi‑Fi network. Select this device on the sender and check the code.',
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 20),
-                    if (_ready)
-                      SelectableText(
-                        _receiver.code!,
+              : SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CampusIcon(Icons.wifi_tethering_rounded, size: 64),
+                      const SizedBox(height: 20),
+                      Text(
+                        _ready
+                            ? tr(
+                                context,
+                                'Ждём отправителя',
+                                'Waiting for sender',
+                              )
+                            : tr(
+                                context,
+                                'Готовим соединение…',
+                                'Starting receiver…',
+                              ),
                         style: const TextStyle(
-                          fontSize: 34,
+                          fontSize: 23,
                           fontWeight: FontWeight.w700,
-                          letterSpacing: 4,
                         ),
-                      )
-                    else
-                      const M3EProgressIndicator.circularWavy(),
-                  ],
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        tr(
+                          context,
+                          'Оба телефона должны быть в одной Wi‑Fi сети. На телефоне отправителя выберите это устройство и проверьте код.',
+                          'Both phones must be on the same Wi‑Fi network. Select this device on the sender and check the code.',
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 20),
+                      if (_ready)
+                        SelectableText(
+                          _receiver.code!,
+                          style: const TextStyle(
+                            fontSize: 34,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 4,
+                          ),
+                        )
+                      else
+                        const M3EProgressIndicator.circularWavy(),
+                    ],
+                  ),
                 ),
         ),
       ),

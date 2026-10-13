@@ -31,6 +31,24 @@ class CampusBrand extends StatelessWidget {
   );
 }
 
+/// Keeps supporting screens on the same reading column, including safe insets.
+class CampusPageBody extends StatelessWidget {
+  const CampusPageBody({super.key, required this.child, this.maxWidth = 640});
+  final Widget child;
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    top: false,
+    child: Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: SizedBox(width: double.infinity, child: child),
+      ),
+    ),
+  );
+}
+
 // Custom design built on material 3 expressive
 class CampusHeader extends StatelessWidget {
   const CampusHeader({

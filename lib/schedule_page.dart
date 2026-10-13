@@ -411,14 +411,18 @@ class _SchedulePageState extends State<SchedulePage>
               variant: M3EIconButtonVariant.standard,
             ),
           ),
-          CampusButton.icon(
-            onPressed: () => Navigator.of(context).push<void>(
-              MaterialPageRoute(
-                builder: (_) => CampusMapsPage(lessons: dailyLessons),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: CampusButton.icon(
+              style: M3EButtonStyle.text,
+              onPressed: () => Navigator.of(context).push<void>(
+                MaterialPageRoute(
+                  builder: (_) => CampusMapsPage(lessons: dailyLessons),
+                ),
               ),
+              icon: const CampusIcon(Icons.map_outlined),
+              label: Text(tr(context, 'Карты кампусов', 'Campus maps')),
             ),
-            icon: const CampusIcon(Icons.map_outlined),
-            label: Text(tr(context, 'Карты кампусов', 'Campus maps')),
           ),
           const SizedBox(height: 12),
           if (groups.isEmpty)

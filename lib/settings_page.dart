@@ -353,7 +353,7 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(height: 28),
             Text(
               tr(context, 'Язык приложения', 'App language'),
-              style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
+              style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 6),
             Text(
@@ -382,7 +382,7 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(height: 28),
             Text(
               tr(context, 'Тестирование', 'Testing'),
-              style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
+              style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 12),
             CampusPanel(
@@ -427,7 +427,7 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(height: 28),
             Text(
               tr(context, 'Приложение', 'App'),
-              style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
+              style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 12),
             CampusPanel(

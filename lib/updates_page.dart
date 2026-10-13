@@ -346,7 +346,9 @@ class _UpdatesPageState extends State<UpdatesPage> {
                       ],
                       Text(
                         _updateStatus(updates),
-                        style: Theme.of(context).textTheme.titleLarge,
+                        style: available
+                            ? Theme.of(context).textTheme.bodyLarge
+                            : Theme.of(context).textTheme.titleLarge,
                       ),
                       if (updates.installedVersion != null) ...[
                         const SizedBox(height: 12),

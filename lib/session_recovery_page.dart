@@ -294,7 +294,7 @@ class _SessionRecoveryPageState extends State<SessionRecoveryPage> {
       appBar: AppBar(
         title: Text(tr(context, 'Восстановить вход', 'Restore sessions')),
       ),
-      body: SafeArea(
+      body: CampusPageBody(
         child: Column(
           children: [
             Expanded(

@@ -70,113 +70,118 @@ class _SessionSharePageState extends State<SessionSharePage> {
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 440),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: _error != null
-                ? Text(
-                    tr(
-                      context,
-                      _error == 'too_many'
-                          ? 'Слишком много данных для QR. Используйте передачу рядом.'
-                          : 'Не удалось создать QR-передачу.',
-                      _error == 'too_many'
-                          ? 'Too much data for QR. Use nearby transfer.'
-                          : 'Could not create the QR transfer.',
-                    ),
-                  )
-                : transfer == null
-                ? const M3EProgressIndicator.circularWavy()
-                : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        _showCode
-                            ? tr(context, 'Код передачи', 'Transfer code')
-                            : tr(
-                                context,
-                                'Сканируйте все QR-кадры',
-                                'Scan all QR frames',
-                              ),
-                        style: const TextStyle(
-                          fontSize: 21,
-                          fontWeight: FontWeight.w700,
-                        ),
-                        textAlign: TextAlign.center,
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+            children: [
+              _error != null
+                  ? Text(
+                      tr(
+                        context,
+                        _error == 'too_many'
+                            ? 'Слишком много данных для QR. Используйте передачу рядом.'
+                            : 'Не удалось создать QR-передачу.',
+                        _error == 'too_many'
+                            ? 'Too much data for QR. Use nearby transfer.'
+                            : 'Could not create the QR transfer.',
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _showCode
-                            ? tr(
-                                context,
-                                'Введите этот код на другом телефоне после сканирования.',
-                                'Enter this code on the other phone after scanning.',
-                              )
-                            : tr(
-                                context,
-                                'Откройте «Получить аккаунты» на другом телефоне и держите камеру на экране.',
-                                'Open “Import sessions” on the other phone and keep its camera pointed here.',
-                              ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 24),
-                      if (_showCode)
-                        SelectableText(
-                          transfer.code
-                              .replaceAllMapped(
-                                RegExp(r'.{4}'),
-                                (m) => '${m.group(0)} ',
-                              )
-                              .trim(),
+                    )
+                  : transfer == null
+                  ? const M3EProgressIndicator.circularWavy()
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _showCode
+                              ? tr(context, 'Код передачи', 'Transfer code')
+                              : tr(
+                                  context,
+                                  'Сканируйте все QR-кадры',
+                                  'Scan all QR frames',
+                                ),
                           style: const TextStyle(
-                            fontSize: 27,
+                            fontSize: 21,
                             fontWeight: FontWeight.w700,
-                            letterSpacing: 2,
                           ),
                           textAlign: TextAlign.center,
-                        )
-                      else ...[
-                        Container(
-                          color: Colors.white,
-                          padding: const EdgeInsets.all(12),
-                          child: QrImageView(
-                            data: transfer.frames[_frame],
-                            version: QrVersions.auto,
-                            errorCorrectionLevel: QrErrorCorrectLevel.L,
-                            size: 290,
-                            backgroundColor: Colors.white,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _showCode
+                              ? tr(
+                                  context,
+                                  'Введите этот код на другом телефоне после сканирования.',
+                                  'Enter this code on the other phone after scanning.',
+                                )
+                              : tr(
+                                  context,
+                                  'Откройте «Получить аккаунты» на другом телефоне и держите камеру на экране.',
+                                  'Open “Import sessions” on the other phone and keep its camera pointed here.',
+                                ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        if (_showCode)
+                          SelectableText(
+                            transfer.code
+                                .replaceAllMapped(
+                                  RegExp(r'.{4}'),
+                                  (m) => '${m.group(0)} ',
+                                )
+                                .trim(),
+                            style: const TextStyle(
+                              fontSize: 27,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 2,
+                            ),
+                            textAlign: TextAlign.center,
+                          )
+                        else ...[
+                          Container(
+                            color: Colors.white,
+                            padding: const EdgeInsets.all(12),
+                            child: LayoutBuilder(
+                              builder: (context, constraints) => QrImageView(
+                                data: transfer.frames[_frame],
+                                version: QrVersions.auto,
+                                errorCorrectionLevel: QrErrorCorrectLevel.L,
+                                size: constraints.maxWidth.clamp(0, 290),
+                                backgroundColor: Colors.white,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text('${_frame + 1} / ${transfer.frames.length}'),
+                        ],
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          child: CampusButton.filled(
+                            onPressed: () =>
+                                setState(() => _showCode = !_showCode),
+                            child: Text(
+                              _showCode
+                                  ? tr(context, 'Показать QR', 'Show QR')
+                                  : tr(context, 'Показать код', 'Show code'),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 12),
-                        Text('${_frame + 1} / ${transfer.frames.length}'),
-                      ],
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: CampusButton.filled(
-                          onPressed: () =>
-                              setState(() => _showCode = !_showCode),
-                          child: Text(
-                            _showCode
-                                ? tr(context, 'Показать QR', 'Show QR')
-                                : tr(context, 'Показать код', 'Show code'),
+                        Text(
+                          tr(
+                            context,
+                            'Сессии дают доступ к аккаунтам. Передавайте QR и код только доверенному человеку.',
+                            'Sessions grant account access. Share the QR and code only with someone you trust.',
+                          ),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                            fontSize: 12,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        tr(
-                          context,
-                          'Сессии дают доступ к аккаунтам. Передавайте QR и код только доверенному человеку.',
-                          'Sessions grant account access. Share the QR and code only with someone you trust.',
-                        ),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+            ],
           ),
         ),
       ),

@@ -1,5 +1,8 @@
 import 'dart:convert';
 
+import 'server_sessions.dart';
+import 'session_server_sync.dart';
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SavedAccount {
@@ -11,6 +14,7 @@ class SavedAccount {
     this.sessionExpired = false,
     this.groupId,
     this.groupName,
+    this.transferredPassNumber,
   });
   final String id;
   final String label;
@@ -23,6 +27,9 @@ class SavedAccount {
 
   final int? groupId;
   final String? groupName;
+
+  // Incoming transfer only; pass numbers are persisted by NfcPassStore.
+  final int? transferredPassNumber;
 
   Map<String, Object?> toJson() => {
     'id': id,
@@ -51,7 +58,7 @@ class AccountStore {
   final FlutterSecureStorage _storage;
   static const _key = 'pulse_accounts_v1';
 
-  Future<List<SavedAccount>> load() async {
+  Future<List<SavedAccount>> loadLocal() async {
     final raw = await _storage.read(key: _key);
     if (raw == null) return [];
     final decoded = jsonDecode(raw) as List<dynamic>;
@@ -60,10 +67,71 @@ class AccountStore {
         .toList();
   }
 
+  Future<List<SavedAccount>> load() async {
+    final local = await loadLocal();
+    await ServerSessions.initialize();
+    final server = ServerSessions.active;
+    if (server == null) return local;
+    try {
+      await SessionAutoSync.sync();
+    } catch (_) {
+      /* Keep cached metadata offline. */
+    }
+    final remote = server.accounts
+        .map(
+          (row) => SavedAccount(
+            id: 'server_${row['id']}',
+            label: row['label'] as String,
+            cookie: serverSessionReference(row['id'] as String),
+            sessionExpired: row['state'] == 'expired',
+            expiresAt: row['expires_at'] is num
+                ? DateTime.fromMillisecondsSinceEpoch(
+                    ((row['expires_at'] as num) * 1000).round(),
+                    isUtc: true,
+                  )
+                : null,
+            groupId: row['group_id'] as int?,
+            groupName: row['group_name'] as String?,
+          ),
+        )
+        .toList();
+    return [
+      ...local.where(
+        (a) =>
+            serverAccountId(a.cookie) == null &&
+            !server.importedIds.containsKey(a.id),
+      ),
+      ...remote,
+    ];
+  }
+
   Future<void> save(List<SavedAccount> accounts) async {
+    final previous = await loadLocal();
+    // Server metadata is authoritative; local edits never replace its cookies.
+    final mapped =
+        ServerSessions.active?.importedIds.keys.toSet() ?? <String>{};
+    final retained = previous.where((a) => mapped.contains(a.id));
+    final local = accounts
+        .where((a) => serverAccountId(a.cookie) == null)
+        .toList();
+    final ids = local.map((a) => a.id).toSet();
+    local.addAll(retained.where((a) => !ids.contains(a.id)));
     await _storage.write(
       key: _key,
-      value: jsonEncode(accounts.map((account) => account.toJson()).toList()),
+      value: jsonEncode(local.map((a) => a.toJson()).toList()),
     );
+    await SessionAutoSync.accountChanges(previous, local);
   }
+}
+
+int? transferredPassNumber(Object? raw) {
+  if (raw == null) return null;
+  if (raw is! String || !RegExp(r'^[1-9][0-9]{0,18}$').hasMatch(raw)) {
+    throw const FormatException('Invalid NFC pass number.');
+  }
+  final value = int.tryParse(raw);
+  if (value == null || value <= 0) {
+    throw const FormatException('Invalid NFC pass number.');
+  }
+  return value;
 }

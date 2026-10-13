@@ -17,6 +17,8 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
+import androidx.webkit.ProfileStore
+import androidx.webkit.WebViewFeature
 
 class MainActivity : FlutterActivity() {
     private class ObserveStartException(val code: String, message: String) : IllegalStateException(message)
@@ -56,6 +58,36 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "antiattendance/batch_login")
+            .setMethodCallHandler { call, result ->
+                if (call.method == "supported") {
+                    result.success(WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE))
+                    return@setMethodCallHandler
+                }
+                val name = call.argument<String>("profile")
+                if (name == null || !name.matches(Regex("aa_batch_[0-9]+_[0-9]+")) ||
+                    !WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)) {
+                    result.error("unsupported", "Batch login profile unavailable", null)
+                    return@setMethodCallHandler
+                }
+                try {
+                    when (call.method) {
+                        "cookies" -> {
+                            val manager = ProfileStore.getInstance().getProfile(name)?.cookieManager
+                            result.success(manager?.getCookie("https://pulse.mirea.ru/rtu_tc.rtu_attend.app.UserService/GetMeInfo"))
+                        }
+                        "clear" -> {
+                            val manager = ProfileStore.getInstance().getProfile(name)?.cookieManager
+                            if (manager == null) result.success(null)
+                            else manager.removeAllCookies { result.success(null) }
+                        }
+                        "dispose" -> result.success(ProfileStore.getInstance().deleteProfile(name))
+                        else -> result.notImplemented()
+                    }
+                } catch (_: Exception) {
+                    result.error("profile_busy", "Login browser profile is still in use", null)
+                }
+            }
         summaryChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "antiattendance/study_summary")
         summaryChannel?.setMethodCallHandler { call, result ->
             when (call.method) {
@@ -163,7 +195,7 @@ class MainActivity : FlutterActivity() {
                             check(emulation.setPreferredService(this, service)) {
                                 "Android could not select this app for NFC."
                             }
-                            PassQueue.start(values, call.argument<Int>("intervalSeconds") ?: 60)
+                            PassQueue.start(values, call.argument<Int>("intervalSeconds") ?: 60, call.argument<Boolean>("single") == true)
                             window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                         } catch (error: Exception) {
                             stopPassQueue()

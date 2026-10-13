@@ -1,3 +1,5 @@
+import 'pulse_api.dart';
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -23,8 +25,9 @@ Future<String> receiverCode(List<int> publicKey) async {
 
 Future<Map<String, String>> encryptNearby(
   List<SavedAccount> accounts,
-  List<int> receiverPublicKey,
-) async {
+  List<int> receiverPublicKey, {
+  Map<String, String> passNumbers = const {},
+}) async {
   if (accounts.isEmpty ||
       accounts.length > 200 ||
       receiverPublicKey.length != 32) {
@@ -49,6 +52,7 @@ Future<Map<String, String>> encryptNearby(
             (a) => {
               'label': a.label,
               'cookie': a.cookie,
+              if (passNumbers[a.id] != null) 'passNumber': passNumbers[a.id],
               'groupId': a.groupId,
               'groupName': a.groupName,
               if (a.expiresAt != null)
@@ -128,7 +132,7 @@ Future<List<SavedAccount>> decryptNearby(
           label.trim().isEmpty ||
           label.length > 60 ||
           cookie.length > 120000 ||
-          !cookie.startsWith('.AspNetCore.Cookies=')) {
+          !isValidPulseCookieHeader(cookie)) {
         throw const FormatException('Invalid transfer.');
       }
       result.add(
@@ -136,6 +140,7 @@ Future<List<SavedAccount>> decryptNearby(
           id: '$i',
           label: label,
           cookie: cookie,
+          transferredPassNumber: transferredPassNumber(item['passNumber']),
           expiresAt: DateTime.tryParse(item['expiresAt'] as String? ?? ''),
           sessionExpired: item['sessionExpired'] == true,
           groupId: item['groupId'] is int ? item['groupId'] as int : null,
@@ -254,8 +259,9 @@ class NearbyReceiver {
 
 Future<void> sendNearby(
   BonsoirService service,
-  List<SavedAccount> accounts,
-) async {
+  List<SavedAccount> accounts, {
+  Map<String, String> passNumbers = const {},
+}) async {
   final encodedKey = service.attributes['pk'];
   final addresses = <String>{
     ...service.hostAddresses.where(
@@ -269,7 +275,11 @@ Future<void> sendNearby(
   if (addresses.isEmpty || encodedKey == null || service.port <= 0) {
     throw const FormatException('Receiver not reachable.');
   }
-  final packet = await encryptNearby(accounts, base64Url.decode(encodedKey));
+  final packet = await encryptNearby(
+    accounts,
+    base64Url.decode(encodedKey),
+    passNumbers: passNumbers,
+  );
   final client = HttpClient()..connectionTimeout = const Duration(seconds: 5);
   try {
     for (final host in addresses) {

@@ -1,4 +1,7 @@
 import 'package:nfc_pass_client/nfc_pass_client.dart';
+import 'package:http/http.dart' as http;
+
+import 'pulse_session.dart';
 
 import 'accounts.dart';
 import 'nfc_pass.dart';
@@ -21,9 +24,22 @@ class SessionCheckResult {
 Future<SessionCheckResult> checkSession(
   SavedAccount account, {
   NfcPassClient? client,
+  http.Client? profileClient,
 }) async {
-  final ownedClient = client == null;
-  final service = client ?? passClient(account);
+  if (client == null) {
+    final state = await probePulseSession(
+      account.cookie,
+      client: profileClient,
+    );
+    return SessionCheckResult(switch (state) {
+      PulseSessionState.valid => SessionCheckState.valid,
+      PulseSessionState.expired => SessionCheckState.expired,
+      PulseSessionState.forbidden => SessionCheckState.forbidden,
+      PulseSessionState.unavailable => SessionCheckState.unavailable,
+      PulseSessionState.invalidResponse => SessionCheckState.invalidResponse,
+    });
+  }
+  final service = client;
   try {
     // A fresh authenticated token proves the server accepts this session.
     // No verification code is sent and no pass is issued by this check.
@@ -44,7 +60,5 @@ Future<SessionCheckResult> checkSession(
     return const SessionCheckResult(SessionCheckState.unavailable);
   } on FormatException {
     return const SessionCheckResult(SessionCheckState.invalidResponse);
-  } finally {
-    if (ownedClient) service.httpClient.close();
   }
 }

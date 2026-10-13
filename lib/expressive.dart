@@ -1,3 +1,5 @@
+import 'icons/campus_icon.dart';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:material_3_expressive/material_3_expressive.dart';
@@ -62,7 +64,9 @@ class AppPassPicker extends StatelessWidget {
             M3EListItem(
               headline: item.label,
               selected: item.selected,
-              trailing: item.selected ? const Icon(Icons.check_rounded) : null,
+              trailing: item.selected
+                  ? const CampusIcon(Icons.check_rounded)
+                  : null,
               onTap: () => Navigator.pop(context, item),
             ),
         ],
@@ -82,7 +86,7 @@ class AppPassPicker extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        const Icon(Icons.unfold_more_rounded, size: 20),
+        const CampusIcon(Icons.unfold_more_rounded, size: 20),
       ],
     ),
   );

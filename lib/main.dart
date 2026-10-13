@@ -1,3 +1,7 @@
+import 'icons/campus_icon.dart';
+import 'server_sessions.dart';
+import 'session_server_sync.dart';
+import 'session_server_page.dart';
 import 'updates_page.dart';
 import 'campus_design.dart';
 import 'expressive.dart';
@@ -9,7 +13,6 @@ import 'dart:io';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import 'accounts.dart';
 import 'session_check.dart';
@@ -25,6 +28,7 @@ import 'nfc_pass.dart';
 import 'nfc_pass_page.dart';
 import 'pulse_api.dart';
 import 'pulse_login.dart';
+import 'batch_login_page.dart';
 import 'queue_scan_page.dart';
 import 'schedule_api.dart';
 import 'schedule_page.dart';
@@ -143,6 +147,13 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
     if (state == AppLifecycleState.resumed) {
       unawaited(_loadAppearance());
       unawaited(_updates.check(force: false));
+      final server = ServerSessions.active;
+      if (server != null) {
+        server.watch();
+        SessionAutoSync.request();
+      }
+    } else if (state == AppLifecycleState.paused) {
+      ServerSessions.active?.pause();
     }
   }
 
@@ -335,6 +346,7 @@ class _HomePageState extends State<HomePage> {
   int _tab = 0;
   bool _scheduleVisited = false;
   var _nfcPageKey = GlobalKey<NfcPassPageState>();
+  StreamSubscription<void>? _serverUpdates;
 
   void _changeTab(int index) {
     if (index == _tab) return;
@@ -397,9 +409,20 @@ class _HomePageState extends State<HomePage> {
       _widgetChannel.setMethodCallHandler(_onWidgetCall);
       unawaited(_takeInitialWidgetRequest());
     }
+    SessionAutoSync.install();
+    _serverUpdates = ServerSessions.changes.listen((_) async {
+      if (_busy || !mounted) return;
+      await _nfcPageKey.currentState?.deactivateQueue();
+      if (!mounted) return;
+      setState(() => _nfcPageKey = GlobalKey<NfcPassPageState>());
+      await _load(preserveSelection: true);
+    });
     _scheduleCounterRefresh();
     _sessionRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {});
+        SessionAutoSync.request();
+      }
     });
     _load();
   }
@@ -491,6 +514,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     if (Platform.isAndroid) _widgetChannel.setMethodCallHandler(null);
+    _serverUpdates?.cancel();
     _counterRefreshTimer?.cancel();
     _sessionRefreshTimer?.cancel();
     _summarySyncTimer?.cancel();
@@ -500,7 +524,7 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool preserveSelection = false}) async {
     if (!_loading && mounted) setState(() => _loading = true);
     try {
       final accounts = await _store.load();
@@ -508,11 +532,23 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _accounts = accounts;
         _marks = accounts.isEmpty ? [] : null;
-        _selected.clear();
-        _selected.addAll(accounts.map((account) => account.id));
+        if (preserveSelection) {
+          final mappings =
+              ServerSessions.active?.importedIds ?? const <String, String>{};
+          final migrated = [
+            for (final id in _selected)
+              if (mappings[id] != null) 'server_${mappings[id]}',
+          ];
+          _selected.addAll(migrated);
+          _selected.retainAll(accounts.map((account) => account.id));
+        } else {
+          _selected.clear();
+          _selected.addAll(accounts.map((account) => account.id));
+        }
         _loading = false;
         _loadError = false;
       });
+      ServerSessions.active?.watch();
       if (accounts.isNotEmpty) unawaited(_refreshMarks());
       _openPendingWidgetScan();
       _openPendingWidgetNfc();
@@ -578,10 +614,29 @@ class _HomePageState extends State<HomePage> {
     ),
   );
 
+  Future<void> _manageServerAccounts() async {
+    await _nfcPageKey.currentState?.deactivateQueue();
+    if (!mounted) return;
+    _message(
+      tr(
+        context,
+        'Управляйте общими аккаунтами в панели сервера.',
+        'Manage shared accounts in the server panel.',
+      ),
+    );
+    await Navigator.of(
+      context,
+    ).push<void>(MaterialPageRoute(builder: (_) => const SessionServerPage()));
+  }
+
   Future<void> _recoverSessions() async {
     if (_busy) return;
     final accounts = _accounts.where((a) => _selected.contains(a.id)).toList();
     if (accounts.isEmpty) return;
+    if (accounts.any((a) => serverAccountId(a.cookie) != null)) {
+      await _manageServerAccounts();
+      return;
+    }
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (_) => SessionRecoveryPage(
@@ -618,8 +673,130 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Future<void> _addAccounts() async {
+    final batch = await showExpressiveSheet<bool>(
+      context: context,
+      builder: (context) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              tr(context, 'Добавить аккаунты', 'Add accounts'),
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const CampusIcon(Icons.person_add_rounded),
+              title: Text(tr(context, 'Один пользователь', 'Single user')),
+              onTap: () => Navigator.pop(context, false),
+            ),
+            ListTile(
+              leading: const CampusIcon(Icons.group_add_rounded),
+              title: Text(
+                tr(context, 'Несколько пользователей', 'Multiple users'),
+              ),
+              subtitle: Text(
+                tr(
+                  context,
+                  'До 10 QR-кодов одновременно',
+                  'Up to 10 QR codes at once',
+                ),
+              ),
+              onTap: () => Navigator.pop(context, true),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || batch == null) return;
+    if (!batch) {
+      await _login();
+      return;
+    }
+    if (!await BatchLoginPage.supported()) {
+      if (mounted) {
+        _message(
+          tr(
+            context,
+            'Для группового входа нужен Android с обновлённым System WebView. Используйте одиночный вход.',
+            'Batch sign-in needs Android with an updated System WebView. Use single sign-in on this device.',
+          ),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+    var count = 3;
+    final chosen = await showExpressiveDialog<int>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, update) => AlertDialog(
+          title: Text(tr(context, 'Сколько пользователей?', 'How many users?')),
+          content: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                onPressed: count > 1 ? () => update(() => count--) : null,
+                icon: const CampusIcon(Icons.remove_rounded),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  '$count',
+                  style: Theme.of(context).textTheme.headlineLarge,
+                ),
+              ),
+              IconButton(
+                onPressed: count < 10 ? () => update(() => count++) : null,
+                icon: const CampusIcon(Icons.add_rounded),
+              ),
+            ],
+          ),
+          actions: [
+            CampusButton.text(
+              onPressed: () => Navigator.pop(context),
+              child: Text(tr(context, 'Отмена', 'Cancel')),
+            ),
+            CampusButton.text(
+              onPressed: () => Navigator.pop(context, count),
+              child: Text(tr(context, 'Продолжить', 'Continue')),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || chosen == null) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => BatchLoginPage(
+          count: chosen,
+          onSave: (account) async {
+            final current = await _store.load();
+            if (current.any((item) => item.cookie == account.cookie)) {
+              throw StateError('Already enrolled');
+            }
+            final next = [...current, account];
+            await _store.save(next);
+            if (mounted) {
+              setState(() {
+                _accounts = next;
+                _selected.add(account.id);
+              });
+            }
+            _scheduleSummarySync();
+          },
+        ),
+      ),
+    );
+  }
+
   Future<void> _login({SavedAccount? replace}) async {
     if (_busy) return;
+    if (replace != null && serverAccountId(replace.cookie) != null) {
+      await _manageServerAccounts();
+      return;
+    }
     if (!Platform.isAndroid && !Platform.isIOS) {
       _message(
         tr(
@@ -702,6 +879,10 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _rename(SavedAccount account) async {
     if (_busy) return;
+    if (serverAccountId(account.cookie) != null) {
+      await _manageServerAccounts();
+      return;
+    }
     final label = await _askText(
       title: tr(context, 'Переименовать аккаунт', 'Rename account'),
       hint: tr(context, 'Имя или удобная подпись', 'Name or a useful label'),
@@ -744,6 +925,10 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _remove(SavedAccount account) async {
     if (_busy) return;
+    if (serverAccountId(account.cookie) != null) {
+      await _manageServerAccounts();
+      return;
+    }
     final confirmed = await showExpressiveDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -933,7 +1118,7 @@ class _HomePageState extends State<HomePage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             CampusListItem(
-              leading: Icon(Icons.wifi_tethering_rounded),
+              leading: CampusIcon(Icons.wifi_tethering_rounded),
               headline: (tr(context, 'Передать рядом', 'Share nearby')),
               supportingText: (tr(
                 context,
@@ -943,7 +1128,7 @@ class _HomePageState extends State<HomePage> {
               onTap: () => Navigator.pop(context, 'nearby'),
             ),
             CampusListItem(
-              leading: Icon(Icons.qr_code_rounded),
+              leading: CampusIcon(Icons.qr_code_rounded),
               headline: (tr(context, 'Передать через QR', 'Share by QR')),
               onTap: () => Navigator.pop(context, 'qr'),
             ),
@@ -963,6 +1148,8 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _importSessions() async {
     if (_busy) return;
+    await _nfcPageKey.currentState?.deactivateQueue();
+    if (!mounted) return;
     final method = await showExpressiveSheet<String>(
       context: context,
       builder: (context) => SafeArea(
@@ -970,7 +1157,7 @@ class _HomePageState extends State<HomePage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             CampusListItem(
-              leading: Icon(Icons.wifi_tethering_rounded),
+              leading: CampusIcon(Icons.wifi_tethering_rounded),
               headline: (tr(context, 'Получить рядом', 'Receive nearby')),
               supportingText: (tr(
                 context,
@@ -980,7 +1167,7 @@ class _HomePageState extends State<HomePage> {
               onTap: () => Navigator.pop(context, 'nearby'),
             ),
             CampusListItem(
-              leading: Icon(Icons.qr_code_scanner_rounded),
+              leading: CampusIcon(Icons.qr_code_scanner_rounded),
               headline: (tr(
                 context,
                 'Сканировать QR передачи',
@@ -1011,13 +1198,14 @@ class _HomePageState extends State<HomePage> {
       ),
     );
     if (!mounted || imported == null) return;
-    final known = _accounts.map((a) => a.cookie).toSet();
+    final known = {for (final account in _accounts) account.cookie: account};
     final added = <SavedAccount>[];
+    final passes = <SavedAccount, int>{};
     final base = DateTime.now().microsecondsSinceEpoch;
     for (final account in imported) {
-      if (!known.add(account.cookie)) continue;
-      added.add(
-        SavedAccount(
+      var target = known[account.cookie];
+      if (target == null) {
+        target = SavedAccount(
           id: '${base}_${added.length}',
           label: account.label,
           cookie: account.cookie,
@@ -1025,10 +1213,15 @@ class _HomePageState extends State<HomePage> {
           sessionExpired: account.sessionExpired,
           groupId: account.groupId,
           groupName: account.groupName,
-        ),
-      );
+        );
+        added.add(target);
+        known[account.cookie] = target;
+      }
+      if (account.transferredPassNumber != null) {
+        passes[target] = account.transferredPassNumber!;
+      }
     }
-    if (added.isEmpty) {
+    if (added.isEmpty && passes.isEmpty) {
       _message(
         tr(
           context,
@@ -1041,15 +1234,22 @@ class _HomePageState extends State<HomePage> {
     final next = [..._accounts, ...added];
     try {
       await _store.save(next);
+      for (final entry in passes.entries) {
+        await NfcPassStore().save(entry.key, entry.value);
+      }
+
       _scheduleSummarySync();
       if (!mounted) return;
       setState(() {
         _accounts = next;
+        _nfcPageKey = GlobalKey<NfcPassPageState>();
         _selected.addAll(added.map((a) => a.id));
       });
       _message(
         trf(context, 'Импортировано: {count}', 'Imported: {count}', {
-          'count': added.length,
+          'count':
+              added.length +
+              passes.keys.where((a) => !added.contains(a)).length,
         }),
       );
     } catch (_) {
@@ -1341,7 +1541,7 @@ class _HomePageState extends State<HomePage> {
       icon: Badge(
         isLabelVisible: available,
         backgroundColor: context.palette.blue,
-        child: Icon(Icons.settings_outlined),
+        child: CampusIcon(Icons.settings_outlined),
       ),
       variant: M3EIconButtonVariant.standard,
     );
@@ -1367,28 +1567,10 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       extendBody: true,
       appBar: AppBar(
-        title: Row(
-          children: [
-            SvgPicture.asset(
-              'icon/brand.svg',
-              width: 28,
-              height: 28,
-              semanticsLabel: tr(context, 'Логотип приложения', 'App logo'),
-            ),
-            const SizedBox(width: 10),
-            const Flexible(
-              child: Text(
-                'AntiAttendance',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -.5,
-                ),
-              ),
-            ),
-          ],
+        title: CampusBrand(
+          width: 74,
+          height: 34,
+          label: tr(context, 'Логотип приложения', 'App logo'),
         ),
         actions: [_settingsButton(context), const SizedBox(width: 8)],
         automaticallyImplyLeading: true,
@@ -1457,7 +1639,7 @@ class _HomePageState extends State<HomePage> {
                                     width: double.infinity,
                                     child: CampusButton.icon(
                                       onPressed: _busy ? null : _scan,
-                                      icon: const Icon(
+                                      icon: const CampusIcon(
                                         Icons.qr_code_scanner_rounded,
                                       ),
                                       label: Text(
@@ -1474,7 +1656,7 @@ class _HomePageState extends State<HomePage> {
                                     width: double.infinity,
                                     child: CampusButton.icon(
                                       onPressed: _busy ? null : _pasteLink,
-                                      icon: const Icon(
+                                      icon: const CampusIcon(
                                         Icons.link_rounded,
                                         size: 20,
                                       ),
@@ -1512,7 +1694,7 @@ class _HomePageState extends State<HomePage> {
                                           onPressed: _busy
                                               ? null
                                               : _shareSessions,
-                                          icon: Icon(
+                                          icon: CampusIcon(
                                             Icons.ios_share_rounded,
                                             size: 18,
                                           ),
@@ -1527,7 +1709,7 @@ class _HomePageState extends State<HomePage> {
                                           onPressed: _busy
                                               ? null
                                               : _importSessions,
-                                          icon: Icon(
+                                          icon: CampusIcon(
                                             Icons.download_rounded,
                                             size: 18,
                                           ),
@@ -1545,17 +1727,17 @@ class _HomePageState extends State<HomePage> {
                                       Expanded(
                                         child: Text(
                                           tr(context, 'Аккаунты', 'Accounts'),
-                                          style: TextStyle(
-                                            fontSize: 21,
-                                            fontWeight: FontWeight.w700,
-                                          ),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleLarge,
                                         ),
                                       ),
                                       CampusButton.icon(
-                                        onPressed: _busy
-                                            ? null
-                                            : () => _login(),
-                                        icon: Icon(Icons.add_rounded, size: 19),
+                                        onPressed: _busy ? null : _addAccounts,
+                                        icon: CampusIcon(
+                                          Icons.add_rounded,
+                                          size: 19,
+                                        ),
                                         label: Text(
                                           tr(context, 'Добавить', 'Add'),
                                         ),
@@ -1587,7 +1769,7 @@ class _HomePageState extends State<HomePage> {
                                         onPressed: _busy || _selected.isEmpty
                                             ? null
                                             : _recoverSessions,
-                                        icon: const Icon(
+                                        icon: const CampusIcon(
                                           Icons.refresh_rounded,
                                           size: 18,
                                         ),
@@ -1613,7 +1795,7 @@ class _HomePageState extends State<HomePage> {
                                                 : () => _chooseGroup(
                                                     Set.of(_selected),
                                                   ),
-                                            icon: Icon(
+                                            icon: CampusIcon(
                                               Icons.groups_rounded,
                                               size: 18,
                                             ),
@@ -1696,7 +1878,9 @@ class _HomePageState extends State<HomePage> {
                                         'Найти аккаунт или группу',
                                         'Search accounts or groups',
                                       ),
-                                      leading: const Icon(Icons.search_rounded),
+                                      leading: const CampusIcon(
+                                        Icons.search_rounded,
+                                      ),
                                       trailing: _accountQuery.isEmpty
                                           ? null
                                           : M3EIconButton(
@@ -1706,7 +1890,7 @@ class _HomePageState extends State<HomePage> {
                                                 'Очистить поиск',
                                                 'Clear search',
                                               ),
-                                              icon: const Icon(
+                                              icon: const CampusIcon(
                                                 Icons.close_rounded,
                                               ),
                                               onPressed: () {
@@ -1907,37 +2091,37 @@ class _AccountRow extends StatelessWidget {
           curve: Curves.easeOutCubic,
           decoration: BoxDecoration(
             color: selected
-                ? context.palette.selected
+                ? context.palette.selectionSurface
                 : context.palette.surface,
             border: Border.all(
               color: selected
                   ? context.palette.blue.withValues(alpha: .35)
                   : context.palette.line,
             ),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(24),
           ),
           clipBehavior: Clip.antiAlias,
           child: Material(
             color: Colors.transparent,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(24),
             child: InkWell(
               onTap: busy ? null : onTap,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(24),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 9, 4, 9),
+                padding: const EdgeInsets.fromLTRB(16, 12, 6, 12),
                 child: Row(
                   children: [
                     Container(
                       width: 40,
-                      height: 46,
+                      height: 40,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: selected
                             ? context.palette.blue
                             : context.palette.paper,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(
+                      child: CampusIcon(
                         selected
                             ? Icons.check_rounded
                             : Icons.person_outline_rounded,
@@ -1955,7 +2139,7 @@ class _AccountRow extends StatelessWidget {
                             account.label,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontWeight: FontWeight.w600),
+                            style: Theme.of(context).textTheme.titleMedium,
                           ),
                           if (account.groupName != null)
                             Text(
@@ -2057,7 +2241,7 @@ class _AccountRow extends StatelessWidget {
                       anchorBuilder: (context, open) => M3EIconButton(
                         suppressInk: true,
                         variant: M3EIconButtonVariant.standard,
-                        icon: Icon(
+                        icon: CampusIcon(
                           Icons.more_vert_rounded,
                           color: context.palette.muted,
                         ),
@@ -2080,9 +2264,20 @@ class _AccountRow extends StatelessWidget {
   }
 
   Widget _countText(BuildContext context, String ru, String en, int? count) =>
-      Text(
-        '${tr(context, ru, en)} ${count ?? '—'}',
-        style: TextStyle(fontSize: 11, color: context.palette.muted),
+      Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: '${tr(context, ru, en)} '),
+            TextSpan(
+              text: '${count ?? '—'}',
+              style: const TextStyle(
+                fontFamily: 'GeistMono',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        style: TextStyle(fontSize: 12, color: context.palette.muted),
       );
 }
 

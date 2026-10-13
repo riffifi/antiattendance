@@ -4,15 +4,30 @@ Flutter app for Android and iOS. It stores several independently signed-in Пу�
 
 ## Use
 
-1. Tap **Добавить** and finish **Войти через МИРЭА** for each account. Give each session a local label.
+1. Tap **Добавить**, choose **Single user** or **Multiple users**, and finish MIREA sign-in. Give each session a local label.
 2. Select accounts and tap **Сканировать QR**. The scanner submits the first valid lecture QR immediately and keeps trying new QR tokens for accounts still waiting or rejected. It closes once all selected accounts are confirmed; you can close it sooner. Alternatively, paste the Пульс URL and tap **Отправить**.
 3. Use **Войти снова** if a session expires, or **Удалить** to remove it from the device.
+
+**Batch account adding (Android):** choose 1–10 users, name their cards, and scan each QR preview. Tap a card for the full QR and sign-in page; **Overview** returns to the cards without closing the login. Approved previews become green ticks. Open those cards and tap **Continue** inside the MIREA WebView. An account is saved only after Pulse confirms its session; the card then says **Account saved**. Existing saved accounts remain if you leave a batch early. Every login uses its own WebView cookie/storage profile. Devices without WebView multi-profile support and iOS use single sign-in. Update Android System WebView if batch sign-in is unavailable.
 
 On Android, add either the 1×1 icon widget or the 2×1 labeled widget to the home screen for a one-tap shortcut to scanning with every saved account. The widget opens the scanner; attendance is sent only after it sees a lecture QR code. Launcher widgets are not available in the iOS build.
 
 Use an account’s **⋮ → Rename** menu to change its local label without signing in again. With several accounts, the account list offers search by name or assigned group; search does not change the selected accounts.
 
 The sign-in screen displays MIREA’s current QR challenge directly in the app. Scan it with another device and approve the login; the app checks approval in the university page’s cookie context and submits MIREA’s login continuation. Pulse cookies are checked during redirects as well as after page loads. MIREA handles MFA. **Refresh QR code** starts a new challenge; **Other sign-in options** reveals the original university page. QR challenges remain in memory and are not stored or included in transfers. The sign-in screen has **− / +** controls below the WebView to shrink or enlarge the MIREA page when a form is cut off on a phone. Settings offers Light, Dark, and Black (AMOLED) appearance. On Android 12+, **Phone colors (Monet)** applies the wallpaper accent to any of the three themes. Open the gear icon for appearance, language, and the About screen. Saved appearance and language load before the first Flutter frame, avoiding a flash of the default theme. All app screens use `material_3_expressive` 1.1.5 for navigation, app bars, buttons, fields, lists, selections, menus, dialogs, sheets, snackbars, and progress. Expressive tokens share the saved color scheme and Geist font. The pass picker integrates with Navigator back handling, sheet accessibility labels follow the app language, and the app respects reduced-motion settings. Material widgets use `material_ui`, as required by that package.
+
+## Interface
+
+The UI uses Geist for text, Geist Mono for times and counters, and the Geist Pixel
+`aa.` mark for branding. A curated set of 70 regular Phosphor SVGs from the supplied
+`SVGs` collection is bundled under `assets/icons/phosphor`; the full source library
+is not included in the APK. Icons follow the current theme and retain their original
+control semantics.
+
+In About, drag the solid logo badge to rotate it. Its reverse shows the original
+app artwork. The badge stays where you leave it; tapping flips it, and keyboard
+arrow keys also rotate it. It uses a cast shadow rather than a glow and does not
+auto-spin or spring back.
 
 ## Updates
 

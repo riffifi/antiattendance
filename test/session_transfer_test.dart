@@ -28,6 +28,49 @@ void main() {
       ),
   ];
 
+  test('NFC passes travel inside encrypted QR and nearby payloads', () async {
+    final numbers = {accounts.first.id: '9223372036854775807'};
+    final transfer = await createSessionTransfer(
+      accounts,
+      passNumbers: numbers,
+    );
+    final collector = SessionTransferCollector();
+    for (final frame in transfer.frames) {
+      collector.accept(frame);
+    }
+    final received = await collector.decrypt(transfer.code);
+    expect(received.first.transferredPassNumber, 9223372036854775807);
+    expect(received.last.transferredPassNumber, isNull);
+    expect(received.first.toJson().containsKey('passNumber'), isFalse);
+    final receiver = await X25519().newKeyPair();
+    final key = await receiver.extractPublicKey();
+    final packet = await encryptNearby(
+      accounts,
+      key.bytes,
+      passNumbers: numbers,
+    );
+    final nearby = await decryptNearby(packet, receiver);
+    expect(nearby.first.transferredPassNumber, 9223372036854775807);
+    expect(nearby.last.transferredPassNumber, isNull);
+  });
+
+  test('transfer rejects invalid NFC pass numbers', () async {
+    for (final value in ['0', '-1', '9223372036854775808', 'token.jwt', '']) {
+      final transfer = await createSessionTransfer(
+        accounts,
+        passNumbers: {accounts.first.id: value},
+      );
+      final collector = SessionTransferCollector();
+      for (final frame in transfer.frames) {
+        collector.accept(frame);
+      }
+      await expectLater(
+        collector.decrypt(transfer.code),
+        throwsFormatException,
+      );
+    }
+  });
+
   test(
     'QR frames reassemble out of order and need the transfer code',
     () async {

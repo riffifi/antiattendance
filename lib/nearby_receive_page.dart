@@ -1,3 +1,4 @@
+import 'icons/campus_icon.dart';
 import 'campus_design.dart';
 
 import 'package:material_3_expressive/material_3_expressive.dart';
@@ -89,7 +90,7 @@ class _NearbyReceivePageState extends State<NearbyReceivePage> {
                     const SizedBox(height: 16),
                     for (final account in _incoming!)
                       CampusListItem(
-                        leading: const Icon(Icons.person_outline),
+                        leading: const CampusIcon(Icons.person_outline),
                         headline: (account.label),
                       ),
                     const SizedBox(height: 16),
@@ -112,7 +113,7 @@ class _NearbyReceivePageState extends State<NearbyReceivePage> {
               : Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.wifi_tethering_rounded, size: 64),
+                    const CampusIcon(Icons.wifi_tethering_rounded, size: 64),
                     const SizedBox(height: 20),
                     Text(
                       _ready

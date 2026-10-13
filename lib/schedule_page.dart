@@ -1,3 +1,5 @@
+import 'icons/campus_icon.dart';
+import 'campus_maps_page.dart';
 import 'campus_design.dart';
 import 'expressive.dart';
 
@@ -144,8 +146,10 @@ class _SchedulePageState extends State<SchedulePage>
     setState(() {
       _loading = true;
       _error = null;
-      _lessons = [];
-      _marks = [];
+      if (_lessons.any((lesson) => lesson.groupId != groupId)) {
+        _lessons = [];
+        _marks = [];
+      }
     });
     try {
       final marks = await widget.log.load();
@@ -245,6 +249,19 @@ class _SchedulePageState extends State<SchedulePage>
                       ),
                     ),
                   ],
+                  if (lesson.location.isNotEmpty)
+                    CampusButton.icon(
+                      onPressed: () => Navigator.of(context).push<void>(
+                        MaterialPageRoute(
+                          builder: (_) => CampusMapsPage(
+                            room: lesson.location,
+                            lessons: [lesson],
+                          ),
+                        ),
+                      ),
+                      icon: const CampusIcon(Icons.map_outlined),
+                      label: Text(tr(context, 'Найти аудиторию', 'Find room')),
+                    ),
                   const SizedBox(height: 22),
                   Text(
                     tr(context, 'Подтверждённые Пульсом', 'Confirmed by Pulse'),
@@ -263,7 +280,7 @@ class _SchedulePageState extends State<SchedulePage>
                       children: [
                         for (final mark in confirmed)
                           Chip(
-                            avatar: Icon(
+                            avatar: CampusIcon(
                               Icons.check_rounded,
                               size: 16,
                               color: context.palette.success,
@@ -286,7 +303,7 @@ class _SchedulePageState extends State<SchedulePage>
                                   ? 'scan'
                                   : 'paste',
                             ),
-                      icon: Icon(
+                      icon: CampusIcon(
                         Platform.isAndroid || Platform.isIOS
                             ? Icons.qr_code_scanner_rounded
                             : Icons.link_rounded,
@@ -305,7 +322,7 @@ class _SchedulePageState extends State<SchedulePage>
                         onPressed: groupAccounts.isEmpty
                             ? null
                             : () => Navigator.pop(context, 'paste'),
-                        icon: Icon(Icons.link_rounded, size: 18),
+                        icon: CampusIcon(Icons.link_rounded, size: 18),
                         label: Text(
                           tr(context, 'Вставить ссылку', 'Paste link'),
                         ),
@@ -388,12 +405,22 @@ class _SchedulePageState extends State<SchedulePage>
                   : () => _refresh(force: true),
               icon: RotationTransition(
                 turns: _refreshRotation,
-                child: const Icon(Icons.refresh_rounded),
+                child: const CampusIcon(Icons.refresh_rounded),
               ),
               tooltip: tr(context, 'Обновить', 'Refresh'),
               variant: M3EIconButtonVariant.standard,
             ),
           ),
+          CampusButton.icon(
+            onPressed: () => Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                builder: (_) => CampusMapsPage(lessons: dailyLessons),
+              ),
+            ),
+            icon: const CampusIcon(Icons.map_outlined),
+            label: Text(tr(context, 'Карты кампусов', 'Campus maps')),
+          ),
+          const SizedBox(height: 12),
           if (groups.isEmpty)
             _EmptyPanel(
               icon: Icons.group_add_outlined,
@@ -430,7 +457,7 @@ class _SchedulePageState extends State<SchedulePage>
                   ),
                   child: Row(
                     children: [
-                      Icon(
+                      CampusIcon(
                         Icons.groups_rounded,
                         color: context.palette.blue,
                         size: 21,
@@ -444,7 +471,7 @@ class _SchedulePageState extends State<SchedulePage>
                           style: TextStyle(fontWeight: FontWeight.w700),
                         ),
                       ),
-                      Icon(
+                      CampusIcon(
                         Icons.keyboard_arrow_down_rounded,
                         color: context.palette.muted,
                       ),
@@ -460,9 +487,24 @@ class _SchedulePageState extends State<SchedulePage>
                   suppressInk: true,
                   onPressed: () =>
                       _selectDay(_day.subtract(const Duration(days: 7))),
-                  icon: Icon(Icons.chevron_left_rounded),
+                  icon: CampusIcon(Icons.chevron_left_rounded),
                   tooltip: tr(context, 'Предыдущая неделя', 'Previous week'),
                   variant: M3EIconButtonVariant.standard,
+                ),
+                M3EIconButton(
+                  icon: const CampusIcon(Icons.date_range_outlined),
+                  tooltip: tr(context, 'Выбрать дату', 'Choose date'),
+                  onPressed: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime(_day.year, _day.month, _day.day),
+                      firstDate: DateTime(today.year - 1),
+                      lastDate: DateTime(today.year + 2),
+                    );
+                    if (date != null && mounted) {
+                      _selectDay(DateTime.utc(date.year, date.month, date.day));
+                    }
+                  },
                 ),
                 Expanded(
                   child: Text(
@@ -475,7 +517,7 @@ class _SchedulePageState extends State<SchedulePage>
                   suppressInk: true,
                   onPressed: () =>
                       _selectDay(_day.add(const Duration(days: 7))),
-                  icon: Icon(Icons.chevron_right_rounded),
+                  icon: CampusIcon(Icons.chevron_right_rounded),
                   tooltip: tr(context, 'Следующая неделя', 'Next week'),
                   variant: M3EIconButtonVariant.standard,
                 ),
@@ -539,10 +581,42 @@ class _SchedulePageState extends State<SchedulePage>
               ],
             ),
             const SizedBox(height: 14),
-            if (_loading) ...[
+            if (_error != null && dailyLessons.isNotEmpty) ...[
+              Text(_error!, style: TextStyle(color: context.palette.muted)),
+              const SizedBox(height: 12),
+            ],
+            if (_sameDay(_day, today) &&
+                dailyLessons.any((lesson) => lesson.end.isAfter(now))) ...[
+              CampusPanel(
+                child: Builder(
+                  builder: (context) {
+                    final lesson = dailyLessons.firstWhere(
+                      (lesson) => lesson.end.isAfter(now),
+                    );
+                    final current = !lesson.start.isAfter(now);
+                    final minutes = (current ? lesson.end : lesson.start)
+                        .difference(now)
+                        .inMinutes;
+                    return M3EListItem(
+                      headline: lesson.subject,
+                      supportingText:
+                          '${current ? tr(context, 'Сейчас', 'Now') : tr(context, 'Следующая пара', 'Next class')} · ${_time(lesson.start)}–${_time(lesson.end)} · ${lesson.location}',
+                      trailing: Text(
+                        trf(context, '{minutes} мин', '{minutes} min', {
+                          'minutes': minutes,
+                        }),
+                      ),
+                      onTap: () => _openLesson(lesson, groupAccounts),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (_loading && dailyLessons.isEmpty) ...[
               const SizedBox(height: 25),
               const Center(child: M3EProgressIndicator.circularWavy()),
-            ] else if (_error != null) ...[
+            ] else if (_error != null && dailyLessons.isEmpty) ...[
               _EmptyPanel(
                 icon: Icons.wifi_off_rounded,
                 title: _error!,
@@ -723,11 +797,21 @@ class _LessonRow extends StatelessWidget {
               children: [
                 Text(
                   time,
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontFamily: 'GeistMono',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    height: 1.4,
+                  ),
                 ),
                 Text(
                   endTime,
-                  style: TextStyle(fontSize: 11, color: context.palette.muted),
+                  style: TextStyle(
+                    fontFamily: 'GeistMono',
+                    fontSize: 11,
+                    height: 1.4,
+                    color: context.palette.muted,
+                  ),
                 ),
               ],
             ),
@@ -738,20 +822,20 @@ class _LessonRow extends StatelessWidget {
           child: CampusPressable(
             child: Material(
               color: context.palette.surface,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(24),
               clipBehavior: Clip.antiAlias,
               child: InkWell(
                 onTap: onTap,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(24),
                 child: Ink(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(24),
                     border: Border.all(
                       color: isCurrent ? accent : context.palette.line,
                     ),
                     color: isCurrent
-                        ? context.palette.selected
+                        ? context.palette.selectionSurface
                         : context.palette.surface,
                   ),
                   child: Column(
@@ -771,7 +855,7 @@ class _LessonRow extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 4),
-                          Icon(
+                          CampusIcon(
                             Icons.chevron_right_rounded,
                             color: context.palette.muted,
                             size: 20,
@@ -808,7 +892,7 @@ class _LessonRow extends StatelessWidget {
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          Icon(
+                          CampusIcon(
                             confirmed.isEmpty
                                 ? Icons.radio_button_unchecked_rounded
                                 : Icons.check_circle_rounded,
@@ -876,7 +960,7 @@ class _EmptyPanel extends StatelessWidget {
     ),
     child: Column(
       children: [
-        Icon(icon, color: context.palette.blue, size: 30),
+        CampusIcon(icon, color: context.palette.blue, size: 30),
         const SizedBox(height: 10),
         Text(
           title,

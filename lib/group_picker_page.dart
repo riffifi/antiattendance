@@ -1,3 +1,4 @@
+import 'icons/campus_icon.dart';
 import 'campus_design.dart';
 
 import 'package:material_3_expressive/material_3_expressive.dart';
@@ -81,11 +82,11 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
                   'Например, ИНБО-10-23',
                   'For example, ИНБО-10-23',
                 ),
-                leading: const Icon(Icons.search_rounded),
+                leading: const CampusIcon(Icons.search_rounded),
                 trailing: M3EIconButton(
                   suppressInk: true,
                   onPressed: _search,
-                  icon: const Icon(Icons.arrow_forward_rounded),
+                  icon: const CampusIcon(Icons.arrow_forward_rounded),
                   variant: M3EIconButtonVariant.standard,
                 ),
                 onSubmitted: (_) => _search(),
@@ -101,7 +102,7 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
                   final group = _groups[index];
                   return CampusListItem(
                     headline: (group.name),
-                    trailing: const Icon(Icons.chevron_right_rounded),
+                    trailing: const CampusIcon(Icons.chevron_right_rounded),
                     onTap: () => Navigator.pop(context, group),
                   );
                 },

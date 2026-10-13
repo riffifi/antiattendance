@@ -1,3 +1,5 @@
+import 'icons/campus_icon.dart';
+
 import 'dart:async';
 import 'dart:io';
 
@@ -198,7 +200,7 @@ class _UpdatesPageState extends State<UpdatesPage> {
               suppressInk: true,
               onPressed: updates.checking ? null : () => updates.check(),
               tooltip: tr(context, 'Обновить', 'Refresh'),
-              icon: const Icon(Icons.refresh_rounded),
+              icon: const CampusIcon(Icons.refresh_rounded),
             ),
           ],
         ),
@@ -242,7 +244,7 @@ class _UpdatesPageState extends State<UpdatesPage> {
                                   ? () => _downloadAndInstall(release)
                                   : () => _openRelease(release.page)
                             : () => updates.check(),
-                        icon: Icon(
+                        icon: CampusIcon(
                           available
                               ? Icons.system_update_rounded
                               : Icons.refresh_rounded,
@@ -325,7 +327,7 @@ class _UpdatesPageState extends State<UpdatesPage> {
                           ),
                         )
                       else
-                        Icon(
+                        CampusIcon(
                           available
                               ? Icons.system_update_rounded
                               : updates.error != null
@@ -390,7 +392,7 @@ class _UpdatesPageState extends State<UpdatesPage> {
                   const SizedBox(height: 12),
                   CampusButton.icon(
                     onPressed: () => _openRelease(release.page),
-                    icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                    icon: const CampusIcon(Icons.open_in_new_rounded, size: 18),
                     label: Text(tr(context, 'Страница релиза', 'Release page')),
                     style: M3EButtonStyle.text,
                   ),

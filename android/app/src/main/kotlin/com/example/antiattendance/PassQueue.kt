@@ -8,16 +8,19 @@ internal object PassQueue {
     private var responded = false
     private var advanceAt = 0L
     private var intervalMillis = 60_000L
+    private var singlePass = false
     internal var elapsedTime: () -> Long = { android.os.SystemClock.elapsedRealtime() }
     internal var wallTime: () -> Long = { System.currentTimeMillis() }
     var armed = false
         private set
 
-    fun start(values: List<Pass>, intervalSeconds: Int) {
+    fun start(values: List<Pass>, intervalSeconds: Int, single: Boolean = false) {
         require(intervalSeconds in 1..300)
         require(values.isNotEmpty() && values.size <= 100)
+        require(!single || values.size == 1)
         require(values.all { it.number > 0 && it.expiresAt > wallTime() })
         passes = values.toList()
+        singlePass = single
         index = 0
         responded = false
         advanceAt = 0L
@@ -27,6 +30,7 @@ internal object PassQueue {
 
     fun stop() {
         passes = emptyList()
+        singlePass = false
         index = 0
         responded = false
         advanceAt = 0L
@@ -43,7 +47,7 @@ internal object PassQueue {
         // Pin the same pass throughout the cooldown. Pulse 2.1.0
         // responds with the identifier to all commands routed to its AID.
         responded = true
-        if (advanceAt == 0L) advanceAt = elapsedTime() + intervalMillis
+        if (!singlePass && advanceAt == 0L) advanceAt = elapsedTime() + intervalMillis
         return encode(pass.number)
     }
 
@@ -54,7 +58,7 @@ internal object PassQueue {
     }
 
     private fun advanceIfDue() {
-        if (armed && advanceAt != 0L && elapsedTime() >= advanceAt) {
+        if (!singlePass && armed && advanceAt != 0L && elapsedTime() >= advanceAt) {
             index++
             responded = false
             advanceAt = 0L
@@ -66,6 +70,8 @@ internal object PassQueue {
         advanceIfDue()
         return mapOf(
         "armed" to armed,
+        "mode" to if (singlePass) "single" else "queue",
+        "expiresAt" to passes.getOrNull(index)?.expiresAt,
         "presented" to index + if (responded) 1 else 0,
         "total" to passes.size,
         "accountId" to passes.getOrNull(index)?.accountId,

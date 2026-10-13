@@ -1,3 +1,5 @@
+import 'pulse_api.dart';
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -18,8 +20,9 @@ class SessionTransfer {
 }
 
 Future<SessionTransfer> createSessionTransfer(
-  List<SavedAccount> accounts,
-) async {
+  List<SavedAccount> accounts, {
+  Map<String, String> passNumbers = const {},
+}) async {
   if (accounts.isEmpty || accounts.length > 200) {
     throw const FormatException('No accounts selected.');
   }
@@ -34,6 +37,7 @@ Future<SessionTransfer> createSessionTransfer(
           (a) => {
             'label': a.label,
             'cookie': a.cookie,
+            if (passNumbers[a.id] != null) 'passNumber': passNumbers[a.id],
             if (a.expiresAt != null)
               'expiresAt': a.expiresAt!.toUtc().toIso8601String(),
             if (a.sessionExpired) 'sessionExpired': true,
@@ -164,7 +168,7 @@ class SessionTransferCollector {
         if (label.trim().isEmpty ||
             label.length > 60 ||
             cookie.length > 120000 ||
-            !cookie.startsWith('.AspNetCore.Cookies=')) {
+            !isValidPulseCookieHeader(cookie)) {
           throw const FormatException('Invalid transfer.');
         }
         accounts.add(
@@ -172,6 +176,7 @@ class SessionTransferCollector {
             id: '$i',
             label: label,
             cookie: cookie,
+            transferredPassNumber: transferredPassNumber(entry['passNumber']),
             expiresAt: DateTime.tryParse(entry['expiresAt'] as String? ?? ''),
             sessionExpired: entry['sessionExpired'] == true,
             groupId: entry['groupId'] is int ? entry['groupId'] as int : null,

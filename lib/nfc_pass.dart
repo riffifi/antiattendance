@@ -6,11 +6,21 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:nfc_pass_client/nfc_pass_client.dart';
 
 import 'accounts.dart';
+import 'server_sessions.dart';
+import 'session_server_sync.dart';
 
 const nfcPassChannel = MethodChannel('antiattendance/nfc_pass');
 
 NfcPassClient passClient(SavedAccount account) => NfcPassClient(
-  cookieProvider: () => account.cookie,
+  cookieProvider: () => serverAccountId(account.cookie) == null
+      ? account.cookie
+      : 'server=managed',
+  httpClient: serverAccountId(account.cookie) == null
+      ? null
+      : ServerRpcClient(
+          ServerSessions.requireClient(),
+          serverAccountId(account.cookie)!,
+        ),
   endpoints: NfcPassEndpoints(
     accessTokenUrl: Uri.https(
       'pulse.mirea.ru',
@@ -61,6 +71,12 @@ class NfcPassStore {
       sha256.convert(utf8.encode(account.cookie)).toString();
 
   Future<String?> number(SavedAccount account) async {
+    final remoteId = serverAccountId(account.cookie);
+    if (remoteId != null) {
+      await ServerSessions.initialize();
+      final server = ServerSessions.active;
+      return server?.passNumber(remoteId);
+    }
     final raw = await _storage.read(key: 'nfc_pass_${account.id}');
     if (raw == null) return null;
     final record = jsonDecode(raw) as Map<String, dynamic>;
@@ -70,15 +86,22 @@ class NfcPassStore {
     return value != null && value > 0 ? number : null;
   }
 
-  Future<void> save(SavedAccount account, int number) {
+  Future<void> save(SavedAccount account, int number) async {
     if (number <= 0) throw ArgumentError.value(number);
-    return _storage.write(
+    final remoteId = serverAccountId(account.cookie);
+    if (remoteId != null) {
+      await SessionAutoSync.passChanged(account, number.toString());
+      await SessionAutoSync.sync();
+      return;
+    }
+    await _storage.write(
       key: 'nfc_pass_${account.id}',
       value: jsonEncode({
         'number': number.toString(),
         'session': _fingerprint(account),
       }),
     );
+    await SessionAutoSync.passChanged(account, number.toString());
   }
 
   Future<void> remove(String accountId) =>
@@ -93,12 +116,29 @@ class NfcPassStore {
     int seconds,
     String? ownAccountId, [
     Iterable<String>? selectedIds,
+    bool single = false,
+    String? singleAccountId,
   ]) => _storage.write(
     key: 'nfc_queue_settings',
     value: jsonEncode({
       'seconds': seconds,
       'ownAccountId': ownAccountId,
       if (selectedIds != null) 'selectedIds': selectedIds.toList(),
+      if (single || singleAccountId != null)
+        'mode': single ? 'single' : 'queue',
+      'singleAccountId': ?singleAccountId,
     }),
   );
+}
+
+Future<Map<String, String>> transferPassNumbers(
+  List<SavedAccount> accounts,
+) async {
+  final store = NfcPassStore();
+  final result = <String, String>{};
+  for (final account in accounts) {
+    final number = await store.number(account);
+    if (number != null) result[account.id] = number;
+  }
+  return result;
 }

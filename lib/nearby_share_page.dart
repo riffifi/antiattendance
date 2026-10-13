@@ -1,3 +1,4 @@
+import 'icons/campus_icon.dart';
 import 'campus_design.dart';
 
 import 'package:material_3_expressive/material_3_expressive.dart';
@@ -9,6 +10,7 @@ import 'package:bonsoir/bonsoir.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'accounts.dart';
+import 'nfc_pass.dart';
 import 'l10n.dart';
 import 'nearby_transfer.dart';
 
@@ -109,7 +111,11 @@ class _NearbySharePageState extends State<NearbySharePage> {
       targets.map((entry) async {
         var success = false;
         try {
-          await sendNearby(entry.value.service, widget.accounts);
+          await sendNearby(
+            entry.value.service,
+            widget.accounts,
+            passNumbers: await transferPassNumbers(widget.accounts),
+          );
           success = true;
         } catch (_) {
           // Show a per-receiver failure so the user can retry.
@@ -176,7 +182,7 @@ class _NearbySharePageState extends State<NearbySharePage> {
             else if (_peers.isEmpty)
               CampusListItem(
                 leading: _ready
-                    ? const Icon(Icons.wifi_find_rounded)
+                    ? const CampusIcon(Icons.wifi_find_rounded)
                     : const M3EProgressIndicator.circularWavy(),
                 headline: (tr(
                   context,

@@ -1,0 +1,302 @@
+{
+  "schema_version": 2,
+  "source_label": "Пульс РТУ МИРЭА",
+  "campuses": [
+    {
+      "id": "v-78",
+      "source_campus_id": "019f9340-d2cc-7c8a-8472-2cbcc2dd3de3",
+      "source_url": "https://pulse.mirea.ru/services/maps?campus=019f9340-d2cc-7c8a-8472-2cbcc2dd3de3",
+      "capture_method": "authenticated_GetCampus_response",
+      "floor_count": 5,
+      "room_shape_count": 1148,
+      "captured_at": "2026-09-12T09:26:32.038Z",
+      "asset": "campus_v-78.json",
+      "sha256": "96184160004667afad4cf9d393978d8751ddc912602ab8a847d45241c262ca0d",
+      "location_source": {
+        "type": "existing_application_catalog",
+        "path": "packages/rtu_mirea_schedule_api_client/lib/src/campuses.dart",
+        "sha256": "7875ca7e2edeec53572d463ee53272b8f2ae3a4d85c42f35478e14a643305f65",
+        "short_name": "В-78"
+      },
+      "floors": [
+        {
+          "id": "v-78-floor0",
+          "level": 0,
+          "source_svg_sha256": "76d43a3c1f87b1cc95c4082f2b08ae664b04f41171c0e9936597e6f013e6529f",
+          "captured_at": "2026-09-12T09:26:32.038Z",
+          "source_svg_method": "native_plan_svg"
+        },
+        {
+          "id": "v-78-floor1",
+          "level": 1,
+          "source_svg_sha256": "41108afc5f0cdcaffb77307a42a969be411e04204ea2fee87d449b179858fa4b",
+          "captured_at": "2026-09-12T09:26:32.038Z",
+          "source_svg_method": "native_plan_svg"
+        },
+        {
+          "id": "v-78-floor2",
+          "level": 2,
+          "source_svg_sha256": "81c92313986acba980804db3d51b8c15aa212d6b59059b283a071470fcb40f18",
+          "captured_at": "2026-09-12T09:26:32.038Z",
+          "source_svg_method": "native_plan_svg"
+        },
+        {
+          "id": "v-78-floor3",
+          "level": 3,
+          "source_svg_sha256": "a5a88eb21c2c6b390fe92c06a9c50a9e82f0608677e379267e3fef431525e7aa",
+          "captured_at": "2026-09-12T09:26:32.038Z",
+          "source_svg_method": "native_plan_svg"
+        },
+        {
+          "id": "v-78-floor4",
+          "level": 4,
+          "source_svg_sha256": "4ea73a668011f561b10e217352716dcf223defe5e75223fccda0c821108b63b6",
+          "captured_at": "2026-09-12T09:26:32.038Z",
+          "source_svg_method": "native_plan_svg"
+        }
+      ],
+      "source_plan_sha256": "a3b57e777960a0d2fe2c8fdf01cb68466a17d24b31aa1207db9a842ff839d7d7",
+      "graph_import_stats": {
+        "source_skeleton_edges": 11344,
+        "rejected_source_edges": 52,
+        "doors": 1372,
+        "blocked_boundaries_excluded": 2192,
+        "closed_doors_excluded": 6,
+        "floor_transitions": 47,
+        "nodes": 16237,
+        "edges": 41218,
+        "components": 530,
+        "largest_component_nodes": 13217,
+        "named_room_anchors": 1148,
+        "isolated_named_rooms": 0
+      },
+      "georeference": {
+        "status": "approximate",
+        "checked_at": "2026-09-07",
+        "evidence": "mirea-pulse/tools/map/source/georeference_registration.json"
+      },
+      "source_refresh_evidence": "mirea-pulse/tools/map/source/refresh_20260912.json",
+      "upstream_sha256": "6279e0c77ad3e70274aadc6622c64c17282a3e90e4cc5858c19975125c4f632b",
+      "graph_asset": "graph_v-78.json.gz",
+      "graph_sha256": "18c68dedf0792244e64c264369ef8afd0e3478e0419232a3555151193047b01a"
+    },
+    {
+      "id": "v-86",
+      "source_campus_id": "01a023a4-e394-7f10-a979-16f396473e1e",
+      "source_url": "https://pulse.mirea.ru/services/maps?campus=01a023a4-e394-7f10-a979-16f396473e1e",
+      "capture_method": "authenticated_GetCampus_response",
+      "floor_count": 8,
+      "room_shape_count": 587,
+      "captured_at": "2026-09-12T09:28:14.191Z",
+      "asset": "campus_v-86.json",
+      "sha256": "f28b0b1a3366c65f819895d85d599c59c8fe728f6d1381523eb9ab2f1ebc4850",
+      "location_source": {
+        "type": "existing_application_catalog",
+        "path": "packages/rtu_mirea_schedule_api_client/lib/src/campuses.dart",
+        "sha256": "7875ca7e2edeec53572d463ee53272b8f2ae3a4d85c42f35478e14a643305f65",
+        "short_name": "В-86"
+      },
+      "floors": [
+        {
+          "id": "v-86-floor0",
+          "level": 0,
+          "source_svg_sha256": "bb68a3e366d61c9ebf76be28a9f1609cf7be2a3805df9930132ee9435d21eb65",
+          "captured_at": "2026-09-06T13:29:02.384Z"
+        },
+        {
+          "id": "v-86-floor1",
+          "level": 1,
+          "source_svg_sha256": "14a79cdd5019b2904f5802e6ddfc9e2d745f925b40534659e239680f4106fac2",
+          "captured_at": "2026-09-06T13:28:52.413Z"
+        },
+        {
+          "id": "v-86-floor2",
+          "level": 2,
+          "source_svg_sha256": "1cdefb17b5b526db4486e114c71781db7f185f9c4bcca2297acbfbc3ec7993fe",
+          "captured_at": "2026-09-06T13:29:03.105Z"
+        },
+        {
+          "id": "v-86-floor3",
+          "level": 3,
+          "source_svg_sha256": "0cb54a13e9b016292fc46473fdb6954fab10cc936b58e6a318cbceeccdb56d57",
+          "captured_at": "2026-09-06T13:29:22.796Z"
+        },
+        {
+          "id": "v-86-floor4",
+          "level": 4,
+          "source_svg_sha256": "35980fe3a19439ca10a4cb0722d10a8832812fe8458c074287a754c5503b92e5",
+          "captured_at": "2026-09-06T13:29:26.884Z"
+        },
+        {
+          "id": "v-86-floor5",
+          "level": 5,
+          "source_svg_sha256": "777fdd576ce2e1c0b6c0227508bc5a68515cc37596d19617ede80586f6c71dd5",
+          "captured_at": "2026-09-06T13:29:28.484Z"
+        },
+        {
+          "id": "v-86-floor6",
+          "level": 6,
+          "source_svg_sha256": "ddec0e6f118672259658dab5d42378d30fe4b4a7293db5730a15421a7195cd7c",
+          "captured_at": "2026-09-06T13:29:47.801Z"
+        },
+        {
+          "id": "v-86-floor7",
+          "level": 7,
+          "source_svg_sha256": "bfe3503760c8b668bcdf491ed085e31b3d9b738bb6f5d9e0f7251cc83b318af2",
+          "captured_at": "2026-09-06T13:29:48.463Z"
+        }
+      ],
+      "source_plan_sha256": "34e8c0d8e03ccacc9930799d501ea7e625f18789726ada47b6d43fe14f63fd3c",
+      "graph_import_stats": {
+        "source_skeleton_edges": 2291,
+        "doors": 813,
+        "blocked_boundaries_excluded": 1449,
+        "rejected_source_edges": 3,
+        "unattached_points": 2,
+        "floor_transitions": 31,
+        "nodes": 6205,
+        "edges": 14933,
+        "components": 318,
+        "largest_component_nodes": 4810,
+        "named_room_anchors": 587,
+        "isolated_named_rooms": 1
+      },
+      "georeference": {
+        "status": "approximate",
+        "checked_at": "2026-09-07",
+        "evidence": "mirea-pulse/tools/map/source/georeference_registration.json"
+      },
+      "upstream_sha256": "1a0994f7b2137f2478e0e544ade8f604476bb8ad1872f17ef55cfb017978f9f5",
+      "graph_asset": "graph_v-86.json.gz",
+      "graph_sha256": "ffbe37804ac80919086a021a099d25765a64c6035a6c9100c457a326f6c3ff00"
+    },
+    {
+      "id": "s-20",
+      "source_campus_id": "01a038f2-df0e-7324-9c5a-73b1766851af",
+      "source_url": "https://pulse.mirea.ru/services/maps?campus=01a038f2-df0e-7324-9c5a-73b1766851af",
+      "capture_method": "authenticated_GetCampus_response",
+      "floor_count": 4,
+      "room_shape_count": 436,
+      "captured_at": "2026-09-12T09:42:36.820Z",
+      "asset": "campus_s-20.json",
+      "sha256": "e170b2e85f61a8422a6619eb73465048b7e132edc09cbafb21f3141e095e30be",
+      "location_source": {
+        "type": "existing_application_catalog",
+        "path": "packages/rtu_mirea_schedule_api_client/lib/src/campuses.dart",
+        "sha256": "7875ca7e2edeec53572d463ee53272b8f2ae3a4d85c42f35478e14a643305f65",
+        "short_name": "С-20"
+      },
+      "floors": [
+        {
+          "id": "s-20-floor1",
+          "level": 1,
+          "source_svg_sha256": "1955a82fa6406590a96b8881879a262eac846716061eb4b33d9d58491eb6bfdd",
+          "captured_at": "2026-09-06T13:31:34.321Z"
+        },
+        {
+          "id": "s-20-floor2",
+          "level": 2,
+          "source_svg_sha256": "d585b53927337effa580d6379152d3fdbb19f60da8490cda6070bf8ff656aee5",
+          "captured_at": "2026-09-06T13:31:36.932Z"
+        },
+        {
+          "id": "s-20-floor3",
+          "level": 3,
+          "source_svg_sha256": "67f86becb69ca39413b14c5f60f04c4834eaa9eeda4919f4c8daf13779f89a28",
+          "captured_at": "2026-09-06T13:31:41.154Z"
+        },
+        {
+          "id": "s-20-floor4",
+          "level": 4,
+          "source_svg_sha256": "de9aedee9ba36f01b18a6a344d9f1ac3407b65971b28b310954884037b4a9317",
+          "captured_at": "2026-09-06T13:31:43.051Z"
+        }
+      ],
+      "source_plan_sha256": "c0acb36cb8dbfc4c441f62391f7a82382191a631a0144645f4d9cf4cd7d99a36",
+      "graph_import_stats": {
+        "source_skeleton_edges": 904,
+        "doors": 388,
+        "blocked_boundaries_excluded": 832,
+        "floor_transitions": 8,
+        "nodes": 2874,
+        "edges": 8450,
+        "components": 190,
+        "largest_component_nodes": 2043,
+        "named_room_anchors": 436,
+        "isolated_named_rooms": 0
+      },
+      "georeference": {
+        "status": "approximate",
+        "checked_at": "2026-09-07",
+        "evidence": "mirea-pulse/tools/map/source/georeference_registration.json"
+      },
+      "upstream_sha256": "d882f55311334cccdd055016b7f27d0eca2849b51360126cb279e595aa728f06",
+      "graph_asset": "graph_s-20.json.gz",
+      "graph_sha256": "573b778e23cf96cff7c59496fa65ccec67641f3324a377ef2e2fe786603acd5d"
+    },
+    {
+      "id": "mp-1",
+      "source_url": "https://github.com/0niel/university-app/tree/master/packages/app_ui/assets/maps/mp-1",
+      "source_label": "Планы University App · МП-1",
+      "capture_method": "existing_repository_svg_assets",
+      "floor_count": 6,
+      "room_shape_count": 488,
+      "asset": "campus_mp-1.json",
+      "sha256": "c4ce8a6702418bbabd2e02de761f511ca171fd3b0ba428bf1c14f150c70d1fd5",
+      "graph_nodes": 0,
+      "graph_edges": 0,
+      "floors": [
+        {
+          "id": "mp-1-floor0",
+          "level": -1,
+          "source_asset": "packages/app_ui/assets/maps/mp-1/-1.svg",
+          "source_sha256": "707bcb9d67fcacd75cf76dd3d6e6636e40b7e31301c8bf80ceab58c4d7a178fe"
+        },
+        {
+          "id": "mp-1-floor1",
+          "level": 1,
+          "source_asset": "packages/app_ui/assets/maps/mp-1/1.svg",
+          "source_sha256": "05377954ff63eff2c1b73a4fd8c55ee30a81583e49db1430d8fa7195000e7b4b"
+        },
+        {
+          "id": "mp-1-floor2",
+          "level": 2,
+          "source_asset": "packages/app_ui/assets/maps/mp-1/2.svg",
+          "source_sha256": "44261caffb1825f7ff7506fe4bb8bb1bdf7112e135f8575953e25c967d2b14b0"
+        },
+        {
+          "id": "mp-1-floor3",
+          "level": 3,
+          "source_asset": "packages/app_ui/assets/maps/mp-1/3.svg",
+          "source_sha256": "58680538d9e56c5b29ea1ff5e1f53dc0ae3e8dd6ea15d5b3e08268c63bb8e1a5"
+        },
+        {
+          "id": "mp-1-floor4",
+          "level": 4,
+          "source_asset": "packages/app_ui/assets/maps/mp-1/4.svg",
+          "source_sha256": "9ba0a1ae1b66502262ee691a48499cc1d365969d6d4004f7d683161d02ebe46e"
+        },
+        {
+          "id": "mp-1-floor5",
+          "level": 5,
+          "source_asset": "packages/app_ui/assets/maps/mp-1/5.svg",
+          "source_sha256": "42572b8f99f995c9c8faf99c18a741ec81d55129f2d7a1b305dae49eca975cc9"
+        }
+      ],
+      "location_source": {
+        "type": "existing_application_catalog",
+        "path": "packages/rtu_mirea_schedule_api_client/lib/src/campuses.dart",
+        "sha256": "7875ca7e2edeec53572d463ee53272b8f2ae3a4d85c42f35478e14a643305f65",
+        "short_name": "МП-1"
+      },
+      "georeference": {
+        "status": "approximate",
+        "checked_at": "2026-09-07",
+        "evidence": "mirea-pulse/tools/map/source/georeference_registration.json"
+      },
+      "graph_asset": "graph_mp-1.json.gz",
+      "graph_sha256": "7d35e5014043dcfda2c3f195a4a52e4465b19574cd308644599458ebea331042"
+    }
+  ],
+  "distribution_note": "Floor plans and room metadata retained; routing graphs distributed separately as gzip-compressed JSON."
+}

@@ -1,6 +1,458 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  "Pulse is open, but the session is not confirmed yet. Retry the check; the saved account has not been replaced.":
+      (
+        "Pulse est ouvert, mais la session n’est pas encore confirmée. Réessayez ; le compte enregistré reste inchangé.",
+        "O Pulse está aberto, mas a sessão ainda não foi confirmada. Repita a verificação; a conta guardada não foi substituída.",
+        "Pulse 已打开，但会话尚未确认。请重新检查；已保存的账号未被替换。",
+      ),
+  "Waiting for Pulse session cookies. If you have signed in, retry the check.":
+      (
+        "En attente des cookies de session Pulse. Si vous êtes connecté, relancez la vérification.",
+        "A aguardar os cookies de sessão do Pulse. Se já iniciou sessão, repita a verificação.",
+        "正在等待 Pulse 会话 Cookie。如果已登录，请重新检查。",
+      ),
+  "Sign-in check": (
+    "Vérification de connexion",
+    "Verificação de início de sessão",
+    "登录检查",
+  ),
+  "Only cookie names are shown. Session values are hidden.": (
+    "Seuls les noms des cookies sont affichés. Leurs valeurs restent masquées.",
+    "Só são apresentados os nomes dos cookies. Os valores da sessão estão ocultos.",
+    "仅显示 Cookie 名称，会话值已隐藏。",
+  ),
+  "1. Enroll a pass": (
+    "1. Ajouter un pass",
+    "1. Registar um passe",
+    "1. 注册通行证",
+  ),
+  "The owner confirms enrollment with their verification code. Use bulk enrollment when several passes need renewing.":
+      (
+        "Le titulaire confirme avec son code de vérification. Utilisez l’ajout groupé pour renouveler plusieurs pass.",
+        "O titular confirma com o código de verificação. Use o registo em lote para renovar vários passes.",
+        "持有人使用验证码确认注册。多个通行证需要更新时，可使用批量注册。",
+      ),
+  "2. Choose a mode": ("2. Choisir un mode", "2. Escolher um modo", "2. 选择模式"),
+  "Single pass: select the owner and activate it. Queue: select people, a delay and your own account, then start the queue.":
+      (
+        "Pass unique : choisissez le titulaire et activez le pass. File : choisissez les personnes, le délai et votre compte, puis démarrez la file.",
+        "Passe único: escolha o titular e ative o passe. Fila: escolha as pessoas, o intervalo e a sua conta, depois inicie a fila.",
+        "单个通行证：选择持有人并激活。队列：选择人员、间隔和自己的账号，然后启动队列。",
+      ),
+  "3. Tap at the gate": (
+    "3. Approcher du portique",
+    "3. Aproximar da catraca",
+    "3. 靠近闸机",
+  ),
+  "Enable NFC and keep the phone unlocked on this tab. Check the gate result: presenting a pass does not confirm admission.":
+      (
+        "Activez le NFC et gardez le téléphone déverrouillé sur cet onglet. Vérifiez le portique : présenter le pass ne garantit pas l’accès.",
+        "Ative o NFC e mantenha o telemóvel desbloqueado neste separador. Verifique a catraca: apresentar o passe não confirma a entrada.",
+        "启用 NFC，并在此页面保持手机解锁。请查看闸机结果：出示通行证并不代表已成功通过。",
+      ),
+  "A single pass stays selected after a tap. The queue advances after a response and the chosen delay; you may need to lift and tap again.":
+      (
+        "Le pass unique reste sélectionné après présentation. La file avance après une réponse et le délai choisi ; éloignez puis rapprochez le téléphone si nécessaire.",
+        "O passe único mantém-se selecionado após a leitura. A fila avança após uma resposta e o intervalo escolhido; poderá ter de afastar e aproximar novamente o telemóvel.",
+        "单个通行证在感应后保持选中。队列收到响应并等待设定间隔后继续；可能需要移开手机后再次感应。",
+      ),
+  "Queue": ("File", "Fila", "队列"),
+  "Single pass": ("Pass unique", "Passe único", "单个通行证"),
+  "Pass is active": ("Pass actif", "Passe ativo", "通行证已激活"),
+  "Choose a pass": ("Choisir un pass", "Escolher um passe", "选择通行证"),
+  "This pass stays active until stopped or its token expires.": (
+    "Ce pass reste actif jusqu’à son arrêt ou à l’expiration de son jeton.",
+    "Este passe permanece ativo até ser desativado ou o token expirar.",
+    "此通行证保持激活，直到停用或令牌过期。",
+  ),
+  "Choose one pass below and activate it.": (
+    "Choisissez un pass ci-dessous et activez-le.",
+    "Escolha um passe abaixo e ative-o.",
+    "请在下方选择一个通行证并激活。",
+  ),
+  "Deactivate pass": ("Désactiver le pass", "Desativar passe", "停用通行证"),
+  "Activate pass": ("Activer le pass", "Ativar passe", "激活通行证"),
+  "Keep this tab open while the pass is active.": (
+    "Gardez cet onglet ouvert lorsque le pass est actif.",
+    "Mantenha este separador aberto enquanto o passe estiver ativo.",
+    "通行证激活期间请保持此页面打开。",
+  ),
+  "QR expired or sign-in was rejected. Refresh this login.": (
+    "Le QR a expiré ou la connexion a été refusée. Relancez cette connexion.",
+    "O QR expirou ou o início de sessão foi recusado. Atualize esta ligação.",
+    "二维码已过期或登录被拒绝。请刷新此次登录。",
+  ),
+  "Could not save: this account already exists or storage is unavailable.": (
+    "Enregistrement impossible : ce compte existe déjà ou le stockage est indisponible.",
+    "Não foi possível guardar: a conta já existe ou o armazenamento está indisponível.",
+    "无法保存：此账号已存在或存储不可用。",
+  ),
+  "Could not refresh sign-in.": (
+    "Impossible de relancer la connexion.",
+    "Não foi possível atualizar o início de sessão.",
+    "无法刷新登录。",
+  ),
+  "Account saved": ("Compte enregistré", "Conta guardada", "账号已保存"),
+  "Saving…": ("Enregistrement…", "A guardar…", "正在保存…"),
+  "Approved · open and tap Continue": (
+    "Approuvé · ouvrez et touchez Continuer",
+    "Aprovado · abra e toque em Continuar",
+    "已批准 · 打开并点击继续",
+  ),
+  "Waiting for scan": ("En attente du scan", "A aguardar leitura", "等待扫描"),
+  "Preparing QR…": ("Préparation du QR…", "A preparar QR…", "正在准备二维码…"),
+  "Finish adding accounts?": (
+    "Terminer l’ajout des comptes ?",
+    "Terminar a adição de contas?",
+    "结束添加账号？",
+  ),
+  "Saved accounts will remain. Unfinished sign-ins will be closed.": (
+    "Les comptes enregistrés seront conservés. Les connexions inachevées seront fermées.",
+    "As contas guardadas serão mantidas. Os inícios de sessão pendentes serão fechados.",
+    "已保存的账号将保留，未完成的登录将关闭。",
+  ),
+  "Stay": ("Rester", "Ficar", "留在此处"),
+  "Finish": ("Terminer", "Terminar", "结束"),
+  "Add a group": ("Ajouter un groupe", "Adicionar um grupo", "添加一组账号"),
+  "Overview": ("Vue d’ensemble", "Visão geral", "概览"),
+  "Done": ("Terminé", "Concluído", "完成"),
+  "Sign-in page unavailable. Retry.": (
+    "Page de connexion indisponible. Réessayez.",
+    "Página de início de sessão indisponível. Tente novamente.",
+    "登录页面不可用，请重试。",
+  ),
+  "Approve on the owner’s phone. Then tap Continue on the MIREA page.": (
+    "Approuvez sur le téléphone du titulaire, puis touchez Continuer sur la page MIREA.",
+    "Aprove no telemóvel do titular. Depois toque em Continuar na página da MIREA.",
+    "请在持有人的手机上批准，然后在 MIREA 页面点击继续。",
+  ),
+  "Open sign-in page": (
+    "Ouvrir la page de connexion",
+    "Abrir página de início de sessão",
+    "打开登录页面",
+  ),
+  "Back to overview": (
+    "Retour à la vue d’ensemble",
+    "Voltar à visão geral",
+    "返回概览",
+  ),
+  "Add accounts": ("Ajouter des comptes", "Adicionar contas", "添加账号"),
+  "Single user": ("Une personne", "Um utilizador", "单个用户"),
+  "Multiple users": ("Plusieurs personnes", "Vários utilizadores", "多个用户"),
+  "Up to 10 QR codes at once": (
+    "Jusqu’à 10 QR codes à la fois",
+    "Até 10 códigos QR de cada vez",
+    "一次最多 10 个二维码",
+  ),
+  "Batch sign-in needs Android with an updated System WebView. Use single sign-in on this device.":
+      (
+        "La connexion groupée nécessite Android et un System WebView à jour. Utilisez la connexion individuelle sur cet appareil.",
+        "O início de sessão em lote requer Android com o System WebView atualizado. Use o início de sessão individual neste dispositivo.",
+        "批量登录需要 Android 和最新的 System WebView。请在此设备上使用单个登录。",
+      ),
+  "How many users?": (
+    "Combien de personnes ?",
+    "Quantos utilizadores?",
+    "多少个用户？",
+  ),
+  'Original logo': ('Ancien logo', 'Logótipo original', '原版标志'),
+  'Drag to rotate': (
+    'Faites glisser pour tourner',
+    'Arraste para rodar',
+    '拖动旋转',
+  ),
+  'Drag to rotate. Tap to flip.': (
+    'Faites glisser pour tourner. Touchez pour retourner.',
+    'Arraste para rodar. Toque para virar.',
+    '拖动旋转，点击翻面。',
+  ),
+  "Check the HTTP(S) address without a path and update the server to the latest version.":
+      (
+        "Vérifiez l’adresse HTTP(S) sans chemin et mettez le serveur à jour.",
+        "Verifique o endereço HTTP(S) sem caminho e atualize o servidor.",
+        "请检查不含路径的 HTTP(S) 地址，并将服务器更新到最新版本。",
+      ),
+  "Could not connect. Check the address and server availability.": (
+    "Connexion impossible. Vérifiez l’adresse et la disponibilité du serveur.",
+    "Não foi possível ligar. Verifique o endereço e a disponibilidade do servidor.",
+    "无法连接。请检查地址和服务器是否可用。",
+  ),
+  "Synchronizing…": ("Synchronisation…", "A sincronizar…", "正在同步…"),
+  "Will retry automatically when the connection is restored.": (
+    "Nouvel essai automatique au rétablissement de la connexion.",
+    "Nova tentativa automática quando a ligação for restabelecida.",
+    "连接恢复后将自动重试。",
+  ),
+  "Automatic synchronization is on": (
+    "Synchronisation automatique activée",
+    "Sincronização automática ativada",
+    "自动同步已开启",
+  ),
+  "Waiting to upload: {count}": (
+    "En attente d’envoi : {count}",
+    "À espera de envio: {count}",
+    "待上传：{count}",
+  ),
+  "Last synchronized: {time}": (
+    "Dernière synchronisation : {time}",
+    "Última sincronização: {time}",
+    "上次同步：{time}",
+  ),
+  "Enter the same address on every phone. Sessions and passes upload automatically, and updates arrive from the server.":
+      (
+        "Saisissez la même adresse sur chaque téléphone. Les sessions et passes sont envoyés automatiquement et les mises à jour arrivent du serveur.",
+        "Introduza o mesmo endereço em todos os telemóveis. As sessões e os passes são enviados automaticamente e as atualizações chegam do servidor.",
+        "请在所有手机上输入相同地址。会话和通行证将自动上传，并从服务器获取更新。",
+      ),
+  "Every phone that can reach this address shares the accounts. Use a trusted network or VPN to restrict access.":
+      (
+        "Tous les téléphones pouvant accéder à cette adresse partagent les comptes. Utilisez un réseau de confiance ou un VPN pour limiter l’accès.",
+        "Todos os telemóveis com acesso a este endereço partilham as contas. Utilize uma rede de confiança ou VPN para restringir o acesso.",
+        "所有能访问此地址的手机都共享这些账号。请使用可信网络或 VPN 限制访问。",
+      ),
+  "Sync now": ("Synchroniser maintenant", "Sincronizar agora", "立即同步"),
+  "Server address and automatic synchronization": (
+    "Adresse du serveur et synchronisation automatique",
+    "Endereço do servidor e sincronização automática",
+    "服务器地址和自动同步",
+  ),
+
+  "Manage shared accounts in the server panel.": (
+    "Gérez les comptes partagés dans le panneau du serveur.",
+    "Gira as contas partilhadas no painel do servidor.",
+    "请在服务器面板中管理共享账号。",
+  ),
+
+  "Could not read connection settings.": (
+    "Impossible de lire les paramètres de connexion.",
+    "Não foi possível ler as definições de ligação.",
+    "无法读取连接设置。",
+  ),
+  "Server connected.": ("Serveur connecté.", "Servidor ligado.", "服务器已连接。"),
+  "The device key is invalid or revoked.": (
+    "La clé de cet appareil est invalide ou révoquée.",
+    "A chave do dispositivo é inválida ou foi revogada.",
+    "设备密钥无效或已被撤销。",
+  ),
+  "Enter an http:// or https:// address without a path, and a device key from the panel.":
+      (
+        "Saisissez une adresse http:// ou https:// sans chemin et une clé créée dans le panneau.",
+        "Introduza um endereço http:// ou https:// sem caminho e uma chave criada no painel.",
+        "请输入不含路径的 http:// 或 https:// 地址，以及在面板中创建的设备密钥。",
+      ),
+  "Could not connect. Check the address, key and server availability.": (
+    "Connexion impossible. Vérifiez l’adresse, la clé et la disponibilité du serveur.",
+    "Não foi possível ligar. Verifique o endereço, a chave e a disponibilidade do servidor.",
+    "无法连接。请检查地址、密钥和服务器是否可用。",
+  ),
+  "Could not remove connection settings.": (
+    "Impossible de supprimer les paramètres de connexion.",
+    "Não foi possível remover as definições de ligação.",
+    "无法删除连接设置。",
+  ),
+  "Synchronized: {count}": (
+    "Synchronisés : {count}",
+    "Sincronizados: {count}",
+    "已同步：{count}",
+  ),
+  "Some accounts were not uploaded. Check their sessions and retry.": (
+    "Certains comptes n’ont pas été envoyés. Vérifiez leurs sessions et réessayez.",
+    "Algumas contas não foram enviadas. Verifique as sessões e tente novamente.",
+    "部分账号未上传。请检查其会话后重试。",
+  ),
+  "Session server": ("Serveur de sessions", "Servidor de sessões", "会话服务器"),
+  "Connect your shared server": (
+    "Connectez votre serveur partagé",
+    "Ligue o seu servidor partilhado",
+    "连接共享服务器",
+  ),
+  "Server configured": ("Serveur configuré", "Servidor configurado", "服务器已配置"),
+  "Create a separate key for this phone in the server panel. Its permissions determine which accounts and passes are available.":
+      (
+        "Créez une clé distincte pour ce téléphone dans le panneau du serveur. Ses autorisations déterminent les comptes et passes disponibles.",
+        "Crie uma chave própria para este telemóvel no painel do servidor. As permissões determinam as contas e os passes disponíveis.",
+        "请在服务器面板中为此手机创建独立密钥。密钥权限决定可用的账号和通行证。",
+      ),
+  "Accounts: {count}": ("Comptes : {count}", "Contas: {count}", "账号：{count}"),
+  "Can publish updates": (
+    "Peut publier des mises à jour",
+    "Pode publicar atualizações",
+    "可发布更新",
+  ),
+  "Read and use": ("Consulter et utiliser", "Consultar e utilizar", "读取和使用"),
+  "Server address": ("Adresse du serveur", "Endereço do servidor", "服务器地址"),
+  "Device key": ("Clé de l’appareil", "Chave do dispositivo", "设备密钥"),
+  "HTTP is supported. Use it on a trusted network or VPN; prefer HTTPS for public access.":
+      (
+        "HTTP est pris en charge. Utilisez un réseau de confiance ou un VPN ; préférez HTTPS pour un accès public.",
+        "HTTP é suportado. Utilize uma rede de confiança ou VPN; prefira HTTPS para acesso público.",
+        "支持 HTTP。请在可信网络或 VPN 中使用；公网访问建议使用 HTTPS。",
+      ),
+  "Test and connect": ("Tester et connecter", "Testar e ligar", "测试并连接"),
+  "Upload local accounts and passes": (
+    "Envoyer les comptes et passes locaux",
+    "Enviar contas e passes locais",
+    "上传本地账号和通行证",
+  ),
+  "Could not open the panel.": (
+    "Impossible d’ouvrir le panneau.",
+    "Não foi possível abrir o painel.",
+    "无法打开面板。",
+  ),
+  "Open server panel": (
+    "Ouvrir le panneau du serveur",
+    "Abrir o painel do servidor",
+    "打开服务器面板",
+  ),
+  "Disconnect server": (
+    "Déconnecter le serveur",
+    "Desligar o servidor",
+    "断开服务器",
+  ),
+  "Address, device key and synchronization": (
+    "Adresse, clé de l’appareil et synchronisation",
+    "Endereço, chave do dispositivo e sincronização",
+    "地址、设备密钥和同步",
+  ),
+
+  "Floor {floor}": ("Étage {floor}", "Piso {floor}", "{floor} 层"),
+  "Place list": ("Liste des lieux", "Lista de locais", "地点列表"),
+  "Nearby places use approximate location. Confirm where you are.": (
+    "Les lieux proches utilisent une position approximative. Confirmez où vous êtes.",
+    "Os locais próximos usam uma localização aproximada. Confirme onde está.",
+    "附近地点根据大致位置排序。请确认您所在的位置。",
+  ),
+  "Room": ("Salle", "Sala", "教室"),
+  "Route steps": ("Étapes de l’itinéraire", "Etapas do percurso", "路线步骤"),
+  "No route found in the saved plan. Choose another start or allow stairs.": (
+    "Aucun itinéraire sur le plan enregistré. Choisissez un autre départ ou autorisez les escaliers.",
+    "Não foi encontrado um percurso na planta guardada. Escolha outra partida ou permita escadas.",
+    "已保存的地图中未找到路线。请更换起点或允许使用楼梯。",
+  ),
+  "Avoid stairs": ("Éviter les escaliers", "Evitar escadas", "避开楼梯"),
+  "Start here": ("Partir d’ici", "Partir daqui", "从这里出发"),
+  "Directions": ("Itinéraire", "Percurso", "路线"),
+  "Save place": ("Enregistrer le lieu", "Guardar local", "收藏地点"),
+  "Clear route": ("Effacer l’itinéraire", "Limpar percurso", "清除路线"),
+  "From": ("Départ", "Partida", "起点"),
+  "No places found.": (
+    "Aucun lieu trouvé.",
+    "Nenhum local encontrado.",
+    "未找到地点。",
+  ),
+  "Approx. ±{meters} m · floor selected manually": (
+    "Env. ±{meters} m · étage choisi manuellement",
+    "Aprox. ±{meters} m · piso selecionado manualmente",
+    "约 ±{meters} 米 · 楼层为手动选择",
+  ),
+  "Saved places": ("Lieux enregistrés", "Locais guardados", "收藏地点"),
+  "Medical": ("Infirmerie", "Posto médico", "医务室"),
+  "Cloakroom": ("Vestiaire", "Vestiário", "衣帽间"),
+  "Entrances": ("Entrées", "Entradas", "入口"),
+  "Food": ("Restauration", "Comida", "餐饮"),
+  "Toilets": ("Toilettes", "Casas de banho", "卫生间"),
+  "All places": ("Tous les lieux", "Todos os locais", "所有地点"),
+  "Open in Pulse": ("Ouvrir dans Pulse", "Abrir no Pulse", "在 Pulse 中打开"),
+  "Directions to campus": (
+    "Itinéraire vers le campus",
+    "Percurso até ao campus",
+    "前往校园",
+  ),
+  "My location": ("Ma position", "A minha localização", "我的位置"),
+  "Continue straight": ("Continuez tout droit", "Continue em frente", "继续直行"),
+  "Change floor": ("Changez d’étage", "Mude de piso", "更换楼层"),
+  "Take the escalator": (
+    "Prenez l’escalier mécanique",
+    "Use a escada rolante",
+    "乘扶梯",
+  ),
+  "Take the ramp": ("Prenez la rampe", "Use a rampa", "走坡道"),
+  "Take the elevator": ("Prenez l’ascenseur", "Use o elevador", "乘电梯"),
+  "Take the stairs": ("Prenez les escaliers", "Use as escadas", "走楼梯"),
+  "Turn back": ("Faites demi-tour", "Volte para trás", "掉头"),
+  "Turn right": ("Tournez à droite", "Vire à direita", "向右转"),
+  "Turn left": ("Tournez à gauche", "Vire à esquerda", "向左转"),
+  "Arrive at destination": (
+    "Arrivée à destination",
+    "Chegada ao destino",
+    "到达目的地",
+  ),
+  "Start walking": ("Début de l’itinéraire", "Iniciar percurso", "开始行走"),
+  "Route uses the saved floor plan. Check passages and signs on site.": (
+    "L’itinéraire utilise le plan enregistré. Vérifiez les passages et les panneaux sur place.",
+    "O percurso usa a planta guardada. Verifique as passagens e a sinalização no local.",
+    "路线使用已保存的平面图。请以现场通道和标识为准。",
+  ),
+  "Could not open the link.": (
+    "Impossible d’ouvrir le lien.",
+    "Não foi possível abrir a ligação.",
+    "无法打开链接。",
+  ),
+  "Rooms from schedule": (
+    "Salles de l’emploi du temps",
+    "Salas do horário",
+    "课表中的教室",
+  ),
+  "Location unavailable. You can choose a starting place manually.": (
+    "Localisation indisponible. Vous pouvez choisir le départ manuellement.",
+    "Localização indisponível. Pode escolher o ponto de partida manualmente.",
+    "定位不可用。您可以手动选择起点。",
+  ),
+  "You are outside the mapped campuses.": (
+    "Vous êtes en dehors des campus disponibles.",
+    "Está fora dos campus disponíveis.",
+    "您位于已收录校园之外。",
+  ),
+  "Allow location access or choose a starting place manually.": (
+    "Autorisez la localisation ou choisissez le départ manuellement.",
+    "Permita o acesso à localização ou escolha o ponto de partida manualmente.",
+    "请允许定位或手动选择起点。",
+  ),
+  "Turn on device location.": (
+    "Activez la localisation de l’appareil.",
+    "Ative a localização do dispositivo.",
+    "请开启设备定位。",
+  ),
+  "GPS cannot identify your floor. Select it manually.": (
+    "Le GPS ne peut pas déterminer l’étage. Sélectionnez-le manuellement.",
+    "O GPS não identifica o piso. Selecione-o manualmente.",
+    "GPS 无法识别楼层。请手动选择。",
+  ),
+  "Which floor are you on?": (
+    "À quel étage êtes-vous ?",
+    "Em que piso está?",
+    "您在哪一层？",
+  ),
+  "Choose starting place": (
+    "Choisir le point de départ",
+    "Escolher ponto de partida",
+    "选择起点",
+  ),
+  "Could not save the place.": (
+    "Impossible d’enregistrer ce lieu.",
+    "Não foi possível guardar o local.",
+    "无法保存地点。",
+  ),
+  "Focus map": ("Centrer le plan", "Centrar mapa", "定位地图"),
+  "Could not load campus maps.": (
+    "Impossible de charger les plans des campus.",
+    "Não foi possível carregar os mapas dos campus.",
+    "无法加载校园地图。",
+  ),
+  "{minutes} min": ("{minutes} min", "{minutes} min", "{minutes} 分钟"),
+  "Next class": ("Prochain cours", "Próxima aula", "下一节课"),
+  "Now": ("En cours", "Agora", "当前"),
+  "Choose date": ("Choisir une date", "Escolher data", "选择日期"),
+  "Find room": ("Trouver la salle", "Encontrar sala", "查找教室"),
+  "Room not found. Choose a campus and floor.": (
+    "Salle introuvable. Choisissez un campus et un étage.",
+    "Sala não encontrada. Escolha um campus e um piso.",
+    "未找到教室。请选择校园和楼层。",
+  ),
+  "Room or place": ("Salle ou lieu", "Sala ou local", "教室或地点"),
+  "Campus maps": ("Plans des campus", "Mapas dos campus", "校园地图"),
   "Study day summary": (
     "Bilan de la journée de cours",
     "Resumo do dia de aulas",

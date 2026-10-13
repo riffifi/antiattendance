@@ -99,6 +99,9 @@ void main() {
         'Geist',
       )..addFont(rootBundle.load('font/Geist[wght].ttf'))).load();
       await (FontLoader(
+        'GeistMono',
+      )..addFont(rootBundle.load('font/GeistMono[wght].ttf'))).load();
+      await (FontLoader(
         'MaterialIcons',
       )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
     });

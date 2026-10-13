@@ -1,3 +1,5 @@
+import 'icons/campus_icon.dart';
+
 import 'package:material_3_expressive/material_3_expressive.dart';
 
 import 'dart:async';
@@ -138,7 +140,7 @@ class _NfcDiagnosticsPageState extends State<NfcDiagnosticsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
+                    CampusIcon(
                       tag == null
                           ? Icons.nfc_rounded
                           : Icons.check_circle_rounded,

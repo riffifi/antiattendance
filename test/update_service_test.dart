@@ -188,10 +188,10 @@ void main() {
   testWidgets('installation permission retry reuses the downloaded APK', (
     tester,
   ) async {
-    final folder = await Directory.systemTemp.createTemp('installer-test');
+    final folder = Directory.systemTemp.createTempSync('installer-test');
     addTearDown(() => folder.delete(recursive: true));
     final apk = File('${folder.path}/update.apk');
-    await apk.writeAsBytes([0x50, 0x4b, 0x03, 0x04]);
+    apk.writeAsBytesSync([0x50, 0x4b, 0x03, 0x04]);
     final release = AppRelease(
       tag: 'v4.0.0',
       page: Uri.parse(releasesPage),
@@ -222,8 +222,9 @@ void main() {
           },
           installApk: (_) async {
             installs++;
-            if (installs == 1)
+            if (installs == 1) {
               throw PlatformException(code: 'INSTALL_PERMISSION_REQUIRED');
+            }
           },
         ),
       ),
@@ -235,7 +236,10 @@ void main() {
       find.text('Allow installs from this app in Android, then return.'),
       findsOneWidget,
     );
-    await tester.tap(find.text('Install update'));
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Install update'));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
     await tester.pumpAndSettle();
     expect(downloads, 1);
     expect(installs, 2);

@@ -1,3 +1,4 @@
+import 'icons/campus_icon.dart';
 import 'qr_tracking.dart';
 import 'app_theme.dart';
 import 'campus_design.dart';
@@ -209,7 +210,7 @@ class QueueScanOverlay extends StatelessWidget {
                         ),
                       ),
                       onPressed: onClose,
-                      icon: const Icon(Icons.close_rounded),
+                      icon: const CampusIcon(Icons.close_rounded),
                       tooltip: tr(context, 'Закрыть', 'Close'),
                       variant: M3EIconButtonVariant.tonal,
                     ),
@@ -237,7 +238,7 @@ class QueueScanOverlay extends StatelessWidget {
                         ),
                       ),
                       onPressed: cameraError ? null : onTorch,
-                      icon: Icon(
+                      icon: CampusIcon(
                         torchOn
                             ? Icons.flashlight_off_rounded
                             : Icons.flashlight_on_rounded,
@@ -277,14 +278,14 @@ class QueueScanOverlay extends StatelessWidget {
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 180),
                             child: cameraError
-                                ? const Icon(
+                                ? const CampusIcon(
                                     Icons.no_photography_rounded,
                                     key: ValueKey('camera-error'),
                                     color: Color(0xFFFFC16B),
                                     size: 42,
                                   )
                                 : queue.remaining == 0
-                                ? Icon(
+                                ? CampusIcon(
                                     Icons.check_rounded,
                                     key: ValueKey('scan-complete'),
                                     color: context.palette.success,
@@ -451,7 +452,7 @@ class QueueScanOverlay extends StatelessWidget {
                           return Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
+                              CampusIcon(
                                 approved
                                     ? Icons.check_circle_rounded
                                     : Icons.circle_outlined,

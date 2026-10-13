@@ -1,3 +1,4 @@
+import 'icons/campus_icon.dart';
 import 'campus_design.dart';
 
 import 'package:material_3_expressive/material_3_expressive.dart';
@@ -191,7 +192,7 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
+                    CampusIcon(
                       _frames.isEmpty
                           ? Icons.sensors_rounded
                           : Icons.check_circle_rounded,
@@ -214,7 +215,7 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
                       const SizedBox(height: 12),
                       CampusButton.icon(
                         onPressed: _start,
-                        icon: Icon(Icons.refresh_rounded),
+                        icon: CampusIcon(Icons.refresh_rounded),
                         label: Text(tr(context, 'Повторить', 'Retry')),
                         style: M3EButtonStyle.text,
                       ),
@@ -262,7 +263,7 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
                       suppressInk: true,
                       tooltip: tr(context, 'Очистить', 'Clear'),
                       onPressed: () => setState(_frames.clear),
-                      icon: Icon(Icons.delete_outline_rounded),
+                      icon: CampusIcon(Icons.delete_outline_rounded),
                       variant: M3EIconButtonVariant.standard,
                     ),
                   ],

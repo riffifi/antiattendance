@@ -1,3 +1,4 @@
+import 'icons/campus_icon.dart';
 import 'campus_design.dart';
 import 'expressive.dart';
 
@@ -46,6 +47,11 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
   bool _nfcDisabled = false;
   bool _widgetStartPending = false;
   String? _ownId;
+  bool _single = false;
+  String? _singleId;
+  Set<String> get _activeIds => _single
+      ? {if (_singleId != null && _numbers.containsKey(_singleId)) _singleId!}
+      : _selected;
   String? _message;
   SavedAccount? _reauthAccount;
   String? _operationAccountId;
@@ -176,6 +182,11 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
               ? numbers.keys.where(savedSelection.contains)
               : numbers.keys,
         );
+        _single = settings['mode'] == 'single';
+        final singleId = settings['singleAccountId'];
+        _singleId = singleId is String && numbers.containsKey(singleId)
+            ? singleId
+            : numbers.keys.firstOrNull;
         final seconds = settings['seconds'];
         if (seconds is int && seconds >= 1 && seconds <= 300) {
           _seconds.text = '$seconds';
@@ -212,7 +223,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
       return;
     }
     _widgetStartPending = false;
-    if (_selected.isEmpty) {
+    if (_activeIds.isEmpty) {
       setState(
         () => _message = tr(
           context,
@@ -530,7 +541,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
   }
 
   Future<void> _start() async {
-    if (_ownId != null && !_selected.contains(_ownId)) {
+    if (!_single && _ownId != null && !_selected.contains(_ownId)) {
       setState(
         () => _message = tr(
           context,
@@ -540,7 +551,9 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
       );
       return;
     }
-    final seconds = int.tryParse(_seconds.text);
+    final seconds = _single
+        ? (int.tryParse(_seconds.text) ?? 60)
+        : int.tryParse(_seconds.text);
     if (seconds == null || seconds < 1 || seconds > 300) {
       setState(
         () => _message = tr(
@@ -558,10 +571,12 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
     });
     final epoch = ++_runEpoch;
     try {
-      _queue = orderPassQueue(
-        widget.accounts.where((a) => _selected.contains(a.id)).toList(),
-        _ownId,
-      );
+      final selectedAccounts = widget.accounts
+          .where((a) => _activeIds.contains(a.id))
+          .toList();
+      _queue = _single
+          ? selectedAccounts
+          : orderPassQueue(selectedAccounts, _ownId);
       final passes = <Map<String, Object>>[];
       for (final account in _queue) {
         _operationAccountId = account.id;
@@ -578,11 +593,11 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
         }
         if (!mounted || epoch != _runEpoch) return;
       }
-      await _store.saveSettings(seconds, _ownId, _selected);
+      await _store.saveSettings(seconds, _ownId, _selected, _single, _singleId);
       if (!mounted || epoch != _runEpoch) return;
       final status = await nfcPassChannel.invokeMapMethod<String, dynamic>(
         'start',
-        {'passes': passes, 'intervalSeconds': seconds},
+        {'passes': passes, 'intervalSeconds': seconds, 'single': _single},
       );
       if (!mounted || epoch != _runEpoch) {
         await nfcPassChannel.invokeMethod<void>('stop');
@@ -652,10 +667,12 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
   }
 
   Future<void> _savePreferences() async {
-    final seconds = int.tryParse(_seconds.text);
+    final seconds = _single
+        ? (int.tryParse(_seconds.text) ?? 60)
+        : int.tryParse(_seconds.text);
     if (seconds == null || seconds < 1 || seconds > 300) return;
     try {
-      await _store.saveSettings(seconds, _ownId, _selected);
+      await _store.saveSettings(seconds, _ownId, _selected, _single, _singleId);
     } catch (error) {
       if (mounted) setState(() => _message = _error(error));
     }
@@ -698,12 +715,84 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
     super.dispose();
   }
 
+  Future<void> _showPassGuide() => showExpressiveSheet<void>(
+    context: context,
+    builder: (context) => ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * .8,
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              tr(context, 'Как пользоваться', 'How to use'),
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 20),
+            Text(
+              tr(context, '1. Подключите пропуск', '1. Enroll a pass'),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              tr(
+                context,
+                'Владелец подтверждает подключение кодом. Для повторного подключения используйте кнопку подключения нескольких пропусков.',
+                'The owner confirms enrollment with their verification code. Use bulk enrollment when several passes need renewing.',
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              tr(context, '2. Выберите режим', '2. Choose a mode'),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              tr(
+                context,
+                'Один пропуск: выберите владельца и нажмите «Активировать». Очередь: выберите людей, задержку и свой аккаунт, затем запустите очередь.',
+                'Single pass: select the owner and activate it. Queue: select people, a delay and your own account, then start the queue.',
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              tr(context, '3. Поднесите телефон', '3. Tap at the gate'),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              tr(
+                context,
+                'Включите NFC и держите телефон разблокированным на этой вкладке. Проверяйте результат на турникете: предъявление не означает успешный проход.',
+                'Enable NFC and keep the phone unlocked on this tab. Check the gate result: presenting a pass does not confirm admission.',
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              tr(
+                context,
+                'Один пропуск не переключается после касания. Очередь переходит к следующему после ответа и заданной задержки; может потребоваться убрать и снова поднести телефон.',
+                'A single pass stays selected after a tap. The queue advances after a response and the chosen delay; you may need to lift and tap again.',
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
   Widget _card({required Widget child, Color? color}) =>
       CampusPanel(color: color, child: child);
 
   void _toggle(SavedAccount account) {
     setState(() {
-      if (!_selected.add(account.id)) _selected.remove(account.id);
+      if (_single) {
+        _singleId = account.id;
+      } else if (!_selected.add(account.id)) {
+        _selected.remove(account.id);
+      }
     });
     unawaited(_savePreferences());
   }
@@ -725,8 +814,8 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
 
   Widget _accountCard(SavedAccount account, bool enabled) {
     final enrolled = _numbers.containsKey(account.id);
-    final selected = _selected.contains(account.id);
-    final own = account.id == _ownId;
+    final selected = _activeIds.contains(account.id);
+    final own = !_single && account.id == _ownId;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: CampusPressable(
@@ -735,9 +824,11 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
           animationDuration: MediaQuery.disableAnimationsOf(context)
               ? Duration.zero
               : const Duration(milliseconds: 140),
-          color: selected ? context.palette.selected : context.palette.surface,
+          color: selected
+              ? context.palette.selectionSurface
+              : context.palette.surface,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(24),
             side: BorderSide(
               color: selected
                   ? context.palette.blue.withValues(alpha: .45)
@@ -751,7 +842,13 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
               padding: const EdgeInsets.fromLTRB(12, 14, 8, 14),
               child: Row(
                 children: [
-                  if (enrolled)
+                  if (enrolled && _single)
+                    M3ERadio<String>(
+                      value: account.id,
+                      groupValue: _singleId,
+                      onChanged: enabled ? (_) => _toggle(account) : null,
+                    )
+                  else if (enrolled)
                     M3ECheckbox(
                       value: selected,
                       onChanged: enabled ? (_) => _toggle(account) : null,
@@ -759,7 +856,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                   else
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Icon(
+                      child: CampusIcon(
                         Icons.badge_outlined,
                         color: context.palette.muted,
                       ),
@@ -809,7 +906,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                     M3EIconButton(
                       suppressInk: true,
                       tooltip: tr(context, 'Удалить пропуск', 'Remove pass'),
-                      icon: Icon(
+                      icon: CampusIcon(
                         Icons.more_horiz_rounded,
                         color: context.palette.muted,
                       ),
@@ -839,7 +936,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
           child: CampusListItem(
-            leading: const Icon(Icons.delete_outline_rounded),
+            leading: const CampusIcon(Icons.delete_outline_rounded),
             headline: (tr(context, 'Удалить пропуск', 'Remove pass')),
             supportingText: (account.label),
             onTap: () => Navigator.pop(context, true),
@@ -869,6 +966,47 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
             children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: CampusButton.icon(
+                        style: _single
+                            ? M3EButtonStyle.tonal
+                            : M3EButtonStyle.filled,
+                        onPressed: enabled
+                            ? () {
+                                setState(() => _single = false);
+                                unawaited(_savePreferences());
+                              }
+                            : null,
+                        icon: const CampusIcon(Icons.queue_outlined),
+                        label: Text(tr(context, 'Очередь', 'Queue')),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: CampusButton.icon(
+                        style: _single
+                            ? M3EButtonStyle.filled
+                            : M3EButtonStyle.tonal,
+                        onPressed: enabled
+                            ? () {
+                                setState(() {
+                                  _single = true;
+                                  _singleId ??= _numbers.keys.firstOrNull;
+                                });
+                                unawaited(_savePreferences());
+                              }
+                            : null,
+                        icon: const CampusIcon(Icons.badge_outlined),
+                        label: Text(tr(context, 'Один пропуск', 'Single pass')),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               if (_bulkEnrolling)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
@@ -896,7 +1034,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                   onPressed: enabled && widget.accounts.isNotEmpty
                       ? _bulkEnroll
                       : null,
-                  icon: const Icon(Icons.playlist_add_check_rounded),
+                  icon: const CampusIcon(Icons.playlist_add_check_rounded),
                   label: Text(
                     tr(
                       context,
@@ -921,7 +1059,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                             color: context.palette.blue.withValues(alpha: .12),
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          child: Icon(
+                          child: CampusIcon(
                             Icons.nfc_rounded,
                             color: scheme.onPrimaryContainer,
                             size: 28,
@@ -931,11 +1069,17 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                         Expanded(
                           child: Text(
                             _running
-                                ? tr(
-                                    context,
-                                    'Очередь работает',
-                                    'Queue is running',
-                                  )
+                                ? (_single
+                                      ? tr(
+                                          context,
+                                          'Пропуск активен',
+                                          'Pass is active',
+                                        )
+                                      : tr(
+                                          context,
+                                          'Очередь работает',
+                                          'Queue is running',
+                                        ))
                                 : _numbers.isEmpty
                                 ? tr(
                                     context,
@@ -960,6 +1104,12 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                     Text(
                       _running
                           ? current?.label ?? '—'
+                          : _single
+                          ? widget.accounts
+                                    .where((a) => a.id == _singleId)
+                                    .firstOrNull
+                                    ?.label ??
+                                tr(context, 'Выберите пропуск', 'Choose a pass')
                           : _selected.length == 1
                           ? tr(context, 'Выбран 1 пропуск', '1 pass selected')
                           : trf(
@@ -977,7 +1127,13 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                     const SizedBox(height: 6),
                     Text(
                       _running
-                          ? _status['responded'] == true
+                          ? _single
+                                ? tr(
+                                    context,
+                                    'Один пропуск активен до остановки или истечения токена.',
+                                    'This pass stays active until stopped or its token expires.',
+                                  )
+                                : _status['responded'] == true
                                 ? trf(
                                     context,
                                     'Следующий через {seconds} с',
@@ -989,6 +1145,12 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                                     'Поднесите телефон к турникету',
                                     'Hold your phone against the gate',
                                   )
+                          : _single
+                          ? tr(
+                              context,
+                              'Выберите один пропуск ниже и активируйте его.',
+                              'Choose one pass below and activate it.',
+                            )
                           : tr(
                               context,
                               'Выберите людей ниже и запустите очередь.',
@@ -999,7 +1161,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                         fontSize: 13,
                       ),
                     ),
-                    if (_running) ...[
+                    if (_running && !_single) ...[
                       const SizedBox(height: 16),
                       M3EProgressIndicator.linearWavy(
                         value: _queue.isEmpty ? 0 : presented / _queue.length,
@@ -1022,126 +1184,127 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                 ),
               ),
               const SizedBox(height: 16),
-              _card(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      tr(context, 'Настройка очереди', 'Queue settings'),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+              if (!_single)
+                _card(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tr(context, 'Настройка очереди', 'Queue settings'),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.timer_outlined,
-                          color: context.palette.muted,
-                          size: 22,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                tr(
-                                  context,
-                                  'Между пропусками',
-                                  'Between passes',
-                                ),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                tr(
-                                  context,
-                                  'От 1 до 300 секунд',
-                                  'From 1 to 300 seconds',
-                                ),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: context.palette.muted,
-                                ),
-                              ),
-                            ],
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          CampusIcon(
+                            Icons.timer_outlined,
+                            color: context.palette.muted,
+                            size: 22,
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        SizedBox(
-                          width: 86,
-                          child: CampusTextField(
-                            controller: _seconds,
-                            enabled: enabled,
-                            textAlign: TextAlign.center,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                              LengthLimitingTextInputFormatter(3),
-                            ],
-                            suffixText: tr(context, 'с', 's'),
-                            onChanged: (_) {
-                              _preferencesTimer?.cancel();
-                              _preferencesTimer = Timer(
-                                const Duration(milliseconds: 400),
-                                () => unawaited(_savePreferences()),
-                              );
-                            },
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  tr(
+                                    context,
+                                    'Между пропусками',
+                                    'Between passes',
+                                  ),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  tr(
+                                    context,
+                                    'От 1 до 300 секунд',
+                                    'From 1 to 300 seconds',
+                                  ),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: context.palette.muted,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      child: Divider(height: 1, color: context.palette.line),
-                    ),
-                    AppPassPicker(
-                      key: ValueKey(_ownId),
-                      enabled: enabled,
-                      hint: tr(context, 'Ваш аккаунт', 'Your account'),
-                      items: [
-                        M3EDropdownItem(
-                          value: '',
-                          label: tr(context, 'Не выбран', 'Not selected'),
-                          selected: _ownId == null,
-                        ),
-                        for (final account in widget.accounts)
+                          const SizedBox(width: 8),
+                          SizedBox(
+                            width: 86,
+                            child: CampusTextField(
+                              controller: _seconds,
+                              enabled: enabled,
+                              textAlign: TextAlign.center,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                LengthLimitingTextInputFormatter(3),
+                              ],
+                              suffixText: tr(context, 'с', 's'),
+                              onChanged: (_) {
+                                _preferencesTimer?.cancel();
+                                _preferencesTimer = Timer(
+                                  const Duration(milliseconds: 400),
+                                  () => unawaited(_savePreferences()),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Divider(height: 1, color: context.palette.line),
+                      ),
+                      AppPassPicker(
+                        key: ValueKey(_ownId),
+                        enabled: enabled,
+                        hint: tr(context, 'Ваш аккаунт', 'Your account'),
+                        items: [
                           M3EDropdownItem(
-                            value: account.id,
-                            label: account.label,
-                            selected: account.id == _ownId,
+                            value: '',
+                            label: tr(context, 'Не выбран', 'Not selected'),
+                            selected: _ownId == null,
                           ),
-                      ],
-                      onChanged: (items) {
-                        final value = items.isEmpty ? '' : items.first.value;
-                        setState(() {
-                          _ownId = value == '' ? null : value;
-                          if (_numbers.containsKey(_ownId)) {
-                            _selected.add(_ownId!);
-                          }
-                        });
-                        unawaited(_savePreferences());
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      tr(
-                        context,
-                        'Ваш пропуск автоматически окажется в конце.',
-                        'Your pass is automatically placed last.',
+                          for (final account in widget.accounts)
+                            M3EDropdownItem(
+                              value: account.id,
+                              label: account.label,
+                              selected: account.id == _ownId,
+                            ),
+                        ],
+                        onChanged: (items) {
+                          final value = items.isEmpty ? '' : items.first.value;
+                          setState(() {
+                            _ownId = value == '' ? null : value;
+                            if (_numbers.containsKey(_ownId)) {
+                              _selected.add(_ownId!);
+                            }
+                          });
+                          unawaited(_savePreferences());
+                        },
                       ),
-                      style: TextStyle(
-                        color: context.palette.muted,
-                        fontSize: 12,
+                      const SizedBox(height: 8),
+                      Text(
+                        tr(
+                          context,
+                          'Ваш пропуск автоматически окажется в конце.',
+                          'Your pass is automatically placed last.',
+                        ),
+                        style: TextStyle(
+                          color: context.palette.muted,
+                          fontSize: 12,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
               const SizedBox(height: 22),
               Row(
                 children: [
@@ -1154,7 +1317,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                       ),
                     ),
                   ),
-                  if (_numbers.isNotEmpty)
+                  if (_numbers.isNotEmpty && !_single)
                     CampusButton.text(
                       onPressed: enabled
                           ? () {
@@ -1183,7 +1346,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                 _card(
                   child: Column(
                     children: [
-                      Icon(
+                      CampusIcon(
                         Icons.badge_outlined,
                         color: context.palette.muted,
                         size: 36,
@@ -1204,7 +1367,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                 CampusTextField(
                   controller: _search,
                   label: tr(context, 'Найти пропуск', 'Search passes'),
-                  leading: const Icon(Icons.search_rounded),
+                  leading: const CampusIcon(Icons.search_rounded),
                   trailing: _query.isEmpty
                       ? null
                       : M3EIconButton(
@@ -1214,7 +1377,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                             'Очистить поиск',
                             'Clear search',
                           ),
-                          icon: const Icon(Icons.close_rounded),
+                          icon: const CampusIcon(Icons.close_rounded),
                           onPressed: () {
                             _search.clear();
                             setState(() => _query = '');
@@ -1265,7 +1428,10 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                 _card(
                   child: Row(
                     children: [
-                      Icon(Icons.widgets_outlined, color: context.palette.blue),
+                      CampusIcon(
+                        Icons.widgets_outlined,
+                        color: context.palette.blue,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -1306,36 +1472,11 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                   ),
                 ),
               const SizedBox(height: 8),
-              M3EList(
-                itemCount: 1,
-                itemBuilder: (context, index) => CampusListItem(
-                  headline: tr(context, 'Как пользоваться', 'How to use'),
-                  leading: Icon(
-                    Icons.info_outline_rounded,
-                    color: context.palette.muted,
-                    size: 20,
-                  ),
-                  expanded: M3EExpandableExpanded.content(
-                    Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: Text(
-                            tr(
-                              context,
-                              'Для подключения нужен код подтверждения владельца. Поднесите разблокированный телефон к турникету. После первого ответа очередь выдержит задержку и переключится дальше. Иногда нужно убрать и снова поднести телефон. Предъявление не подтверждает допуск — проверяйте результат на турникете.',
-                              'Enroll each pass with its owner’s verification code. Hold the unlocked phone against the gate. After the first response, the queue waits for the delay and advances. You may need to lift and tap again. Presentation does not confirm admission; check the gate result.',
-                            ),
-                            style: TextStyle(
-                              color: context.palette.muted,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              CampusListItem(
+                headline: tr(context, 'Как пользоваться', 'How to use'),
+                leading: const CampusIcon(Icons.help_outline),
+                trailing: const CampusIcon(Icons.chevron_right),
+                onTap: _showPassGuide,
               ),
             ],
           ),
@@ -1352,7 +1493,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                     liveRegion: true,
                     child: Row(
                       children: [
-                        Icon(
+                        CampusIcon(
                           Icons.info_outline_rounded,
                           color: context.palette.blue,
                           size: 20,
@@ -1370,7 +1511,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                         M3EIconButton(
                           suppressInk: true,
                           tooltip: tr(context, 'Закрыть', 'Dismiss'),
-                          icon: const Icon(Icons.close_rounded, size: 18),
+                          icon: const CampusIcon(Icons.close_rounded, size: 18),
                           onPressed: () => setState(() => _message = null),
                           variant: M3EIconButtonVariant.standard,
                         ),
@@ -1387,7 +1528,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                 CampusButton.icon(
                   onPressed: () =>
                       nfcPassChannel.invokeMethod<void>('openNfcSettings'),
-                  icon: const Icon(Icons.settings_outlined),
+                  icon: const CampusIcon(Icons.settings_outlined),
                   label: Text(tr(context, 'Настройки NFC', 'NFC settings')),
                   style: M3EButtonStyle.text,
                 ),
@@ -1396,7 +1537,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                 child: CampusButton.icon(
                   onPressed: _running
                       ? _stop
-                      : enabled && _selected.isNotEmpty
+                      : enabled && _activeIds.isNotEmpty
                       ? _start
                       : null,
                   icon: _busy
@@ -1407,23 +1548,47 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                             strokeWidth: 2,
                           ),
                         )
-                      : Icon(_running ? Icons.stop_rounded : Icons.nfc_rounded),
+                      : CampusIcon(
+                          _running ? Icons.stop_rounded : Icons.nfc_rounded,
+                        ),
                   label: Text(
                     _busy
                         ? tr(context, 'Подождите…', 'Please wait…')
                         : _running
-                        ? tr(context, 'Остановить очередь', 'Stop queue')
-                        : tr(context, 'Запустить очередь', 'Start queue'),
+                        ? (_single
+                              ? tr(
+                                  context,
+                                  'Отключить пропуск',
+                                  'Deactivate pass',
+                                )
+                              : tr(context, 'Остановить очередь', 'Stop queue'))
+                        : (_single
+                              ? tr(
+                                  context,
+                                  'Активировать пропуск',
+                                  'Activate pass',
+                                )
+                              : tr(
+                                  context,
+                                  'Запустить очередь',
+                                  'Start queue',
+                                )),
                   ),
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                tr(
-                  context,
-                  'Не закрывайте вкладку, пока очередь работает.',
-                  'Keep this tab open while the queue runs.',
-                ),
+                _single
+                    ? tr(
+                        context,
+                        'Не закрывайте вкладку, пока пропуск активен.',
+                        'Keep this tab open while the pass is active.',
+                      )
+                    : tr(
+                        context,
+                        'Не закрывайте вкладку, пока очередь работает.',
+                        'Keep this tab open while the queue runs.',
+                      ),
                 textAlign: TextAlign.center,
                 style: TextStyle(color: context.palette.muted, fontSize: 11),
               ),

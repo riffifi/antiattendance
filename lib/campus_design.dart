@@ -1,10 +1,35 @@
+import 'icons/campus_icon.dart';
+
 import 'dart:ui' as ui;
 
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:material_3_expressive/material_3_expressive.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import 'app_theme.dart';
+
+/// Compact, outlined lettermark that remains readable in every appearance.
+class CampusBrand extends StatelessWidget {
+  const CampusBrand({
+    super.key,
+    this.width = 84,
+    this.height = 38,
+    this.label = 'AntiAttendance',
+  });
+  final double width;
+  final double height;
+  final String label;
+  @override
+  Widget build(BuildContext context) => SvgPicture.asset(
+    'icon/brand.svg',
+    width: width,
+    height: height,
+    fit: BoxFit.contain,
+    colorFilter: ColorFilter.mode(context.palette.ink, BlendMode.srcIn),
+    semanticsLabel: label,
+  );
+}
 
 // Custom design built on material 3 expressive
 class CampusHeader extends StatelessWidget {
@@ -42,11 +67,8 @@ class CampusHeader extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           subtitle,
-          style: TextStyle(
-            color: context.palette.muted,
-            fontSize: 14,
-            height: 1.5,
-          ),
+          style: Theme.of(context).textTheme.bodyMedium
+              ?.copyWith(color: context.palette.muted),
         ),
       ],
     ),
@@ -119,7 +141,7 @@ class CampusPanel extends StatelessWidget {
   Widget build(BuildContext context) => Material(
     color: color ?? context.palette.surface,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(24),
       side: BorderSide(color: context.palette.line),
     ),
     clipBehavior: Clip.antiAlias,
@@ -166,6 +188,7 @@ class CampusButton extends StatelessWidget {
   Widget build(BuildContext context) => M3EButton(
     onPressed: onPressed,
     style: style,
+    splashFactory: NoSplash.splashFactory,
     child: icon == null
         ? child
         : Row(
@@ -176,7 +199,6 @@ class CampusButton extends StatelessWidget {
               Flexible(child: child),
             ],
           ),
-    splashFactory: NoSplash.splashFactory,
   );
 }
 
@@ -314,7 +336,7 @@ class _CampusNavigationState extends State<CampusNavigation> {
                                           child: Column(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              Icon(
+                                              CampusIcon(
                                                 CampusNavigation.icons[index],
                                                 size: 22,
                                                 color:
@@ -399,6 +421,7 @@ class CampusTextField extends StatelessWidget {
     this.leading,
     this.trailing,
     this.autofocus = false,
+    this.obscureText = false,
     this.enabled = true,
     this.maxLength,
     this.keyboardType,
@@ -415,6 +438,7 @@ class CampusTextField extends StatelessWidget {
   final Widget? leading;
   final Widget? trailing;
   final bool autofocus;
+  final bool obscureText;
   final bool enabled;
   final int? maxLength;
   final TextInputType? keyboardType;
@@ -426,8 +450,28 @@ class CampusTextField extends StatelessWidget {
   final String? suffixText;
   @override
   Widget build(BuildContext context) => M3ETextField(
+    variant: M3ETextFieldVariant.outlined,
+    theme: M3ETextFieldTheme(
+      outlinedShape: BorderRadius.circular(16),
+      filledShape: BorderRadius.circular(16),
+      focusOutlineWidth: 2,
+      inputTextStyle: Theme.of(context).textTheme.bodyLarge,
+      labelTextStyle: Theme.of(context).textTheme.bodyLarge,
+      colors: M3ETextFieldColorTheme(
+        outlineColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.error)
+              ? Theme.of(context).colorScheme.error
+              : states.contains(WidgetState.disabled)
+              ? context.palette.line.withValues(alpha: .5)
+              : states.contains(WidgetState.focused)
+              ? context.palette.blue
+              : context.palette.line,
+        ),
+      ),
+    ),
     controller: controller,
     autofocus: autofocus,
+    obscureText: obscureText,
     enabled: enabled,
     maxLength: maxLength,
     keyboardType: keyboardType,

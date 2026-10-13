@@ -1,7 +1,11 @@
+import 'server_sessions.dart';
+
 import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
+import 'package:nfc_pass_client/nfc_pass_client.dart'
+    show nfcSessionCookieHeader;
 
 const pulseHost = 'pulse.mirea.ru';
 const pulseLoginUrl =
@@ -25,29 +29,36 @@ String attendanceTokenFromQr(String value) {
   return tokens.single;
 }
 
+bool isPulseCredentialCookie(String name) =>
+    !name.startsWith('__ddg') &&
+    !name.startsWith('_ga') &&
+    !name.startsWith('.AspNetCore.OpenIdConnect.Nonce.') &&
+    !name.startsWith('.AspNetCore.Correlation.') &&
+    !{'XSRF-TOKEN', 'csrf', 'theme', 'locale', 'cookie_consent'}.contains(name);
+
 String pulseSessionCookie(Map<String, String> cookies) {
-  final base = cookies['.AspNetCore.Cookies'];
-  if (base == null || base.isEmpty) {
+  final retained = Map<String, String>.fromEntries(
+    cookies.entries.where(
+      (e) =>
+          e.value.isNotEmpty &&
+          !e.key.startsWith('.AspNetCore.OpenIdConnect.Nonce.') &&
+          !e.key.startsWith('.AspNetCore.Correlation.'),
+    ),
+  );
+  if (!retained.keys.any(isPulseCredentialCookie)) {
     throw const FormatException('Сессия Пульса не найдена.');
   }
-  final chunkMatch = RegExp(r'^chunks-([1-9][0-9]*)$').firstMatch(base);
-  final count = chunkMatch == null ? 0 : int.parse(chunkMatch.group(1)!);
-  if (base.startsWith('chunks-') && chunkMatch == null || count > 64) {
-    throw const FormatException('Некорректная сессия Пульса.');
+  return nfcSessionCookieHeader(
+    retained.entries.map((e) => '${e.key}=${e.value}').join('; '),
+  );
+}
+
+bool isValidPulseCookieHeader(String header) {
+  try {
+    return header.contains('=') && nfcSessionCookieHeader(header).isNotEmpty;
+  } on FormatException {
+    return false;
   }
-  final result = <String>[];
-  for (var i = 0; i <= count; i++) {
-    final name = i == 0 ? '.AspNetCore.Cookies' : '.AspNetCore.CookiesC$i';
-    final value = cookies[name];
-    if (value == null ||
-        value.isEmpty ||
-        !RegExp(r'^[\x21\x23-\x2B\x2D-\x3A\x3C-\x5B\x5D-\x7E]+$')
-            .hasMatch(value)) {
-      throw const FormatException('Сессия Пульса неполная.');
-    }
-    result.add('$name=$value');
-  }
-  return result.join('; ');
 }
 
 enum ApprovalState { approved, waiting, rejected }
@@ -82,16 +93,29 @@ class PulseApi {
             'content-type': 'application/grpc-web+proto',
             'accept': 'application/grpc-web+proto',
             'x-grpc-web': '1',
-            'cookie': cookie,
+            if (serverAccountId(cookie) == null)
+              'cookie': nfcSessionCookieHeader(cookie),
+            'x-requested-with': 'XMLHttpRequest',
+            'origin': 'https://$pulseHost',
           })
           ..bodyBytes = frame;
-    final response = await _client
-        .send(httpRequest)
-        .timeout(const Duration(seconds: 15));
+    final remoteId = serverAccountId(cookie);
+    final response =
+        await (remoteId == null
+                ? _client.send(httpRequest)
+                : ServerSessions.requireClient().proxy(
+                    remoteId,
+                    'attendance',
+                    frame,
+                  ))
+            .timeout(const Duration(seconds: 15));
     if (response.statusCode == 401 ||
-        response.statusCode == 403 ||
-        response.statusCode == 302 ||
-        response.statusCode == 303) {
+        ({301, 302, 303, 307, 308}.contains(response.statusCode) &&
+            (Uri.tryParse(response.headers['location'] ?? '')?.path
+                        .contains('/auth/login') ==
+                    true ||
+                Uri.tryParse(response.headers['location'] ?? '')?.host ==
+                    'sso.mirea.ru'))) {
       throw const PulseApiException(
         'Сессия истекла. Войдите в аккаунт снова.',
         sessionExpired: true,

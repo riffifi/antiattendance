@@ -1,3 +1,4 @@
+import 'icons/campus_icon.dart';
 import 'qr_tracking.dart';
 import 'app_theme.dart';
 import 'campus_design.dart';
@@ -206,7 +207,7 @@ class _SessionImportPageState extends State<SessionImportPage> {
           const SizedBox(height: 16),
           for (final account in _accounts!)
             CampusListItem(
-              leading: const Icon(Icons.person_outline),
+              leading: const CampusIcon(Icons.person_outline),
               headline: (account.label),
             ),
           const SizedBox(height: 16),

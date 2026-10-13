@@ -1,3 +1,5 @@
+import 'icons/campus_icon.dart';
+
 import 'package:material_3_expressive/material_3_expressive.dart';
 
 import 'dart:async';
@@ -10,8 +12,10 @@ import 'l10n.dart';
 import 'accounts.dart';
 import 'app_theme.dart';
 import 'pulse_api.dart';
+import 'pulse_session.dart';
 import 'login_qr.dart';
 import 'campus_design.dart';
+import 'expressive.dart';
 
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -36,6 +40,12 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
   bool _readingLogin = false;
   Timer? _loginTimer;
   int _loginEpoch = 0;
+  bool _checkingSession = false;
+  String? _sessionMessage;
+  List<String> _cookieNames = [];
+  PulseSessionState? _sessionState;
+  String? _lastCandidate;
+  DateTime? _lastCandidateCheck;
 
   @override
   void initState() {
@@ -64,6 +74,12 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
       if (!mounted || _finished || !_pageReady) return;
       final url = await controller.getUrl();
       if (url?.host == pulseHost) {
+        if (mounted && _qrLink != null) {
+          setState(() {
+            _qrLink = null;
+            _showBrowser = true;
+          });
+        }
         await _checkSession();
         return;
       }
@@ -171,31 +187,77 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
     }
   }
 
-  Future<void> _checkSession() async {
-    if (_finished || !mounted) return;
+  Future<void> _checkSession({bool force = false}) async {
+    if (_finished || !mounted || _checkingSession || !_ready) return;
+    _checkingSession = true;
+    final epoch = _loginEpoch;
     try {
-      final cookies = await CookieManager.instance().getCookies(
-        url: WebUri('https://$pulseHost/'),
-      );
+      // Cookie paths matter: an authenticated RPC cookie need not be visible at
+      // '/'. The profile endpoint is also what Pulse uses to identify its user.
+      final manager = CookieManager.instance();
+      final cookies = [
+        ...await manager.getCookies(url: WebUri('https://$pulseHost/')),
+        ...await manager.getCookies(url: WebUri(pulseProfileUrl)),
+      ];
       final values = <String, String>{};
       for (final cookie in cookies) {
-        final value = cookie.value;
-        if (value is String) values[cookie.name] = value;
+        if (cookie.value is String) {
+          values[cookie.name] = cookie.value as String;
+        }
       }
       final session = pulseSessionCookie(values);
-      if (!mounted || _finished) return;
-      _finished = true;
+      if (!mounted || _finished || epoch != _loginEpoch) return;
+      final names =
+          session
+              .split('; ')
+              .map((part) => part.substring(0, part.indexOf('=')))
+              .toList()
+            ..sort();
+      if (!force &&
+          session == _lastCandidate &&
+          _lastCandidateCheck != null &&
+          DateTime.now().difference(_lastCandidateCheck!) <
+              const Duration(seconds: 8)) {
+        return;
+      }
+      _lastCandidate = session;
+      _lastCandidateCheck = DateTime.now();
+      final state = await probePulseSession(session);
+      if (!mounted || _finished || epoch != _loginEpoch) return;
+      _sessionState = state;
+      _cookieNames = names;
+      if (state != PulseSessionState.valid) {
+        final url = await _webView?.getUrl();
+        if (mounted && url?.host == pulseHost) {
+          setState(() {
+            _qrLink = null;
+            _showBrowser = true;
+            _sessionMessage = tr(
+              context,
+              'Пульс открыт, но сессия пока не подтверждена. Повторите проверку; данные аккаунта не заменены.',
+              'Pulse is open, but the session is not confirmed yet. Retry the check; the saved account has not been replaced.',
+            );
+          });
+        }
+        return;
+      }
+      // Gateway and analytics cookies can expire long before authentication.
+      // Only legacy auth-cookie metadata has a known session-expiry meaning.
       final expiryDates =
           cookies
               .where(
-                (cookie) => session
-                    .split('; ')
-                    .any((part) => part.startsWith('${cookie.name}=')),
+                (cookie) =>
+                    (cookie.name == '.AspNetCore.Cookies' ||
+                        RegExp(r'^\.AspNetCore\.CookiesC[1-9][0-9]*$')
+                            .hasMatch(cookie.name)) &&
+                    cookie.value == values[cookie.name],
               )
               .map((cookie) => cookie.expiresDate)
               .whereType<int>()
+              .where((date) => date > DateTime.now().millisecondsSinceEpoch)
               .toList()
             ..sort();
+      _finished = true;
       Navigator.of(context).pop(
         SavedAccount(
           id: '',
@@ -210,12 +272,60 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
         ),
       );
     } on FormatException {
-      // The login redirects through pages before the Pulse cookie is set.
+      // Incomplete cookies during SSO redirects are retried after navigation.
+      final url = await _webView?.getUrl();
+      if (mounted &&
+          epoch == _loginEpoch &&
+          url?.host == pulseHost &&
+          _pageReady) {
+        setState(() {
+          _qrLink = null;
+          _showBrowser = true;
+          _cookieNames = [];
+          _sessionMessage = tr(
+            context,
+            'Ожидаем сессионные cookies Пульса. Если вход уже выполнен, повторите проверку.',
+            'Waiting for Pulse session cookies. If you have signed in, retry the check.',
+          );
+        });
+      }
     } catch (_) {
-      // Cookie reads can fail while WebView moves between redirect pages.
-      // A later page load will check the session again.
+      // A redirect may destroy the current WebView cookie context.
+    } finally {
+      _checkingSession = false;
     }
   }
+
+  Future<void> _showSessionDetails() => showExpressiveSheet<void>(
+    context: context,
+    builder: (context) => Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            tr(context, 'Проверка входа', 'Sign-in check'),
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 12),
+          Text('GetMeInfo: ${_sessionState?.name ?? 'waiting'}'),
+          const SizedBox(height: 8),
+          SelectableText(
+            'Cookie names: ${_cookieNames.isEmpty ? 'none' : _cookieNames.join(', ')}',
+          ),
+          const SizedBox(height: 12),
+          Text(
+            tr(
+              context,
+              'Показаны только названия cookies. Значения сессии скрыты.',
+              'Only cookie names are shown. Session values are hidden.',
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 
   Future<void> _applyZoom(
     InAppWebViewController controller,
@@ -284,6 +394,36 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
         ? const Center(child: M3EProgressIndicator.circularWavy())
         : Column(
             children: [
+              if (_sessionMessage != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _sessionMessage!,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          CampusButton.text(
+                            onPressed: () => _checkSession(force: true),
+                            child: Text(
+                              tr(context, 'Проверить сессию', 'Check session'),
+                            ),
+                          ),
+                          CampusButton.text(
+                            onPressed: _showSessionDetails,
+                            child: Text(
+                              tr(context, 'Проверка входа', 'Sign-in check'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               Expanded(
                 child: Stack(
                   children: [
@@ -366,7 +506,7 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
                                   _zoom <= 0.5
                               ? null
                               : () => _changeZoom(_zoom - 0.15),
-                          icon: const Icon(Icons.remove_rounded),
+                          icon: const CampusIcon(Icons.remove_rounded),
                           tooltip: tr(context, 'Уменьшить', 'Zoom out'),
                           variant: M3EIconButtonVariant.filled,
                         ),
@@ -387,7 +527,7 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
                                   _zoom >= 2.0
                               ? null
                               : () => _changeZoom(_zoom + 0.15),
-                          icon: const Icon(Icons.add_rounded),
+                          icon: const CampusIcon(Icons.add_rounded),
                           tooltip: tr(context, 'Увеличить', 'Zoom in'),
                           variant: M3EIconButtonVariant.filled,
                         ),

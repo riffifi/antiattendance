@@ -13,6 +13,7 @@ import android.widget.FrameLayout;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.webkit.WebViewFeature;
+import androidx.webkit.WebViewCompat;
 
 import com.pichillilorenzo.flutter_inappwebview_android.InAppWebViewFlutterPlugin;
 import com.pichillilorenzo.flutter_inappwebview_android.find_interaction.FindInteractionController;
@@ -65,6 +66,13 @@ public class FlutterWebView implements PlatformWebView {
 
     webView = new InAppWebView(context, plugin, id, windowId, customSettings, contextMenu, 
             customSettings.useHybridComposition ? null : plugin.flutterView, userScripts);
+    String sessionProfile = (String) initialSettings.get("sessionProfile");
+    if (sessionProfile != null) {
+      if (!WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)) {
+        throw new IllegalStateException("Update Android System WebView to use batch login");
+      }
+      WebViewCompat.setProfile(webView, sessionProfile);
+    }
     displayListenerProxy.onPostWebViewInitialization(displayManager);
 
     // set MATCH_PARENT layout params to the WebView, otherwise it won't take all the available space!

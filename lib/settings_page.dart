@@ -1,4 +1,6 @@
+import 'icons/campus_icon.dart';
 import 'updates_page.dart';
+import 'session_server_page.dart';
 import 'expressive.dart';
 import 'campus_design.dart';
 
@@ -369,11 +371,11 @@ class _SettingsPageState extends State<SettingsPage> {
                 headline:
                     _languages[_language] ??
                     tr(context, 'Как на телефоне', 'Use phone language'),
-                leading: Icon(
+                leading: CampusIcon(
                   Icons.language_rounded,
                   color: context.palette.blue,
                 ),
-                trailing: const Icon(Icons.unfold_more_rounded),
+                trailing: const CampusIcon(Icons.unfold_more_rounded),
                 onTap: _saving ? null : _openLanguages,
               ),
             ),
@@ -386,14 +388,17 @@ class _SettingsPageState extends State<SettingsPage> {
             CampusPanel(
               padding: EdgeInsets.zero,
               child: CampusListItem(
-                leading: Icon(Icons.nfc_rounded, color: context.palette.blue),
+                leading: CampusIcon(
+                  Icons.nfc_rounded,
+                  color: context.palette.blue,
+                ),
                 headline: (tr(context, 'Проверка NFC', 'NFC diagnostics')),
                 supportingText: (tr(
                   context,
                   'Посмотреть сведения о найденном NFC-устройстве',
                   'View detected NFC connection details',
                 )),
-                trailing: Icon(Icons.chevron_right_rounded),
+                trailing: CampusIcon(Icons.chevron_right_rounded),
                 onTap: () => Navigator.of(context).push<void>(
                   MaterialPageRoute(builder: (_) => const NfcDiagnosticsPage()),
                 ),
@@ -403,7 +408,7 @@ class _SettingsPageState extends State<SettingsPage> {
             CampusPanel(
               padding: EdgeInsets.zero,
               child: CampusListItem(
-                leading: Icon(
+                leading: CampusIcon(
                   Icons.sensors_rounded,
                   color: context.palette.blue,
                 ),
@@ -413,7 +418,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   'Посмотреть опрос NFC-считывателя',
                   'Observe NFC reader polling',
                 )),
-                trailing: Icon(Icons.chevron_right_rounded),
+                trailing: CampusIcon(Icons.chevron_right_rounded),
                 onTap: () => Navigator.of(context).push<void>(
                   MaterialPageRoute(builder: (_) => const TurnstileProbePage()),
                 ),
@@ -425,6 +430,26 @@ class _SettingsPageState extends State<SettingsPage> {
               style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
+            CampusPanel(
+              padding: EdgeInsets.zero,
+              child: CampusListItem(
+                leading: CampusIcon(
+                  Icons.dns_rounded,
+                  color: context.palette.blue,
+                ),
+                headline: tr(context, 'Сервер сессий', 'Session server'),
+                supportingText: tr(
+                  context,
+                  'Адрес сервера и автоматическая синхронизация',
+                  'Server address and automatic synchronization',
+                ),
+                trailing: const CampusIcon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute(builder: (_) => const SessionServerPage()),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             if (Platform.isAndroid) ...[
               CampusPanel(
                 padding: EdgeInsets.zero,
@@ -439,7 +464,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     'После последнего занятия: подтверждения каждого человека и истёкшие сессии.',
                     'After the last class: each person’s confirmations and expired sessions.',
                   ),
-                  leading: const Icon(Icons.notifications_outlined),
+                  leading: const CampusIcon(Icons.notifications_outlined),
                   trailing: M3ESwitch(
                     value: _daySummary,
                     onChanged: _saving ? null : _chooseSummary,
@@ -470,12 +495,13 @@ class _SettingsPageState extends State<SettingsPage> {
                     'Предпросмотр виджета',
                     'Widget preview',
                   ),
-                  leading: const Icon(Icons.widgets_outlined),
+                  leading: const CampusIcon(Icons.widgets_outlined),
                   onTap: _pinScanWidget,
                 ),
               ),
             ],
             if (widget.updates != null) ...[
+              const SizedBox(height: 24),
               AnimatedBuilder(
                 animation: widget.updates!,
                 builder: (context, _) => CampusPanel(
@@ -492,12 +518,12 @@ class _SettingsPageState extends State<SettingsPage> {
                         : tr(context, 'Проверить', 'Check now'),
                     leading: Badge(
                       isLabelVisible: widget.updates!.updateAvailable,
-                      child: Icon(
+                      child: CampusIcon(
                         Icons.system_update_rounded,
                         color: context.palette.blue,
                       ),
                     ),
-                    trailing: const Icon(Icons.chevron_right_rounded),
+                    trailing: const CampusIcon(Icons.chevron_right_rounded),
                     onTap: () => Navigator.of(context).push<void>(
                       MaterialPageRoute(
                         builder: (_) => UpdatesPage(
@@ -515,7 +541,7 @@ class _SettingsPageState extends State<SettingsPage> {
             CampusPanel(
               padding: EdgeInsets.zero,
               child: CampusListItem(
-                leading: Icon(
+                leading: CampusIcon(
                   Icons.info_outline_rounded,
                   color: context.palette.blue,
                 ),
@@ -524,7 +550,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   'О AntiAttendance',
                   'About AntiAttendance',
                 )),
-                trailing: Icon(Icons.chevron_right_rounded),
+                trailing: CampusIcon(Icons.chevron_right_rounded),
                 onTap: () => Navigator.of(context).push<void>(
                   MaterialPageRoute(builder: (_) => const AboutPage()),
                 ),
@@ -572,7 +598,7 @@ class _Choice extends StatelessWidget {
             duration: MediaQuery.disableAnimationsOf(context)
                 ? Duration.zero
                 : const Duration(milliseconds: 140),
-            child: Icon(
+            child: CampusIcon(
               selected ? Icons.check_circle_rounded : Icons.circle_outlined,
               key: ValueKey(selected),
               color: selected ? context.palette.blue : context.palette.muted,
@@ -705,7 +731,7 @@ class _ThemePreview extends StatelessWidget {
                     const SizedBox(height: 8),
                     AnimatedSwitcher(
                       duration: duration,
-                      child: Icon(
+                      child: CampusIcon(
                         selected
                             ? Icons.check_circle_rounded
                             : Icons.circle_outlined,

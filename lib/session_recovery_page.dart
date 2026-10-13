@@ -1,3 +1,5 @@
+import 'icons/campus_icon.dart';
+
 import 'dart:io';
 
 import 'package:material_ui/material_ui.dart';
@@ -353,7 +355,7 @@ class _SessionRecoveryPageState extends State<SessionRecoveryPage> {
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8),
                           child: M3EListItem(
-                            leading: Icon(
+                            leading: CampusIcon(
                               _restored.contains(account.id) ||
                                       state == SessionCheckState.valid
                                   ? Icons.check_circle_outline_rounded

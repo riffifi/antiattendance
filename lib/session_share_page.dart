@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import 'accounts.dart';
+import 'nfc_pass.dart';
 import 'l10n.dart';
 import 'session_transfer.dart';
 
@@ -34,7 +35,10 @@ class _SessionSharePageState extends State<SessionSharePage> {
 
   Future<void> _prepare() async {
     try {
-      final transfer = await createSessionTransfer(widget.accounts);
+      final transfer = await createSessionTransfer(
+        widget.accounts,
+        passNumbers: await transferPassNumbers(widget.accounts),
+      );
       if (!mounted) return;
       setState(() => _transfer = transfer);
       _timer = Timer.periodic(const Duration(milliseconds: 1800), (_) {

@@ -21,8 +21,9 @@ class ApkUpdateDownloader {
     Directory? cacheDirectory,
     void Function(int received, int? total)? onProgress,
   }) async {
-    if (_downloadActive)
+    if (_downloadActive) {
       throw StateError('An update download is already running.');
+    }
     _downloadActive = true;
     try {
       return await _download(

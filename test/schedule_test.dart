@@ -288,6 +288,8 @@ void main() {
     await tester.tap(find.byIcon(Icons.calendar_today_outlined).last);
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Mathematics'), 150);
+    await tester.ensureVisible(find.text('Mathematics'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Mathematics'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Paste link'));

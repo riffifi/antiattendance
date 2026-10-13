@@ -1,4 +1,6 @@
+import 'icons/campus_icon.dart';
 import 'campus_design.dart';
+import 'about_logo.dart';
 
 import 'package:material_3_expressive/material_3_expressive.dart';
 
@@ -6,7 +8,6 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import 'app_theme.dart';
@@ -71,7 +72,7 @@ class _AboutPageState extends State<AboutPage> {
               width: double.infinity,
               child: CampusButton.icon(
                 onPressed: _openRepository,
-                icon: const Icon(Icons.open_in_new_rounded, size: 20),
+                icon: const CampusIcon(Icons.open_in_new_rounded, size: 20),
                 label: const Text('GitHub'),
               ),
             ),
@@ -100,45 +101,7 @@ class _AboutPageState extends State<AboutPage> {
               ),
               child: Column(
                 children: [
-                  Container(
-                    width: 148,
-                    height: 148,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          context.palette.selected,
-                          context.palette.selected.withValues(alpha: .12),
-                        ],
-                      ),
-                    ),
-                    child: Container(
-                      width: 96,
-                      height: 96,
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(26),
-                        border: Border.all(color: context.palette.line),
-                        boxShadow: [
-                          BoxShadow(
-                            color: context.palette.blue.withValues(alpha: .08),
-                            blurRadius: 24,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: SvgPicture.asset(
-                        'icon/brand.svg',
-                        semanticsLabel: tr(
-                          context,
-                          'Логотип приложения',
-                          'App logo',
-                        ),
-                      ),
-                    ),
-                  ),
+                  const AboutLogo(),
                   const SizedBox(height: 20),
                   FittedBox(
                     fit: BoxFit.scaleDown,
@@ -216,7 +179,7 @@ class _AboutPageState extends State<AboutPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
+                  CampusIcon(
                     Icons.lock_outline_rounded,
                     color: context.palette.blue,
                     size: 22,
@@ -256,7 +219,7 @@ class _Feature extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Column(
         children: [
-          Icon(icon, size: 24, color: context.palette.blue),
+          CampusIcon(icon, size: 24, color: context.palette.blue),
           const SizedBox(height: 10),
           Text(
             label,

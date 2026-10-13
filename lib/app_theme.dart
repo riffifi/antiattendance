@@ -43,6 +43,9 @@ class AppPalette {
   final Color mint;
   final Color success;
 
+  Color get selectionSurface =>
+      Color.alphaBlend(selected.withValues(alpha: .28), surface);
+
   static AppPalette of(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
@@ -151,16 +154,33 @@ abstract final class AppTheme {
       textTheme: base.textTheme
           .copyWith(
             headlineLarge: TextStyle(
-              fontSize: 36,
-              height: 1.05,
-              letterSpacing: -1.5,
-              fontWeight: FontWeight.w800,
+              fontSize: 32,
+              height: 1.15,
+              letterSpacing: -1,
+              fontWeight: FontWeight.w700,
               color: ink,
             ),
             titleLarge: TextStyle(
               fontSize: 22,
+              height: 1.25,
               letterSpacing: -.6,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
+              color: ink,
+            ),
+            titleMedium: TextStyle(
+              fontSize: 16,
+              height: 1.35,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -.2,
+              color: ink,
+            ),
+            bodyLarge: TextStyle(fontSize: 16, height: 1.5, color: ink),
+            bodyMedium: TextStyle(fontSize: 14, height: 1.5, color: ink),
+            bodySmall: TextStyle(fontSize: 12, height: 1.4, color: muted),
+            labelLarge: TextStyle(
+              fontSize: 14,
+              height: 1.2,
+              fontWeight: FontWeight.w600,
               color: ink,
             ),
           )
@@ -180,6 +200,8 @@ abstract final class AppTheme {
         showDragHandle: true,
       ),
       appBarTheme: AppBarTheme(
+        toolbarHeight: 64,
+        titleSpacing: 20,
         backgroundColor: paper,
         foregroundColor: ink,
         elevation: 0,
@@ -188,7 +210,8 @@ abstract final class AppTheme {
         centerTitle: false,
         titleTextStyle: TextStyle(
           fontFamily: 'Geist',
-          fontSize: 20,
+          fontSize: 18,
+          letterSpacing: -.3,
           fontWeight: FontWeight.w600,
           color: ink,
         ),
@@ -233,7 +256,7 @@ abstract final class AppTheme {
           disabledForegroundColor: muted,
           minimumSize: const Size(0, 52),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
           textStyle: const TextStyle(
             fontFamily: 'Geist',
@@ -248,7 +271,7 @@ abstract final class AppTheme {
           side: BorderSide(color: line),
           minimumSize: const Size(0, 48),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
         ).copyWith(overlayColor: feedback),
       ),
@@ -257,7 +280,7 @@ abstract final class AppTheme {
           foregroundColor: scheme.primary,
           minimumSize: const Size(0, 44),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
           textStyle: const TextStyle(
             fontFamily: 'Geist',
@@ -269,20 +292,20 @@ abstract final class AppTheme {
         color: surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           side: BorderSide(color: line),
         ),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: surface,
         side: BorderSide(color: line),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: surface,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: line),
         ),
         contentPadding: const EdgeInsets.symmetric(

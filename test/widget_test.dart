@@ -342,7 +342,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('AntiAttendance'), findsOneWidget);
+    expect(find.byType(CampusBrand), findsOneWidget);
     await tester.tap(find.byIcon(Icons.settings_outlined));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Use phone language'), 200);

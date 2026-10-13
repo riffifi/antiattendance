@@ -1,3 +1,5 @@
+import 'icons/campus_icon.dart';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:material_3_expressive/material_3_expressive.dart';
 
@@ -73,7 +75,7 @@ class WidgetPreview extends StatelessWidget {
           ? MainAxisAlignment.center
           : MainAxisAlignment.start,
       children: [
-        Icon(
+        CampusIcon(
           nfc ? Icons.nfc_rounded : Icons.qr_code_scanner_rounded,
           size: 26,
           color: context.palette.ink,

@@ -13,6 +13,7 @@ import 'accounts.dart';
 import 'app_theme.dart';
 import 'pulse_api.dart';
 import 'pulse_session.dart';
+import 'session_expiry.dart';
 import 'login_qr.dart';
 import 'campus_design.dart';
 import 'expressive.dart';
@@ -245,34 +246,23 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
         }
         return;
       }
-      // Gateway and analytics cookies can expire long before authentication.
-      // Only legacy auth-cookie metadata has a known session-expiry meaning.
-      final expiryDates =
-          cookies
-              .where(
-                (cookie) =>
-                    (cookie.name == '.AspNetCore.Cookies' ||
-                        RegExp(r'^\.AspNetCore\.CookiesC[1-9][0-9]*$')
-                            .hasMatch(cookie.name)) &&
-                    cookie.value == values[cookie.name],
-              )
-              .map((cookie) => cookie.expiresDate)
-              .whereType<int>()
-              .where((date) => date > DateTime.now().millisecondsSinceEpoch)
-              .toList()
-            ..sort();
+      final expiry = sessionCookieExpiry(
+        session,
+        cookieExpiries: {
+          for (final cookie in cookies)
+            if (cookie.value == values[cookie.name])
+              cookie.name: cookie.expiresDate,
+        },
+      );
       _finished = true;
       Navigator.of(context).pop(
         SavedAccount(
           id: '',
           label: '',
           cookie: session,
-          expiresAt: expiryDates.isEmpty
-              ? null
-              : DateTime.fromMillisecondsSinceEpoch(
-                  expiryDates.first,
-                  isUtc: true,
-                ),
+          expiresAt: expiry != null && expiry.isAfter(DateTime.now())
+              ? expiry
+              : null,
         ),
       );
     } on FormatException {

@@ -22,6 +22,11 @@ Use **Settings → My group** to fetch only that group’s accounts and passes, 
 filters visible accounts and keeps bulk selection within the chosen group.
 Update the separate server repository before enabling group-only synchronization.
 
+Session expiry is read from recognized login-cookie metadata or an embedded
+session expiry, and is included in server synchronization. Browser sessions and
+opaque cookies may expose no date; those remain “Session expiry unknown”. Digital
+pass access-token lifetimes are not used as login expiry dates.
+
 ## Interface
 
 The UI uses Geist for text, Geist Mono for times and counters, and the Geist Pixel

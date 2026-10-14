@@ -17,6 +17,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
+import androidx.webkit.CookieManagerCompat
 import androidx.webkit.ProfileStore
 import androidx.webkit.WebViewFeature
 
@@ -91,6 +92,12 @@ class MainActivity : FlutterActivity() {
                         "cookies" -> {
                             val manager = ProfileStore.getInstance().getProfile(name)?.cookieManager
                             result.success(manager?.getCookie("https://pulse.mirea.ru/rtu_tc.rtu_attend.app.UserService/GetMeInfo"))
+                        }
+                        "cookieInfo" -> {
+                            val manager = ProfileStore.getInstance().getProfile(name)?.cookieManager
+                            result.success(if (manager != null && WebViewFeature.isFeatureSupported(WebViewFeature.GET_COOKIE_INFO))
+                                CookieManagerCompat.getCookieInfo(manager, "https://pulse.mirea.ru/rtu_tc.rtu_attend.app.UserService/GetMeInfo")
+                                else emptyList<String>())
                         }
                         "clear" -> {
                             val manager = ProfileStore.getInstance().getProfile(name)?.cookieManager

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'server_sessions.dart';
 import 'session_server_sync.dart';
 import 'app_settings.dart';
+import 'session_expiry.dart';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -46,7 +47,9 @@ class SavedAccount {
     id: json['id'] as String,
     label: json['label'] as String,
     cookie: json['cookie'] as String,
-    expiresAt: DateTime.tryParse(json['expiresAt'] as String? ?? ''),
+    expiresAt:
+        DateTime.tryParse(json['expiresAt'] as String? ?? '') ??
+        sessionCookieExpiry(json['cookie'] as String),
     sessionExpired: json['sessionExpired'] == true,
     groupId: json['groupId'] as int?,
     groupName: json['groupName'] as String?,

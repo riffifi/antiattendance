@@ -28,6 +28,11 @@ const serverRpcPaths = {
   '/rtu_tc.rtu_attend.humanpass.HumanPassService/GetDigitalPass': 'pass-issue',
 };
 
+double? _expirySeconds(String value) {
+  final date = DateTime.tryParse(value);
+  return date == null ? null : date.millisecondsSinceEpoch / 1000;
+}
+
 class SessionServerException implements Exception {
   const SessionServerException(this.message, {this.status});
   final String message;
@@ -239,6 +244,9 @@ class SessionServerClient {
         'expected_session_version': ?expectedSessionVersion,
         'group_id': account['groupId'],
         'group_name': account['groupName'],
+        'expires_at': account['expiresAt'] is String
+            ? _expirySeconds(account['expiresAt'] as String)
+            : null,
       },
     );
     final id = result['id'];
@@ -246,6 +254,21 @@ class SessionServerClient {
       throw const FormatException('Invalid imported account.');
     }
     return result;
+  }
+
+  Future<void> publishExpiry(
+    String id,
+    DateTime expiry,
+    int sessionVersion,
+  ) async {
+    await _json(
+      '/api/accounts/$id/expiry',
+      method: 'PUT',
+      body: {
+        'expires_at': expiry.millisecondsSinceEpoch / 1000,
+        'expected_session_version': sessionVersion,
+      },
+    );
   }
 
   Future<void> publishPass(

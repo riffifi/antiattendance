@@ -278,6 +278,19 @@ abstract final class SessionAutoSync {
               remote = client.accounts.where((r) => r['id'] == id).firstOrNull;
             }
             if (remote == null) return;
+            if (remote['expires_at'] == null &&
+                account.expiresAt?.isAfter(DateTime.now()) == true) {
+              try {
+                await client.publishExpiry(
+                  id,
+                  account.expiresAt!,
+                  remote['session_version'] as int,
+                );
+                await client.fetch();
+              } on SessionServerException catch (error) {
+                if (error.status != 409) rethrow;
+              }
+            }
             final number = await NfcPassStore().number(account);
             if (number != null && record['pass_number'] != number) {
               final expected =

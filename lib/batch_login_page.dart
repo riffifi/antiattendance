@@ -18,6 +18,7 @@ import 'l10n.dart';
 import 'login_qr.dart';
 import 'pulse_api.dart';
 import 'pulse_session.dart';
+import 'session_expiry.dart';
 
 const _channel = MethodChannel('antiattendance/batch_login');
 
@@ -218,6 +219,17 @@ class _BatchLoginPageState extends State<BatchLoginPage> {
           entry.saving = true;
           entry.qr = null;
         });
+        var metadata = <String, int?>{};
+        try {
+          final infos = await _channel.invokeListMethod<String>('cookieInfo', {
+            'profile': entry.profile,
+          });
+          metadata = expiryMetadataFromCookieInfo(infos ?? []);
+        } catch (_) {
+          /* Older WebViews still support embedded session expiry. */
+        }
+        if (!mounted || generation != entry.generation) return;
+        final expiry = sessionCookieExpiry(cookie, cookieExpiries: metadata);
         final label = entry.name.text.trim();
         final account = SavedAccount(
           id: entry.profile,
@@ -229,6 +241,9 @@ class _BatchLoginPageState extends State<BatchLoginPage> {
                 )
               : label,
           cookie: cookie,
+          expiresAt: expiry != null && expiry.isAfter(DateTime.now())
+              ? expiry
+              : null,
         );
         // Two callbacks must never save over one another's account list.
         final saving = _saveQueue.then((_) => widget.onSave(account));

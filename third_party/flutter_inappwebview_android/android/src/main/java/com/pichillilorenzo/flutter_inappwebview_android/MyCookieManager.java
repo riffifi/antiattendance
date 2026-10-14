@@ -243,6 +243,7 @@ public class MyCookieManager extends ChannelDelegateImpl {
         cookieMap.put("isSecure", false);
         cookieMap.put("isHttpOnly", false);
 
+        Long maxAgeExpiry = null;
         for (int i = 1; i < cookieParams.length; i++) {
           String[] cookieParamNameValue = cookieParams[i].split("=", 2);
           String cookieParamName = cookieParamNameValue[0].trim();
@@ -250,7 +251,7 @@ public class MyCookieManager extends ChannelDelegateImpl {
 
           if (cookieParamName.equalsIgnoreCase("Expires")) {
             try {
-              final SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy hh:mm:ss z", Locale.US);
+              final SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
               Date expiryDate = sdf.parse(cookieParamValue);
               if (expiryDate != null) {
                 cookieMap.put("expiresDate", expiryDate.getTime());
@@ -261,8 +262,8 @@ public class MyCookieManager extends ChannelDelegateImpl {
           } else if (cookieParamName.equalsIgnoreCase("Max-Age")) {
             try {
               long maxAge = Long.parseLong(cookieParamValue);
-              cookieMap.put("expiresDate", System.currentTimeMillis() + maxAge);
-            } catch (NumberFormatException e) {
+              maxAgeExpiry = Math.addExact(System.currentTimeMillis(), Math.multiplyExact(maxAge, 1000L));
+            } catch (NumberFormatException | ArithmeticException e) {
               Log.e(LOG_TAG, "", e);
             }
           } else if (cookieParamName.equalsIgnoreCase("Domain")) {
@@ -277,6 +278,7 @@ public class MyCookieManager extends ChannelDelegateImpl {
             cookieMap.put("path", cookieParamValue);
           }
         }
+        if (maxAgeExpiry != null) cookieMap.put("expiresDate", maxAgeExpiry);
       }
 
       cookieListMap.add(cookieMap);
@@ -424,7 +426,7 @@ public class MyCookieManager extends ChannelDelegateImpl {
   }
 
   public static String getCookieExpirationDate(Long timestamp) {
-    final SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy hh:mm:ss z", Locale.US);
+    final SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
     sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
     return sdf.format(new Date(timestamp));
   }

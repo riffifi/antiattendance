@@ -192,7 +192,7 @@ class _SessionImportPageState extends State<SessionImportPage> {
         children: [
           Text(
             tr(context, 'Импортировать аккаунты?', 'Import these accounts?'),
-            style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w400),
           ),
           const SizedBox(height: 8),
           Text(

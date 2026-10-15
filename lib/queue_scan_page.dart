@@ -197,6 +197,7 @@ class QueueScanOverlay extends StatelessWidget {
                 child: Row(
                   children: [
                     CampusTextAction(
+                      icon: Icons.close_rounded,
                       onPressed: onClose,
                       tooltip: tr(context, 'Закрыть', 'Close'),
                       label: tr(context, 'Закрыть', 'Close'),
@@ -215,6 +216,7 @@ class QueueScanOverlay extends StatelessWidget {
                       ),
                     ),
                     CampusTextAction(
+                      icon: Icons.flashlight_on_rounded,
                       onPressed: cameraError ? null : onTorch,
                       tooltip: tr(context, 'Фонарик', 'Flashlight'),
                       label: tr(context, 'Фонарик', 'Flashlight'),

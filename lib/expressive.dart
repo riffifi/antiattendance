@@ -1,5 +1,7 @@
 import 'campus_design.dart';
 import 'app_haptics.dart';
+import 'l10n.dart';
+import 'icons/campus_icon.dart';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
@@ -24,16 +26,47 @@ Future<T?> showExpressiveSheet<T>({
   isScrollControlled: true,
   useSafeArea: true,
   showDragHandle: false,
+  constraints: const BoxConstraints(maxWidth: 640),
   builder: (context) => PredictiveBackSurface(
-    child: SafeArea(
-      top: false,
-      child: Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.viewInsetsOf(context).bottom + 12,
+    child: AnimatedPadding(
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 160),
+      curve: Curves.easeOutCubic,
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                const SizedBox(width: 48),
+                Expanded(
+                  child: Center(
+                    child: showDragHandle
+                        ? Container(
+                            width: 32,
+                            height: 2,
+                            color: Theme.of(context).dividerColor,
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ),
+                CampusTextAction(
+                  icon: Icons.close_rounded,
+                  label: tr(context, 'Закрыть', 'Close'),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            Flexible(
+              child: compact
+                  ? SingleChildScrollView(child: builder(context))
+                  : builder(context),
+            ),
+          ],
         ),
-        child: compact
-            ? SingleChildScrollView(child: builder(context))
-            : builder(context),
       ),
     ),
   ),
@@ -70,7 +103,9 @@ class AppPassPicker extends StatelessWidget {
             CampusListItem(
               headline: item.label,
               selected: item.selected,
-              trailing: item.selected ? const Text('×') : null,
+              trailing: item.selected
+                  ? const CampusIcon(Icons.check_rounded, size: 18)
+                  : null,
               onTap: item.disabled ? null : () => Navigator.pop(context, item),
             ),
         ],
@@ -90,6 +125,7 @@ class AppPassPicker extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
+        const CampusIcon(Icons.keyboard_arrow_down_rounded, size: 18),
       ],
     ),
   );

@@ -387,6 +387,7 @@ class _SchedulePageState extends State<SchedulePage> {
                     label: tr(context, 'карты', 'maps'),
                   ),
                   CampusTextAction(
+                    icon: Icons.refresh_rounded,
                     onPressed: groups.isEmpty || _loading
                         ? null
                         : () => _refresh(force: true),
@@ -458,6 +459,7 @@ class _SchedulePageState extends State<SchedulePage> {
                   children: [
                     Expanded(
                       child: CampusTextAction(
+                        icon: Icons.chevron_left_rounded,
                         onPressed: () =>
                             _selectDay(_day.subtract(const Duration(days: 7))),
                         tooltip: tr(
@@ -493,6 +495,7 @@ class _SchedulePageState extends State<SchedulePage> {
                     ),
                     Expanded(
                       child: CampusTextAction(
+                        icon: Icons.chevron_right_rounded,
                         onPressed: () =>
                             _selectDay(_day.add(const Duration(days: 7))),
                         tooltip: tr(context, 'Следующая неделя', 'Next week'),
@@ -768,7 +771,7 @@ class _LessonRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 52,
+          width: MediaQuery.textScalerOf(context).scale(52).clamp(52, 96),
           child: Padding(
             padding: const EdgeInsets.only(top: 15),
             child: Column(

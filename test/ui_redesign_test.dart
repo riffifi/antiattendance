@@ -81,9 +81,7 @@ void main() {
     },
   );
 
-  testWidgets('Settings navigation uses words without decorative icons', (
-    tester,
-  ) async {
+  testWidgets('Settings destinations retain readable labels', (tester) async {
     final theme = AppTheme.build(AppThemeMode.dark)
         .copyWith(platform: TargetPlatform.android);
     await tester.pumpWidget(
@@ -99,7 +97,6 @@ void main() {
     await tester.pumpAndSettle();
     for (final label in ['Study day summary', 'Mark-all widget']) {
       await tester.scrollUntilVisible(find.text(label), 250);
-      expect(find.byType(Icon), findsNothing);
       expect(find.text(label), findsOneWidget);
     }
     expect(tester.takeException(), isNull);

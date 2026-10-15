@@ -1,6 +1,16 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  'No groups found. Try another name.': (
+    'Aucun groupe trouvé. Essayez un autre nom.',
+    'Nenhuma turma encontrada. Tente outro nome.',
+    '未找到班级。请尝试其他名称。',
+  ),
+  'Enter at least two characters and search.': (
+    'Saisissez au moins deux caractères puis recherchez.',
+    'Introduza pelo menos dois caracteres e pesquise.',
+    '输入至少两个字符后搜索。',
+  ),
   'Search': ('Rechercher', 'Pesquisar', '搜索'),
   'Actions': ('Actions', 'Ações', '操作'),
   'actions': ('actions', 'ações', '操作'),

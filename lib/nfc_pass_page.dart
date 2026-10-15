@@ -1411,45 +1411,20 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                 ),
               const SizedBox(height: 8),
               if (defaultTargetPlatform == TargetPlatform.android)
-                _card(
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              tr(
-                                context,
-                                'На главном экране',
-                                'On your home screen',
-                              ),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              tr(
-                                context,
-                                'Запуск сохранённой очереди одним касанием.',
-                                'Start your saved queue with one tap.',
-                              ),
-                              style: TextStyle(
-                                color: context.palette.muted,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      CampusButton.text(
-                        onPressed: enabled ? _addWidget : null,
-                        child: Text(
-                          tr(context, 'Добавить виджет', 'Add widget'),
-                        ),
-                      ),
-                    ],
+                CampusListItem(
+                  headline: tr(
+                    context,
+                    'На главном экране',
+                    'On your home screen',
+                  ),
+                  supportingText: tr(
+                    context,
+                    'Запуск сохранённой очереди одним касанием.',
+                    'Start your saved queue with one tap.',
+                  ),
+                  trailing: CampusButton.text(
+                    onPressed: enabled ? _addWidget : null,
+                    child: Text(tr(context, 'Добавить виджет', 'Add widget')),
                   ),
                 ),
               const SizedBox(height: 8),
@@ -1585,6 +1560,7 @@ class _VerificationDialogState extends State<_VerificationDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
+    scrollable: true,
     title: Text(widget.label),
     content: Column(
       mainAxisSize: MainAxisSize.min,
@@ -1611,6 +1587,9 @@ class _VerificationDialogState extends State<_VerificationDialog> {
             'Verification code (6 digits)',
           ),
           onChanged: (_) => setState(() {}),
+          onSubmitted: (_) {
+            if (_code.text.length == 6) Navigator.pop(context, _code.text);
+          },
         ),
       ],
     ),

@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'app_theme.dart';
 import 'l10n.dart';
 import 'editorial_controls.dart';
+import 'icons/campus_icon.dart';
 export 'editorial_controls.dart';
 export 'campus_models.dart';
 import 'campus_models.dart';
@@ -397,46 +398,56 @@ class CampusListItem extends StatelessWidget {
   final VoidCallback? onTap;
   final bool selected;
   @override
-  Widget build(BuildContext context) => Semantics(
-    selected: selected,
-    child: Column(
-      children: [
-        EditorialAction(
-          onPressed: onTap,
-          invertOnInteraction: false,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-          child: Row(
-            children: [
-              if (leading != null) ...[leading!, const SizedBox(width: 12)],
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      headline,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    if (supportingText != null) ...[
-                      const SizedBox(height: 5),
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, bounds) => Semantics(
+      selected: selected,
+      child: Column(
+        children: [
+          EditorialAction(
+            onPressed: onTap,
+            invertOnInteraction: false,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            child: Row(
+              children: [
+                if (leading != null) ...[leading!, const SizedBox(width: 12)],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        supportingText!,
-                        style: Theme.of(context).textTheme.bodySmall
-                            ?.copyWith(color: context.palette.muted),
+                        headline,
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
+                      if (supportingText != null) ...[
+                        const SizedBox(height: 5),
+                        Text(
+                          supportingText!,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: context.palette.muted),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              if (trailing != null) ...[const SizedBox(width: 8), trailing!],
-              if (trailing == null && selected) ...[
-                const SizedBox(width: 8),
-                const Text('×'),
+                if (trailing != null) ...[
+                  const SizedBox(width: 8),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: bounds.maxWidth * .42,
+                    ),
+                    child: trailing!,
+                  ),
+                ],
+                if (trailing == null && selected) ...[
+                  const SizedBox(width: 8),
+                  const CampusIcon(Icons.check_rounded, size: 18),
+                ],
               ],
-            ],
+            ),
           ),
-        ),
-        Divider(height: .5, thickness: .5, color: context.palette.line),
-      ],
+          Divider(height: .5, thickness: .5, color: context.palette.line),
+        ],
+      ),
     ),
   );
 }
@@ -595,12 +606,13 @@ class CampusAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) => AppBar(
     title: title,
     actions: actions,
-    leadingWidth: leadingWidth ?? 76,
+    leadingWidth: leadingWidth ?? 56,
     automaticallyImplyLeading: false,
     leading:
         leading ??
         (automaticallyImplyLeading && Navigator.of(context).canPop()
             ? CampusTextAction(
+                icon: Icons.arrow_back_rounded,
                 label: tr(context, 'Назад', 'Back'),
                 onPressed: () => Navigator.of(context).maybePop(),
               )

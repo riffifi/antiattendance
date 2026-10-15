@@ -123,103 +123,111 @@ class _NfcDiagnosticsPageState extends State<NfcDiagnosticsPage> {
         title: Text(tr(context, 'Проверка NFC', 'NFC diagnostics')),
         automaticallyImplyLeading: true,
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: context.palette.surface,
-                  borderRadius: BorderRadius.zero,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _status(context),
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (_scanning && tag == null) ...[
-                      const SizedBox(height: 16),
-                      const CampusProgress.linear(),
-                    ],
-                  ],
-                ),
-              ),
-              if (tag != null) ...[
-                const SizedBox(height: 20),
-                Text(
-                  tr(context, 'Что увидел телефон', 'What this phone detected'),
-                  style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 12),
+      body: SafeArea(
+        top: false,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+              children: [
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: context.palette.surface,
                     borderRadius: BorderRadius.zero,
                   ),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _detail(
-                        tr(context, 'Технологии', 'Technologies'),
-                        technologies,
+                      Text(
+                        _status(context),
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                      if (tag['atqa'] != null)
-                        _detail('NFC-A ATQA', tag['atqa']),
-                      if (tag['sak'] != null) _detail('NFC-A SAK', tag['sak']),
-                      if (tag['maxTransceiveLength'] != null) ...[
-                        _detail(
-                          tr(
-                            context,
-                            'ISO-DEP: максимальный размер',
-                            'ISO-DEP max bytes',
-                          ),
-                          tag['maxTransceiveLength'],
-                        ),
-                        _detail(
-                          tr(
-                            context,
-                            'ISO-DEP: исторические байты',
-                            'ISO-DEP historical bytes',
-                          ),
-                          tag['historicalBytesLength'],
-                        ),
-                        _detail(
-                          tr(
-                            context,
-                            'ISO-DEP: байты верхнего уровня',
-                            'ISO-DEP higher layer bytes',
-                          ),
-                          tag['hiLayerResponseLength'],
-                        ),
-                        _detail(
-                          tr(context, 'Расширенные APDU', 'Extended APDU'),
-                          tag['extendedApduSupported'] == true
-                              ? tr(context, 'Да', 'Yes')
-                              : tr(context, 'Нет', 'No'),
-                        ),
+                      if (_scanning && tag == null) ...[
+                        const SizedBox(height: 16),
+                        const CampusProgress.linear(),
                       ],
                     ],
                   ),
                 ),
-              ],
-              const SizedBox(height: 16),
-              Text(
-                tr(
-                  context,
-                  'Это технические сведения о NFC-соединении. Они не подтверждают, что обнаружен именно Пульс; данные пропуска не считываются и не сохраняются.',
-                  'These are NFC connection details. They do not confirm that the device is Pulse; pass data is neither read nor saved.',
+                if (tag != null) ...[
+                  const SizedBox(height: 20),
+                  Text(
+                    tr(
+                      context,
+                      'Что увидел телефон',
+                      'What this phone detected',
+                    ),
+                    style: TextStyle(fontSize: 21, fontWeight: FontWeight.w400),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: context.palette.surface,
+                      borderRadius: BorderRadius.zero,
+                    ),
+                    child: Column(
+                      children: [
+                        _detail(
+                          tr(context, 'Технологии', 'Technologies'),
+                          technologies,
+                        ),
+                        if (tag['atqa'] != null)
+                          _detail('NFC-A ATQA', tag['atqa']),
+                        if (tag['sak'] != null)
+                          _detail('NFC-A SAK', tag['sak']),
+                        if (tag['maxTransceiveLength'] != null) ...[
+                          _detail(
+                            tr(
+                              context,
+                              'ISO-DEP: максимальный размер',
+                              'ISO-DEP max bytes',
+                            ),
+                            tag['maxTransceiveLength'],
+                          ),
+                          _detail(
+                            tr(
+                              context,
+                              'ISO-DEP: исторические байты',
+                              'ISO-DEP historical bytes',
+                            ),
+                            tag['historicalBytesLength'],
+                          ),
+                          _detail(
+                            tr(
+                              context,
+                              'ISO-DEP: байты верхнего уровня',
+                              'ISO-DEP higher layer bytes',
+                            ),
+                            tag['hiLayerResponseLength'],
+                          ),
+                          _detail(
+                            tr(context, 'Расширенные APDU', 'Extended APDU'),
+                            tag['extendedApduSupported'] == true
+                                ? tr(context, 'Да', 'Yes')
+                                : tr(context, 'Нет', 'No'),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                Text(
+                  tr(
+                    context,
+                    'Это технические сведения о NFC-соединении. Они не подтверждают, что обнаружен именно Пульс; данные пропуска не считываются и не сохраняются.',
+                    'These are NFC connection details. They do not confirm that the device is Pulse; pass data is neither read nor saved.',
+                  ),
+                  style: TextStyle(color: context.palette.muted, fontSize: 13),
                 ),
-                style: TextStyle(color: context.palette.muted, fontSize: 13),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

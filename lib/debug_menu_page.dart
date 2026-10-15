@@ -365,11 +365,13 @@ class _DebugMenuPageState extends State<DebugMenuPage> {
       title: Text(tr(context, 'Меню отладки', 'Debug menu')),
       actions: [
         CampusTextAction(
+          icon: Icons.refresh_rounded,
           onPressed: _loading ? null : _refresh,
           tooltip: tr(context, 'Обновить', 'Refresh'),
           label: tr(context, 'Обновить', 'Refresh'),
         ),
         CampusTextAction(
+          icon: Icons.content_copy_rounded,
           onPressed: _report == null || _loading ? null : _copy,
           tooltip: tr(context, 'Копировать отчёт', 'Copy report'),
           label: tr(context, 'Копировать отчёт', 'Copy report'),

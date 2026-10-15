@@ -194,6 +194,7 @@ class _UpdatesPageState extends State<UpdatesPage> {
           title: Text(tr(context, 'Обновления', 'Updates')),
           actions: [
             CampusTextAction(
+              icon: Icons.refresh_rounded,
               onPressed: updates.checking ? null : () => updates.check(),
               tooltip: tr(context, 'Обновить', 'Refresh'),
               label: tr(context, 'Обновить', 'Refresh'),
@@ -277,106 +278,100 @@ class _UpdatesPageState extends State<UpdatesPage> {
             ),
           ),
         ),
-        body: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
-              children: [
-                AnimatedContainer(
-                  duration: MediaQuery.disableAnimationsOf(context)
-                      ? Duration.zero
-                      : const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: available
-                        ? context.palette.selected
-                        : context.palette.surface,
-                    borderRadius: BorderRadius.zero,
-                    border: Border.all(color: context.palette.line),
-                    boxShadow: available
-                        ? [
-                            BoxShadow(
-                              color: context.palette.blue.withValues(
-                                alpha: .08,
-                              ),
-                              blurRadius: 20,
-                              offset: const Offset(0, 8),
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (updates.checking)
-                        const SizedBox(
-                          width: 32,
-                          height: 32,
-                          child: CampusProgress.compact(strokeWidth: 2),
-                        )
-                      else if (available) ...[
-                        Text(
-                          release.tag,
-                          style: Theme.of(context).textTheme.headlineLarge,
-                        ),
-                        const SizedBox(height: 10),
-                      ],
-                      Text(
-                        _updateStatus(updates),
-                        style: available
-                            ? Theme.of(context).textTheme.bodyLarge
-                            : Theme.of(context).textTheme.titleLarge,
-                      ),
-                      if (updates.installedVersion != null) ...[
-                        const SizedBox(height: 12),
-                        Text(
-                          trf(
-                            context,
-                            'Установлена версия {version}',
-                            'Installed: {version}',
-                            {'version': updates.installedVersion!},
+        body: SafeArea(
+          top: false,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+                children: [
+                  AnimatedContainer(
+                    duration: MediaQuery.disableAnimationsOf(context)
+                        ? Duration.zero
+                        : const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: available
+                          ? context.palette.selected
+                          : context.palette.surface,
+                      borderRadius: BorderRadius.zero,
+                      border: Border.all(color: context.palette.line),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (updates.checking)
+                          const SizedBox(
+                            width: 32,
+                            height: 32,
+                            child: CampusProgress.compact(strokeWidth: 2),
+                          )
+                        else if (available) ...[
+                          Text(
+                            release.tag,
+                            style: Theme.of(context).textTheme.headlineLarge,
                           ),
-                          style: TextStyle(color: context.palette.muted),
-                        ),
-                      ],
-                      if (release?.publishedAt != null) ...[
-                        const SizedBox(height: 8),
+                          const SizedBox(height: 10),
+                        ],
                         Text(
-                          MaterialLocalizations.of(
-                            context,
-                          ).formatMediumDate(release!.publishedAt!.toLocal()),
-                          style: TextStyle(
-                            color: context.palette.muted,
-                            fontSize: 12,
-                          ),
+                          _updateStatus(updates),
+                          style: available
+                              ? Theme.of(context).textTheme.bodyLarge
+                              : Theme.of(context).textTheme.titleLarge,
                         ),
-                      ],
-                    ],
-                  ),
-                ),
-                if (release != null) ...[
-                  const SizedBox(height: 28),
-                  CampusSectionTitle(tr(context, 'Что нового', 'What’s new')),
-                  CampusPanel(
-                    child: ReleaseNotes(
-                      notes: release.notes.isEmpty
-                          ? tr(
+                        if (updates.installedVersion != null) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            trf(
                               context,
-                              'В этом релизе нет описания изменений.',
-                              'No release notes were provided.',
-                            )
-                          : release.notes,
+                              'Установлена версия {version}',
+                              'Installed: {version}',
+                              {'version': updates.installedVersion!},
+                            ),
+                            style: TextStyle(color: context.palette.muted),
+                          ),
+                        ],
+                        if (release?.publishedAt != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            MaterialLocalizations.of(
+                              context,
+                            ).formatMediumDate(release!.publishedAt!.toLocal()),
+                            style: TextStyle(
+                              color: context.palette.muted,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  CampusButton.action(
-                    onPressed: () => _openRelease(release.page),
-                    label: Text(tr(context, 'Страница релиза', 'Release page')),
-                    style: CampusButtonStyle.text,
-                  ),
+                  if (release != null) ...[
+                    const SizedBox(height: 28),
+                    CampusSectionTitle(tr(context, 'Что нового', 'What’s new')),
+                    CampusPanel(
+                      child: ReleaseNotes(
+                        notes: release.notes.isEmpty
+                            ? tr(
+                                context,
+                                'В этом релизе нет описания изменений.',
+                                'No release notes were provided.',
+                              )
+                            : release.notes,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    CampusButton.action(
+                      onPressed: () => _openRelease(release.page),
+                      label: Text(
+                        tr(context, 'Страница релиза', 'Release page'),
+                      ),
+                      style: CampusButtonStyle.text,
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

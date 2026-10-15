@@ -18,6 +18,7 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
   List<ScheduleGroup> _groups = [];
   String? _error;
   bool _loading = false;
+  bool _searched = false;
   int _generation = 0;
 
   @override
@@ -30,12 +31,18 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
     final generation = ++_generation;
     final query = _controller.text.trim();
     if (query.length < 2) {
-      setState(() => _groups = []);
+      setState(() {
+        _groups = [];
+        _loading = false;
+        _error = null;
+        _searched = false;
+      });
       return;
     }
     setState(() {
       _loading = true;
       _error = null;
+      _searched = true;
     });
     try {
       final groups = await widget.api.searchGroups(query);
@@ -65,45 +72,69 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
       title: Text(tr(context, 'Выбрать группу', 'Choose group')),
       automaticallyImplyLeading: true,
     ),
-    body: Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 640),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: CampusTextField(
-                controller: _controller,
-                autofocus: true,
-                label: tr(
-                  context,
-                  'Например, ИНБО-10-23',
-                  'For example, ИНБО-10-23',
+    body: SafeArea(
+      top: false,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: CampusTextField(
+                  controller: _controller,
+                  autofocus: true,
+                  label: tr(
+                    context,
+                    'Например, ИНБО-10-23',
+                    'For example, ИНБО-10-23',
+                  ),
+                  trailing: CampusTextAction(
+                    icon: Icons.search_rounded,
+                    onPressed: _search,
+                    tooltip: tr(context, 'Поиск', 'Search'),
+                    label: tr(context, 'Поиск', 'Search'),
+                  ),
+                  onSubmitted: (_) => _search(),
                 ),
-                trailing: CampusTextAction(
-                  onPressed: _search,
-                  tooltip: tr(context, 'Поиск', 'Search'),
-                  label: tr(context, 'Поиск', 'Search'),
+              ),
+              if (_loading) const CampusProgress.linear(),
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(_error!),
                 ),
-                onSubmitted: (_) => _search(),
+              Expanded(
+                child: _groups.isEmpty && !_loading && _error == null
+                    ? SingleChildScrollView(
+                        padding: const EdgeInsets.all(20),
+                        child: Text(
+                          _searched
+                              ? tr(
+                                  context,
+                                  'Группы не найдены. Попробуйте другое название.',
+                                  'No groups found. Try another name.',
+                                )
+                              : tr(
+                                  context,
+                                  'Введите минимум два символа и нажмите поиск.',
+                                  'Enter at least two characters and search.',
+                                ),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: _groups.length,
+                        itemBuilder: (context, index) {
+                          final group = _groups[index];
+                          return CampusListItem(
+                            headline: (group.name),
+                            onTap: () => Navigator.pop(context, group),
+                          );
+                        },
+                      ),
               ),
-            ),
-            if (_loading) const CampusProgress.linear(),
-            if (_error != null)
-              Padding(padding: const EdgeInsets.all(16), child: Text(_error!)),
-            Expanded(
-              child: ListView.builder(
-                itemCount: _groups.length,
-                itemBuilder: (context, index) {
-                  final group = _groups[index];
-                  return CampusListItem(
-                    headline: (group.name),
-                    onTap: () => Navigator.pop(context, group),
-                  );
-                },
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     ),

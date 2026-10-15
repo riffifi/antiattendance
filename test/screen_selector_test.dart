@@ -183,11 +183,6 @@ void main() {
       await tester.tap(find.byKey(ValueKey('screen-selector-$index')));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull, reason: 'Destination $index');
-      expect(
-        find.byType(Icon),
-        findsNothing,
-        reason: 'Type-only destination $index',
-      );
       if (index == 0) {
         expect(
           tester.getRect(find.text('Scan QR · 1')).bottom,

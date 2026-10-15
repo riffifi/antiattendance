@@ -24,6 +24,10 @@ class _StudySummaryPageState extends State<StudySummaryPage> {
   }
 
   Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _failed = false;
+    });
     try {
       final raw = await studySummaryChannel.invokeMethod<String>('last');
       if (mounted) {
@@ -125,6 +129,11 @@ class _StudySummaryPageState extends State<StudySummaryPage> {
                       ),
                     ),
                 ],
+                if (_failed)
+                  CampusButton.text(
+                    onPressed: _load,
+                    child: Text(tr(context, 'Повторить', 'Retry')),
+                  ),
               ],
             ),
     ),

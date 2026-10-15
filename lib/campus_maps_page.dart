@@ -519,25 +519,28 @@ class _CampusMapsPageState extends State<CampusMapsPage>
         appBar: CampusAppBar(
           title: Text(tr(context, 'Карты кампусов', 'Campus maps')),
         ),
-        body: Center(
-          child: _failed
-              ? Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      tr(
-                        context,
-                        'Не удалось загрузить карты.',
-                        'Could not load campus maps.',
+        body: SafeArea(
+          top: false,
+          child: Center(
+            child: _failed
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        tr(
+                          context,
+                          'Не удалось загрузить карты.',
+                          'Could not load campus maps.',
+                        ),
                       ),
-                    ),
-                    CampusButton.text(
-                      onPressed: _load,
-                      child: Text(tr(context, 'Повторить', 'Retry')),
-                    ),
-                  ],
-                )
-              : const CampusProgress.compact(),
+                      CampusButton.text(
+                        onPressed: _load,
+                        child: Text(tr(context, 'Повторить', 'Retry')),
+                      ),
+                    ],
+                  )
+                : const CampusProgress.compact(),
+          ),
         ),
       );
     }
@@ -619,6 +622,7 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                 controller: _search,
                 label: tr(context, 'Аудитория или место', 'Room or place'),
                 trailing: CampusTextAction(
+                  icon: Icons.close_rounded,
                   onPressed: () => setState(() {
                     _search.clear();
                     _kind = null;
@@ -718,6 +722,7 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                         child: Text(tr(context, 'Настройки', 'Settings')),
                       ),
                     CampusTextAction(
+                      icon: Icons.close_rounded,
                       onPressed: () => setState(() => _gpsError = null),
                       tooltip: tr(context, 'Закрыть', 'Dismiss'),
                       label: tr(context, 'Закрыть', 'Dismiss'),
@@ -880,6 +885,7 @@ class _CampusMapsPageState extends State<CampusMapsPage>
               label: tr(context, 'Сохранить место', 'Save place'),
             ),
             CampusTextAction(
+              icon: Icons.close_rounded,
               onPressed: () => setState(() {
                 _selected = null;
                 _invalidateRoute();
@@ -1023,47 +1029,49 @@ class _PlacePickerState extends State<_PlacePicker> {
     }
     return SizedBox(
       height: MediaQuery.sizeOf(context).height * .7,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              widget.title,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: CampusTextField(
-              controller: _search,
-              label: tr(context, 'Аудитория или место', 'Room or place'),
-              onChanged: (_) => setState(() {}),
-            ),
-          ),
-          if (widget.position != null)
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Text(
-                tr(
-                  context,
-                  'Ближайшие места по приблизительной позиции. Подтвердите, где вы находитесь.',
-                  'Nearby places use approximate location. Confirm where you are.',
-                ),
+      child: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.title,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 16),
+                  CampusTextField(
+                    controller: _search,
+                    label: tr(context, 'Аудитория или место', 'Room or place'),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  if (widget.position != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      tr(
+                        context,
+                        'Ближайшие места по приблизительной позиции. Подтвердите, где вы находитесь.',
+                        'Nearby places use approximate location. Confirm where you are.',
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: places.length,
-              itemBuilder: (context, index) {
-                final place = places[index];
-                return CampusListItem(
-                  headline: place.label,
-                  supportingText:
-                      '${campusFloorLabel(context, widget.campus.floor(place.floorId))} · ${placeKindLabel(context, place.kind)}',
-                  onTap: () => Navigator.pop(context, place),
-                );
-              },
-            ),
+          ),
+          SliverList.builder(
+            itemCount: places.length,
+            itemBuilder: (context, index) {
+              final place = places[index];
+              return CampusListItem(
+                headline: place.label,
+                supportingText:
+                    '${campusFloorLabel(context, widget.campus.floor(place.floorId))} · ${placeKindLabel(context, place.kind)}',
+                onTap: () => Navigator.pop(context, place),
+              );
+            },
           ),
         ],
       ),

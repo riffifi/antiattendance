@@ -325,6 +325,7 @@ class _BatchLoginPageState extends State<BatchLoginPage> {
       final close = await showExpressiveDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
+          scrollable: true,
           title: Text(
             tr(context, 'Закончить добавление?', 'Finish adding accounts?'),
           ),
@@ -435,6 +436,7 @@ class _BatchLoginPageState extends State<BatchLoginPage> {
       child: Scaffold(
         appBar: CampusAppBar(
           leading: CampusTextAction(
+            icon: Icons.arrow_back_rounded,
             onPressed: _leave,
             label: tr(context, 'Назад', 'Back'),
           ),
@@ -462,153 +464,190 @@ class _BatchLoginPageState extends State<BatchLoginPage> {
               ),
           ],
         ),
-        body: Stack(
-          children: [
-            for (var i = 0; i < _entries.length; i++)
-              Positioned.fill(
-                child: Offstage(
-                  offstage: _active != i,
-                  child: InAppWebView(
-                    key: ValueKey(_entries[i].profile),
-                    initialUrlRequest: URLRequest(url: WebUri(pulseLoginUrl)),
-                    initialSettings: BatchLoginSettings(_entries[i].profile),
-                    initialUserScripts: UnmodifiableListView([
-                      UserScript(
-                        source: _holdApprovalScript,
-                        injectionTime:
-                            UserScriptInjectionTime.AT_DOCUMENT_START,
-                      ),
-                    ]),
-                    onWebViewCreated: (controller) {
-                      _entries[i].browser = controller;
-                    },
-                    onLoadStop: (controller, url) =>
-                        unawaited(_poll(_entries[i])),
-                    onReceivedError: (controller, request, error) {
-                      if (request.isForMainFrame == true && mounted) {
-                        setState(
-                          () => _entries[i].error = tr(
-                            context,
-                            'Страница входа недоступна. Повторите попытку.',
-                            'Sign-in page unavailable. Retry.',
-                          ),
-                        );
-                      }
-                    },
+        body: SafeArea(
+          top: false,
+          child: Stack(
+            children: [
+              for (var i = 0; i < _entries.length; i++)
+                Positioned.fill(
+                  child: Offstage(
+                    offstage: _active != i,
+                    child: InAppWebView(
+                      key: ValueKey(_entries[i].profile),
+                      initialUrlRequest: URLRequest(url: WebUri(pulseLoginUrl)),
+                      initialSettings: BatchLoginSettings(_entries[i].profile),
+                      initialUserScripts: UnmodifiableListView([
+                        UserScript(
+                          source: _holdApprovalScript,
+                          injectionTime:
+                              UserScriptInjectionTime.AT_DOCUMENT_START,
+                        ),
+                      ]),
+                      onWebViewCreated: (controller) {
+                        _entries[i].browser = controller;
+                      },
+                      onLoadStop: (controller, url) =>
+                          unawaited(_poll(_entries[i])),
+                      onReceivedError: (controller, request, error) {
+                        if (request.isForMainFrame == true && mounted) {
+                          setState(
+                            () => _entries[i].error = tr(
+                              context,
+                              'Страница входа недоступна. Повторите попытку.',
+                              'Sign-in page unavailable. Retry.',
+                            ),
+                          );
+                        }
+                      },
+                    ),
                   ),
                 ),
-              ),
-            if (active == null)
-              Positioned.fill(
-                child: ColoredBox(
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Text(
-                          tr(
-                            context,
-                            'Сохранено $saved из ${_entries.length}. Назовите карточки, отсканируйте коды, затем откройте зелёные карточки и нажмите «Продолжить».',
-                            'Saved $saved of ${_entries.length}. Name the cards, scan the codes, then open green cards and tap Continue.',
+              if (active == null)
+                Positioned.fill(
+                  child: ColoredBox(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Text(
+                            tr(
+                              context,
+                              'Сохранено $saved из ${_entries.length}. Назовите карточки, отсканируйте коды, затем откройте зелёные карточки и нажмите «Продолжить».',
+                              'Saved $saved of ${_entries.length}. Name the cards, scan the codes, then open green cards and tap Continue.',
+                            ),
                           ),
                         ),
-                      ),
-                      Expanded(
-                        child: LayoutBuilder(
-                          builder: (context, constraints) => GridView.builder(
-                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                            itemCount: _entries.length,
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount:
-                                      ((constraints.maxWidth - 28) / 232)
-                                          .floor()
-                                          .clamp(1, 3),
-                                  mainAxisExtent:
-                                      360 +
-                                      100 *
-                                          (MediaQuery.textScalerOf(context)
-                                                          .scale(14) /
-                                                      14 -
-                                                  1)
-                                              .clamp(0, 2),
-                                  crossAxisSpacing: 12,
-                                  mainAxisSpacing: 12,
+                        Expanded(
+                          child: LayoutBuilder(
+                            builder: (context, constraints) => GridView.builder(
+                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                              itemCount: _entries.length,
+                              gridDelegate:
+                                  SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount:
+                                        ((constraints.maxWidth - 28) / 232)
+                                            .floor()
+                                            .clamp(1, 3),
+                                    mainAxisExtent:
+                                        360 +
+                                        100 *
+                                            (MediaQuery.textScalerOf(context)
+                                                            .scale(14) /
+                                                        14 -
+                                                    1)
+                                                .clamp(0, 2),
+                                    crossAxisSpacing: 12,
+                                    mainAxisSpacing: 12,
+                                  ),
+                              itemBuilder: (context, i) =>
+                                  _card(_entries[i], i),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              if (active != null &&
+                  !active.showBrowser &&
+                  !active.approved &&
+                  active.error == null &&
+                  !active.saved)
+                Positioned.fill(
+                  child: ColoredBox(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    child: Center(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              tr(context, 'Вход по QR-коду', 'Sign in with QR'),
+                              style: Theme.of(context).textTheme.headlineSmall,
+                            ),
+                            const SizedBox(height: 24),
+                            if (active.qr != null)
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                color: Colors.white,
+                                child: QrImageView(
+                                  data: active.qr!,
+                                  size: 280,
+                                  backgroundColor: Colors.white,
                                 ),
-                            itemBuilder: (context, i) => _card(_entries[i], i),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            if (active != null &&
-                !active.showBrowser &&
-                !active.approved &&
-                active.error == null &&
-                !active.saved)
-              Positioned.fill(
-                child: ColoredBox(
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                  child: Center(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            tr(context, 'Вход по QR-коду', 'Sign in with QR'),
-                            style: Theme.of(context).textTheme.headlineSmall,
-                          ),
-                          const SizedBox(height: 24),
-                          if (active.qr != null)
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              color: Colors.white,
-                              child: QrImageView(
-                                data: active.qr!,
-                                size: 280,
-                                backgroundColor: Colors.white,
+                              )
+                            else ...[
+                              const CircularProgressIndicator(),
+                              const SizedBox(height: 12),
+                              Text(
+                                tr(
+                                  context,
+                                  'Подготовка QR-кода…',
+                                  'Preparing QR…',
+                                ),
                               ),
-                            )
-                          else ...[
-                            const CircularProgressIndicator(),
-                            const SizedBox(height: 12),
+                            ],
+                            const SizedBox(height: 20),
                             Text(
                               tr(
                                 context,
-                                'Подготовка QR-кода…',
-                                'Preparing QR…',
+                                'Подтвердите вход на телефоне владельца. Затем нажмите «Продолжить» на странице МИРЭА.',
+                                'Approve on the owner’s phone. Then tap Continue on the MIREA page.',
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            CampusButton.text(
+                              onPressed: () =>
+                                  setState(() => active.showBrowser = true),
+                              child: Text(
+                                tr(
+                                  context,
+                                  'Открыть страницу входа',
+                                  'Open sign-in page',
+                                ),
+                              ),
+                            ),
+                            CampusButton.text(
+                              onPressed: () => _refresh(active),
+                              child: Text(
+                                tr(
+                                  context,
+                                  'Обновить QR-код',
+                                  'Refresh QR code',
+                                ),
                               ),
                             ),
                           ],
-                          const SizedBox(height: 20),
-                          Text(
-                            tr(
-                              context,
-                              'Подтвердите вход на телефоне владельца. Затем нажмите «Продолжить» на странице МИРЭА.',
-                              'Approve on the owner’s phone. Then tap Continue on the MIREA page.',
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (active != null && (active.error != null || active.saved))
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: 16,
+                  child: Material(
+                    color: context.palette.surface,
+                    borderRadius: BorderRadius.zero,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(_status(active)),
                           CampusButton.text(
-                            onPressed: () =>
-                                setState(() => active.showBrowser = true),
+                            onPressed: active.saved
+                                ? () => setState(() => _active = null)
+                                : () => _refresh(active),
                             child: Text(
-                              tr(
-                                context,
-                                'Открыть страницу входа',
-                                'Open sign-in page',
-                              ),
-                            ),
-                          ),
-                          CampusButton.text(
-                            onPressed: () => _refresh(active),
-                            child: Text(
-                              tr(context, 'Обновить QR-код', 'Refresh QR code'),
+                              active.saved
+                                  ? tr(context, 'К обзору', 'Back to overview')
+                                  : tr(context, 'Повторить', 'Retry'),
                             ),
                           ),
                         ],
@@ -616,37 +655,8 @@ class _BatchLoginPageState extends State<BatchLoginPage> {
                     ),
                   ),
                 ),
-              ),
-            if (active != null && (active.error != null || active.saved))
-              Positioned(
-                left: 16,
-                right: 16,
-                bottom: 16,
-                child: Material(
-                  color: context.palette.surface,
-                  borderRadius: BorderRadius.zero,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(_status(active)),
-                        CampusButton.text(
-                          onPressed: active.saved
-                              ? () => setState(() => _active = null)
-                              : () => _refresh(active),
-                          child: Text(
-                            active.saved
-                                ? tr(context, 'К обзору', 'Back to overview')
-                                : tr(context, 'Повторить', 'Retry'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

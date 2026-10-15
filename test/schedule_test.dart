@@ -293,6 +293,7 @@ void main() {
       find.byType(CampusTextField).last,
       'https://pulse.mirea.ru/lessons/visiting-logs/self-approve?token=abc',
     );
+    await tester.pump();
     await tester.tap(find.text('Submit'));
     await tester.pumpAndSettle();
     expect(log.marks.single.lessonKey, lesson.key);

@@ -25,17 +25,31 @@ Future<bool?> showWidgetPreview(BuildContext context, {required bool nfc}) =>
                 for (final small in [false, true])
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: CampusListItem(
-                      headline: small
-                          ? tr(context, 'Компактный · 1×1', 'Compact · 1×1')
-                          : tr(context, 'С подписью · 2×1', 'Labeled · 2×1'),
-                      selected: compact == small,
-                      onTap: () => setState(() => compact = small),
-                      leading: CampusCheckbox(
-                        value: compact == small,
-                        onChanged: (_) => setState(() => compact = small),
-                      ),
-                      trailing: WidgetPreview(nfc: nfc, compact: small),
+                    child: Column(
+                      children: [
+                        CampusListItem(
+                          headline: small
+                              ? tr(context, 'Компактный · 1×1', 'Compact · 1×1')
+                              : tr(
+                                  context,
+                                  'С подписью · 2×1',
+                                  'Labeled · 2×1',
+                                ),
+                          selected: compact == small,
+                          onTap: () => setState(() => compact = small),
+                          leading: CampusCheckbox(
+                            value: compact == small,
+                            onChanged: (_) => setState(() => compact = small),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: WidgetPreview(nfc: nfc, compact: small),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 const SizedBox(height: 8),

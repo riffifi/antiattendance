@@ -174,148 +174,151 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
         title: Text(tr(context, 'Сигнал турникета', 'Turnstile signal')),
         automaticallyImplyLeading: true,
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: context.palette.surface,
-                  borderRadius: BorderRadius.zero,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _message(context),
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (_listening && _frames.isEmpty) ...[
-                      const SizedBox(height: 16),
-                      const CampusProgress.linear(),
-                    ],
-                    if (_error != null && Platform.isAndroid) ...[
-                      const SizedBox(height: 12),
-                      CampusButton.action(
-                        onPressed: _start,
-                        label: Text(tr(context, 'Повторить', 'Retry')),
-                        style: CampusButtonStyle.text,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _error != null
-                    ? tr(
-                        context,
-                        'Этот экран не передаёт пропуск и не открывает турникет.',
-                        'This screen does not present a pass or open the gate.',
-                      )
-                    : _fieldOnly
-                    ? tr(
-                        context,
-                        'Android не предоставляет режим наблюдения на этом телефоне. Показываем только появление поля NFC-считывателя: его команды и данные пропуска недоступны.',
-                        'Android reports Observe Mode unavailable on this phone. Only reader field detection is available; polling commands and pass data are not captured.',
-                      )
-                    : tr(
-                        context,
-                        'Телефон только слушает опрос NFC. Пропуск не передаётся, вход через турникет не выполняется. На старых Android этот режим недоступен.',
-                        'The phone only observes NFC polling. It does not present a pass or open the gate. Older Android versions cannot use this mode.',
-                      ),
-                style: TextStyle(color: context.palette.muted, fontSize: 13),
-              ),
-              if (_frames.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _fieldOnly
-                            ? tr(context, 'События поля', 'Field events')
-                            : tr(context, 'Кадры опроса', 'Polling frames'),
+      body: SafeArea(
+        top: false,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: context.palette.surface,
+                    borderRadius: BorderRadius.zero,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _message(context),
                         style: TextStyle(
-                          fontSize: 21,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (_listening && _frames.isEmpty) ...[
+                        const SizedBox(height: 16),
+                        const CampusProgress.linear(),
+                      ],
+                      if (_error != null && Platform.isAndroid) ...[
+                        const SizedBox(height: 12),
+                        CampusButton.action(
+                          onPressed: _start,
+                          label: Text(tr(context, 'Повторить', 'Retry')),
+                          style: CampusButtonStyle.text,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  _error != null
+                      ? tr(
+                          context,
+                          'Этот экран не передаёт пропуск и не открывает турникет.',
+                          'This screen does not present a pass or open the gate.',
+                        )
+                      : _fieldOnly
+                      ? tr(
+                          context,
+                          'Android не предоставляет режим наблюдения на этом телефоне. Показываем только появление поля NFC-считывателя: его команды и данные пропуска недоступны.',
+                          'Android reports Observe Mode unavailable on this phone. Only reader field detection is available; polling commands and pass data are not captured.',
+                        )
+                      : tr(
+                          context,
+                          'Телефон только слушает опрос NFC. Пропуск не передаётся, вход через турникет не выполняется. На старых Android этот режим недоступен.',
+                          'The phone only observes NFC polling. It does not present a pass or open the gate. Older Android versions cannot use this mode.',
+                        ),
+                  style: TextStyle(color: context.palette.muted, fontSize: 13),
+                ),
+                if (_frames.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _fieldOnly
+                              ? tr(context, 'События поля', 'Field events')
+                              : tr(context, 'Кадры опроса', 'Polling frames'),
+                          style: TextStyle(
+                            fontSize: 21,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ),
+                      CampusTextAction(
+                        onPressed: () => setState(_frames.clear),
+                        tooltip: tr(context, 'Очистить', 'Clear'),
+                        label: tr(context, 'Очистить', 'Clear'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  for (final frame in _frames)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: context.palette.surface,
+                          borderRadius: BorderRadius.zero,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(switch (frame['type']) {
+                              'Field on' => tr(
+                                context,
+                                'Поле появилось',
+                                'Field on',
+                              ),
+                              'Field off' => tr(
+                                context,
+                                'Поле исчезло',
+                                'Field off',
+                              ),
+                              _ => '${frame['type'] ?? '—'}',
+                            }, style: TextStyle(fontWeight: FontWeight.w400)),
+                            if ('${frame['data'] ?? ''}'.isNotEmpty) ...[
+                              const SizedBox(height: 5),
+                              SelectableText(
+                                '${frame['data']}',
+                                style: TextStyle(fontFamily: 'monospace'),
+                              ),
+                            ],
+                            const SizedBox(height: 5),
+                            Text(
+                              _fieldOnly
+                                  ? trf(
+                                      context,
+                                      'Время: {time} мкс',
+                                      'Time: {time} µs',
+                                      {'time': frame['timestampUs'] ?? '—'},
+                                    )
+                                  : trf(
+                                      context,
+                                      'Время: {time} мкс · усиление: {gain}',
+                                      'Time: {time} µs · gain: {gain}',
+                                      {
+                                        'time': frame['timestampUs'] ?? '—',
+                                        'gain': frame['gain'] ?? '—',
+                                      },
+                                    ),
+                              style: TextStyle(
+                                color: context.palette.muted,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    CampusTextAction(
-                      onPressed: () => setState(_frames.clear),
-                      tooltip: tr(context, 'Очистить', 'Clear'),
-                      label: tr(context, 'Очистить', 'Clear'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                for (final frame in _frames)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: context.palette.surface,
-                        borderRadius: BorderRadius.zero,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(switch (frame['type']) {
-                            'Field on' => tr(
-                              context,
-                              'Поле появилось',
-                              'Field on',
-                            ),
-                            'Field off' => tr(
-                              context,
-                              'Поле исчезло',
-                              'Field off',
-                            ),
-                            _ => '${frame['type'] ?? '—'}',
-                          }, style: TextStyle(fontWeight: FontWeight.w700)),
-                          if ('${frame['data'] ?? ''}'.isNotEmpty) ...[
-                            const SizedBox(height: 5),
-                            SelectableText(
-                              '${frame['data']}',
-                              style: TextStyle(fontFamily: 'monospace'),
-                            ),
-                          ],
-                          const SizedBox(height: 5),
-                          Text(
-                            _fieldOnly
-                                ? trf(
-                                    context,
-                                    'Время: {time} мкс',
-                                    'Time: {time} µs',
-                                    {'time': frame['timestampUs'] ?? '—'},
-                                  )
-                                : trf(
-                                    context,
-                                    'Время: {time} мкс · усиление: {gain}',
-                                    'Time: {time} µs · gain: {gain}',
-                                    {
-                                      'time': frame['timestampUs'] ?? '—',
-                                      'gain': frame['gain'] ?? '—',
-                                    },
-                                  ),
-                            style: TextStyle(
-                              color: context.palette.muted,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

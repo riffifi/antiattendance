@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'app_theme.dart';
 import 'app_haptics.dart';
+import 'icons/campus_icon.dart';
 
 class EditorialAction extends StatefulWidget {
   const EditorialAction({
@@ -138,15 +139,17 @@ class CampusTextAction extends StatelessWidget {
   const CampusTextAction({
     super.key,
     required this.label,
+    this.icon,
     this.tooltip,
     this.onPressed,
   });
   final String label;
+  final IconData? icon;
   final String? tooltip;
   final VoidCallback? onPressed;
   @override
   Widget build(BuildContext context) => ConstrainedBox(
-    constraints: const BoxConstraints(maxWidth: 96),
+    constraints: BoxConstraints(maxWidth: icon == null ? 96 : 48),
     child: Tooltip(
       message: tooltip ?? label,
       child: Semantics(
@@ -159,16 +162,18 @@ class CampusTextAction extends StatelessWidget {
             widthFactor: 1,
             heightFactor: 1,
             child: ExcludeSemantics(
-              child: Text(
-                label.toLowerCase(),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontFamily: 'Geist',
-                  fontSize: 13,
-                  height: 1.2,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
+              child: icon != null
+                  ? CampusIcon(icon, size: 20)
+                  : Text(
+                      label.toLowerCase(),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 13,
+                        height: 1.2,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
             ),
           ),
         ),
@@ -200,14 +205,10 @@ class CampusCheckbox extends StatelessWidget {
           border: Border.all(color: context.palette.ink, width: .5),
         ),
         child: value == true
-            ? Text(
-                '×',
-                style: TextStyle(
-                  fontFamily: 'Geist',
-                  fontSize: 18,
-                  height: 1,
-                  color: context.palette.paper,
-                ),
+            ? CampusIcon(
+                Icons.check_rounded,
+                size: 16,
+                color: context.palette.paper,
               )
             : null,
       ),

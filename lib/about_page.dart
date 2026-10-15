@@ -76,114 +76,119 @@ class _AboutPageState extends State<AboutPage> {
         ),
       ),
     ),
-    body: Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 640),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
-          children: [
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: 1),
-              duration: MediaQuery.disableAnimationsOf(context)
-                  ? Duration.zero
-                  : const Duration(milliseconds: 320),
-              curve: Curves.easeOutCubic,
-              builder: (context, value, child) => Opacity(
-                opacity: value,
-                child: Transform.translate(
-                  offset: Offset(0, 10 * (1 - value)),
-                  child: child,
+    body: SafeArea(
+      top: false,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+            children: [
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: MediaQuery.disableAnimationsOf(context)
+                    ? Duration.zero
+                    : const Duration(milliseconds: 320),
+                curve: Curves.easeOutCubic,
+                builder: (context, value, child) => Opacity(
+                  opacity: value,
+                  child: Transform.translate(
+                    offset: Offset(0, 10 * (1 - value)),
+                    child: child,
+                  ),
                 ),
-              ),
-              child: Column(
-                children: [
-                  const AboutLogo(),
-                  const SizedBox(height: 8),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      'AntiAttendance',
-                      style: Theme.of(context).textTheme.headlineLarge,
+                child: Column(
+                  children: [
+                    const AboutLogo(),
+                    const SizedBox(height: 8),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'AntiAttendance',
+                        style: Theme.of(context).textTheme.headlineLarge,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    tr(
-                      context,
-                      'Пульс и расписание — в одном месте.',
-                      'Pulse and your schedule in one place.',
+                    const SizedBox(height: 10),
+                    Text(
+                      tr(
+                        context,
+                        'Пульс и расписание — в одном месте.',
+                        'Pulse and your schedule in one place.',
+                      ),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: context.palette.muted,
+                        fontSize: 15,
+                        height: 1.5,
+                      ),
                     ),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: context.palette.muted,
-                      fontSize: 15,
-                      height: 1.5,
-                    ),
-                  ),
-                  FutureBuilder<String?>(
-                    future: _version,
-                    builder: (context, snapshot) => snapshot.data == null
-                        ? const SizedBox(height: 20)
-                        : Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: context.palette.surface,
-                                border: Border.all(color: context.palette.line),
-                                borderRadius: BorderRadius.zero,
-                              ),
-                              child: Text(
-                                'v${snapshot.data}',
-                                style: TextStyle(
-                                  color: context.palette.muted,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
+                    FutureBuilder<String?>(
+                      future: _version,
+                      builder: (context, snapshot) => snapshot.data == null
+                          ? const SizedBox(height: 20)
+                          : Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: context.palette.surface,
+                                  border: Border.all(
+                                    color: context.palette.line,
+                                  ),
+                                  borderRadius: BorderRadius.zero,
+                                ),
+                                child: Text(
+                                  'v${snapshot.data}',
+                                  style: TextStyle(
+                                    color: context.palette.muted,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            CampusPanel(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _Feature(label: tr(context, 'Посещаемость', 'Attendance')),
-                  _Feature(label: tr(context, 'Расписание', 'Schedule')),
-                  _Feature(label: tr(context, 'Передача', 'Transfer')),
-                ],
+              const SizedBox(height: 12),
+              CampusPanel(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _Feature(label: tr(context, 'Посещаемость', 'Attendance')),
+                    _Feature(label: tr(context, 'Расписание', 'Schedule')),
+                    _Feature(label: tr(context, 'Передача', 'Transfer')),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            CampusPanel(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      tr(
-                        context,
-                        'Пароли не сохраняются. Приложение не является официальным сервисом МИРЭА.',
-                        'Passwords are not saved. This is not an official MIREA app.',
-                      ),
-                      style: TextStyle(
-                        color: context.palette.muted,
-                        fontSize: 13,
-                        height: 1.6,
+              const SizedBox(height: 16),
+              CampusPanel(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        tr(
+                          context,
+                          'Пароли не сохраняются. Приложение не является официальным сервисом МИРЭА.',
+                          'Passwords are not saved. This is not an official MIREA app.',
+                        ),
+                        style: TextStyle(
+                          color: context.palette.muted,
+                          fontSize: 13,
+                          height: 1.6,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     ),

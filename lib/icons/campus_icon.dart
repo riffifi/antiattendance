@@ -27,6 +27,7 @@ class CampusIcon extends Icon {
     Icons.chevron_right: 'caret-right',
     Icons.chevron_right_rounded: 'caret-right',
     Icons.circle_outlined: 'circle',
+    Icons.content_copy_rounded: 'copy',
     Icons.close: 'x',
     Icons.close_rounded: 'x',
     Icons.cloud_off_rounded: 'cloud-slash',

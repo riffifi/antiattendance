@@ -288,6 +288,7 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
 
   Future<void> _showSessionDetails() => showExpressiveSheet<void>(
     context: context,
+    compact: true,
     builder: (context) => Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       child: Column(
@@ -378,150 +379,161 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
       ),
       automaticallyImplyLeading: true,
     ),
-    body: _error != null
-        ? Center(child: Text(trMessage(context, _error!)))
-        : !_ready
-        ? const Center(child: CampusProgress.compact())
-        : Column(
-            children: [
-              if (_sessionMessage != null)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _sessionMessage!,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      Wrap(
-                        spacing: 8,
-                        children: [
-                          CampusButton.text(
-                            onPressed: () => _checkSession(force: true),
-                            child: Text(
-                              tr(context, 'Проверить сессию', 'Check session'),
-                            ),
-                          ),
-                          CampusButton.text(
-                            onPressed: _showSessionDetails,
-                            child: Text(
-                              tr(context, 'Проверка входа', 'Sign-in check'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              Expanded(
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: InAppWebView(
-                        initialUrlRequest: URLRequest(
-                          url: WebUri(pulseLoginUrl),
-                        ),
-                        initialSettings: InAppWebViewSettings(
-                          supportZoom: true,
-                          builtInZoomControls: true,
-                          displayZoomControls: false,
-                        ),
-                        onWebViewCreated: (controller) {
-                          if (mounted) setState(() => _webView = controller);
-                        },
-                        onLoadStart: (controller, url) {
-                          _loginEpoch++;
-                          if (mounted) setState(() => _pageReady = false);
-                          if (mounted) setState(() => _qrLink = null);
-                          unawaited(_checkSession());
-                        },
-                        onLoadStop: (controller, url) {
-                          if (mounted) setState(() => _pageReady = true);
-                          unawaited(
-                            _applyZoom(
-                              controller,
-                              _zoom,
-                            ).catchError((Object _) {}),
-                          );
-                          unawaited(_checkSession());
-                          unawaited(_readLogin());
-                        },
-                        onUpdateVisitedHistory: (controller, url, isReload) {
-                          unawaited(_checkSession());
-                        },
-                        onReceivedError: (controller, request, error) {
-                          if (request.isForMainFrame == true && mounted) {
-                            setState(
-                              () =>
-                                  _error = 'Не удалось открыть страницу входа.',
-                            );
-                          }
-                        },
-                      ),
-                    ),
-                    if (_qrLink != null && !_showBrowser)
-                      Positioned.fill(child: _loginQr()),
-                  ],
-                ),
-              ),
-              if (_qrLink == null || _showBrowser)
-                SafeArea(
-                  top: false,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: context.palette.surface,
-                      border: Border(
-                        top: BorderSide(color: context.palette.line),
-                      ),
-                    ),
-                    child: Row(
+    body: SafeArea(
+      top: false,
+      child: _error != null
+          ? Center(child: Text(trMessage(context, _error!)))
+          : !_ready
+          ? const Center(child: CampusProgress.compact())
+          : Column(
+              children: [
+                if (_sessionMessage != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            tr(context, 'Масштаб страницы', 'Page zoom'),
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
+                        Text(
+                          _sessionMessage!,
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
-                        CampusTextAction(
-                          onPressed:
-                              _zooming ||
-                                  !_pageReady ||
-                                  _webView == null ||
-                                  _zoom <= 0.5
-                              ? null
-                              : () => _changeZoom(_zoom - 0.15),
-                          tooltip: tr(context, 'Уменьшить', 'Zoom out'),
-                          label: tr(context, 'Уменьшить', 'Zoom out'),
-                        ),
-                        SizedBox(
-                          width: 52,
-                          child: Text(
-                            '${(_zoom * 100).round()}%',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                        CampusTextAction(
-                          onPressed:
-                              _zooming ||
-                                  !_pageReady ||
-                                  _webView == null ||
-                                  _zoom >= 2.0
-                              ? null
-                              : () => _changeZoom(_zoom + 0.15),
-                          tooltip: tr(context, 'Увеличить', 'Zoom in'),
-                          label: tr(context, 'Увеличить', 'Zoom in'),
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            CampusButton.text(
+                              onPressed: () => _checkSession(force: true),
+                              child: Text(
+                                tr(
+                                  context,
+                                  'Проверить сессию',
+                                  'Check session',
+                                ),
+                              ),
+                            ),
+                            CampusButton.text(
+                              onPressed: _showSessionDetails,
+                              child: Text(
+                                tr(context, 'Проверка входа', 'Sign-in check'),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: InAppWebView(
+                          initialUrlRequest: URLRequest(
+                            url: WebUri(pulseLoginUrl),
+                          ),
+                          initialSettings: InAppWebViewSettings(
+                            supportZoom: true,
+                            builtInZoomControls: true,
+                            displayZoomControls: false,
+                          ),
+                          onWebViewCreated: (controller) {
+                            if (mounted) setState(() => _webView = controller);
+                          },
+                          onLoadStart: (controller, url) {
+                            _loginEpoch++;
+                            if (mounted) setState(() => _pageReady = false);
+                            if (mounted) setState(() => _qrLink = null);
+                            unawaited(_checkSession());
+                          },
+                          onLoadStop: (controller, url) {
+                            if (mounted) setState(() => _pageReady = true);
+                            unawaited(
+                              _applyZoom(
+                                controller,
+                                _zoom,
+                              ).catchError((Object _) {}),
+                            );
+                            unawaited(_checkSession());
+                            unawaited(_readLogin());
+                          },
+                          onUpdateVisitedHistory: (controller, url, isReload) {
+                            unawaited(_checkSession());
+                          },
+                          onReceivedError: (controller, request, error) {
+                            if (request.isForMainFrame == true && mounted) {
+                              setState(
+                                () => _error =
+                                    'Не удалось открыть страницу входа.',
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                      if (_qrLink != null && !_showBrowser)
+                        Positioned.fill(child: _loginQr()),
+                    ],
+                  ),
                 ),
-            ],
-          ),
+                if (_qrLink == null || _showBrowser)
+                  SafeArea(
+                    top: false,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: context.palette.surface,
+                        border: Border(
+                          top: BorderSide(color: context.palette.line),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              tr(context, 'Масштаб страницы', 'Page zoom'),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          CampusTextAction(
+                            onPressed:
+                                _zooming ||
+                                    !_pageReady ||
+                                    _webView == null ||
+                                    _zoom <= 0.5
+                                ? null
+                                : () => _changeZoom(_zoom - 0.15),
+                            tooltip: tr(context, 'Уменьшить', 'Zoom out'),
+                            label: tr(context, 'Уменьшить', 'Zoom out'),
+                          ),
+                          SizedBox(
+                            width: 52,
+                            child: Text(
+                              '${(_zoom * 100).round()}%',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          CampusTextAction(
+                            onPressed:
+                                _zooming ||
+                                    !_pageReady ||
+                                    _webView == null ||
+                                    _zoom >= 2.0
+                                ? null
+                                : () => _changeZoom(_zoom + 0.15),
+                            tooltip: tr(context, 'Увеличить', 'Zoom in'),
+                            label: tr(context, 'Увеличить', 'Zoom in'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+    ),
   );
 }

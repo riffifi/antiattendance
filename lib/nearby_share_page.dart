@@ -153,67 +153,70 @@ class _NearbySharePageState extends State<NearbySharePage> {
       title: Text(tr(context, 'Передать рядом', 'Share nearby')),
       automaticallyImplyLeading: true,
     ),
-    body: Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 600),
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            CampusHeader(
-              title: tr(context, 'Выберите получателей', 'Select receivers'),
-              subtitle: tr(
-                context,
-                'Откройте «Получить рядом» на других телефонах в той же Wi‑Fi сети. Сверьте код каждого устройства перед отправкой.',
-                'Open “Receive nearby” on the other phones on the same Wi‑Fi. Match each device code before sending.',
-              ),
-            ),
-            if (_failed)
-              Text(
-                tr(
+    body: SafeArea(
+      top: false,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              CampusHeader(
+                title: tr(context, 'Выберите получателей', 'Select receivers'),
+                subtitle: tr(
                   context,
-                  'Не удалось найти устройства. Проверьте Wi‑Fi и разрешение локальной сети.',
-                  'Could not discover devices. Check Wi‑Fi and local network permission.',
+                  'Откройте «Получить рядом» на других телефонах в той же Wi‑Fi сети. Сверьте код каждого устройства перед отправкой.',
+                  'Open “Receive nearby” on the other phones on the same Wi‑Fi. Match each device code before sending.',
                 ),
-              )
-            else if (_peers.isEmpty)
-              CampusListItem(
-                leading: _ready
-                    ? const SizedBox.shrink()
-                    : const CampusProgress.compact(),
-                headline: (tr(
-                  context,
-                  'Ищем получателей…',
-                  'Looking for receivers…',
-                )),
               ),
-            for (final entry in _peers.entries)
-              CampusListItem(
-                headline: entry.value.service.name,
-                supportingText:
-                    '${tr(context, 'Код', 'Code')}: ${entry.value.code}'
-                    '${_outcomes[entry.key] == true
-                        ? tr(context, ' · Отправлено', ' · Sent')
-                        : _outcomes[entry.key] == false
-                        ? tr(context, ' · Ошибка отправки', ' · Send failed')
-                        : ''}',
-                leading: CampusCheckbox(
-                  value: _selected.contains(entry.key),
-                  onChanged: _sending
-                      ? null
-                      : (_) => _toggleReceiver(entry.key),
+              if (_failed)
+                Text(
+                  tr(
+                    context,
+                    'Не удалось найти устройства. Проверьте Wi‑Fi и разрешение локальной сети.',
+                    'Could not discover devices. Check Wi‑Fi and local network permission.',
+                  ),
+                )
+              else if (_peers.isEmpty)
+                CampusListItem(
+                  leading: _ready
+                      ? const SizedBox.shrink()
+                      : const CampusProgress.compact(),
+                  headline: (tr(
+                    context,
+                    'Ищем получателей…',
+                    'Looking for receivers…',
+                  )),
                 ),
-                onTap: _sending ? null : () => _toggleReceiver(entry.key),
+              for (final entry in _peers.entries)
+                CampusListItem(
+                  headline: entry.value.service.name,
+                  supportingText:
+                      '${tr(context, 'Код', 'Code')}: ${entry.value.code}'
+                      '${_outcomes[entry.key] == true
+                          ? tr(context, ' · Отправлено', ' · Sent')
+                          : _outcomes[entry.key] == false
+                          ? tr(context, ' · Ошибка отправки', ' · Send failed')
+                          : ''}',
+                  leading: CampusCheckbox(
+                    value: _selected.contains(entry.key),
+                    onChanged: _sending
+                        ? null
+                        : (_) => _toggleReceiver(entry.key),
+                  ),
+                  onTap: _sending ? null : () => _toggleReceiver(entry.key),
+                ),
+              const SizedBox(height: 16),
+              CampusButton.filled(
+                onPressed: _selected.isEmpty || _sending ? null : _send,
+                child: Text(
+                  _sending
+                      ? tr(context, 'Отправляем…', 'Sending…')
+                      : tr(context, 'Передать выбранным', 'Send to selected'),
+                ),
               ),
-            const SizedBox(height: 16),
-            CampusButton.filled(
-              onPressed: _selected.isEmpty || _sending ? null : _send,
-              child: Text(
-                _sending
-                    ? tr(context, 'Отправляем…', 'Sending…')
-                    : tr(context, 'Передать выбранным', 'Send to selected'),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     ),

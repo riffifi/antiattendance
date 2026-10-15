@@ -40,13 +40,11 @@ the Android wallpaper-color channel, and the Material 3 Expressive dependency
 have been removed. Flutter's existing Material infrastructure remains for
 routing, localization, text editing, native back handling, and themed dialogs.
 
-Decorative icons are removed throughout the app. Actions read as words, including
-back, actions, paste, maps, refresh, search, and zoom. Page headings lead the
-layout; their action rows sit beneath them. The schedule date range and its
-previous/date/next controls use separate rows so translated labels and enlarged
-text fit. The rail retains vertical snapping and haptics. Selection uses a small
-typographic mark with explicit accessibility state; scan success and failure
-use text instead of pictograms. QR codes and floor plans remain functional data.
+The typography remains the main navigation language. Simple Phosphor icons are
+used for back, close, refresh, search, copy, directional navigation and selection
+where they make the control clearer or free header space. Primary actions retain
+word labels. Icons have localized tooltips and accessibility labels. See
+[the complete screen and modal audit](ui-audit.md) for the current review.
 
 The content pane reserves system status/navigation insets. Scan and NFC actions
 remain above the system navigation area. Dialogs and sheets retain native back

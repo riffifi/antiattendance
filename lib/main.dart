@@ -790,6 +790,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _addAccounts() async {
     final batch = await showExpressiveSheet<bool>(
       context: context,
+      compact: true,
       builder: (context) => Padding(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
         child: Column(
@@ -844,6 +845,7 @@ class _HomePageState extends State<HomePage> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, update) => AlertDialog(
+          scrollable: true,
           title: Text(tr(context, 'Сколько пользователей?', 'How many users?')),
           content: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -852,11 +854,16 @@ class _HomePageState extends State<HomePage> {
                 onPressed: count > 1 ? () => update(() => count--) : null,
                 label: '−',
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Text(
-                  '$count',
-                  style: Theme.of(context).textTheme.headlineLarge,
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      '$count',
+                      style: Theme.of(context).textTheme.headlineLarge,
+                    ),
+                  ),
                 ),
               ),
               CampusTextAction(
@@ -1044,6 +1051,7 @@ class _HomePageState extends State<HomePage> {
     final confirmed = await showExpressiveDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        scrollable: true,
         title: Text(
           trf(context, 'Удалить {name}?', 'Delete {name}?', {
             'name': account.label,
@@ -1225,6 +1233,7 @@ class _HomePageState extends State<HomePage> {
     }
     final method = await showExpressiveSheet<String>(
       context: context,
+      compact: true,
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1262,6 +1271,7 @@ class _HomePageState extends State<HomePage> {
     if (!mounted) return;
     final method = await showExpressiveSheet<String>(
       context: context,
+      compact: true,
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -2579,8 +2589,14 @@ class _TextInputDialogState extends State<_TextInputDialog> {
     super.dispose();
   }
 
+  void _submit() {
+    final value = _controller.text.trim();
+    if (value.isNotEmpty) Navigator.pop(context, value);
+  }
+
   @override
   Widget build(BuildContext context) => AlertDialog(
+    scrollable: true,
     title: Text(widget.title),
     content: CampusTextField(
       controller: _controller,
@@ -2588,6 +2604,8 @@ class _TextInputDialogState extends State<_TextInputDialog> {
       maxLength: widget.maxLength,
       label: widget.title,
       placeholder: widget.hint,
+      onChanged: (_) => setState(() {}),
+      onSubmitted: (_) => _submit(),
     ),
     actions: [
       CampusButton.text(
@@ -2595,10 +2613,7 @@ class _TextInputDialogState extends State<_TextInputDialog> {
         child: Text(tr(context, 'Отмена', 'Cancel')),
       ),
       CampusButton.filled(
-        onPressed: () {
-          final value = _controller.text.trim();
-          if (value.isNotEmpty) Navigator.pop(context, value);
-        },
+        onPressed: _controller.text.trim().isEmpty ? null : _submit,
         child: Text(widget.action),
       ),
     ],

@@ -1,9 +1,6 @@
-import 'icons/campus_icon.dart';
 import 'qr_tracking.dart';
 import 'app_theme.dart';
 import 'campus_design.dart';
-
-import 'package:material_3_expressive/material_3_expressive.dart';
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -195,24 +192,14 @@ class QueueScanOverlay extends StatelessWidget {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: context.palette.surface.withValues(alpha: .96),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.zero,
                 ),
                 child: Row(
                   children: [
-                    M3EIconButton(
-                      suppressInk: true,
-                      decoration: M3EIconButtonDecoration(
-                        backgroundColor: WidgetStatePropertyAll(
-                          context.palette.surface.withValues(alpha: .95),
-                        ),
-                        foregroundColor: WidgetStatePropertyAll(
-                          context.palette.ink,
-                        ),
-                      ),
+                    CampusTextAction(
                       onPressed: onClose,
-                      icon: const CampusIcon(Icons.close_rounded),
                       tooltip: tr(context, 'Закрыть', 'Close'),
-                      variant: M3EIconButtonVariant.tonal,
+                      label: tr(context, 'Закрыть', 'Close'),
                     ),
                     Expanded(
                       child: Text(
@@ -227,24 +214,10 @@ class QueueScanOverlay extends StatelessWidget {
                         ),
                       ),
                     ),
-                    M3EIconButton(
-                      suppressInk: true,
-                      decoration: M3EIconButtonDecoration(
-                        backgroundColor: WidgetStatePropertyAll(
-                          context.palette.surface.withValues(alpha: .95),
-                        ),
-                        foregroundColor: WidgetStatePropertyAll(
-                          context.palette.ink,
-                        ),
-                      ),
+                    CampusTextAction(
                       onPressed: cameraError ? null : onTorch,
-                      icon: CampusIcon(
-                        torchOn
-                            ? Icons.flashlight_off_rounded
-                            : Icons.flashlight_on_rounded,
-                      ),
                       tooltip: tr(context, 'Фонарик', 'Flashlight'),
-                      variant: M3EIconButtonVariant.tonal,
+                      label: tr(context, 'Фонарик', 'Flashlight'),
                     ),
                   ],
                 ),
@@ -278,18 +251,19 @@ class QueueScanOverlay extends StatelessWidget {
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 180),
                             child: cameraError
-                                ? const CampusIcon(
-                                    Icons.no_photography_rounded,
-                                    key: ValueKey('camera-error'),
-                                    color: Color(0xFFFFC16B),
-                                    size: 42,
+                                ? Text(
+                                    tr(
+                                      context,
+                                      'Ошибка камеры',
+                                      'Camera error',
+                                    ),
+                                    key: const ValueKey('camera-error'),
+                                    textAlign: TextAlign.center,
                                   )
                                 : queue.remaining == 0
-                                ? CampusIcon(
-                                    Icons.check_rounded,
-                                    key: ValueKey('scan-complete'),
-                                    color: context.palette.success,
-                                    size: 52,
+                                ? Text(
+                                    tr(context, 'Готово', 'Done'),
+                                    key: const ValueKey('scan-complete'),
                                   )
                                 : const SizedBox.shrink(
                                     key: ValueKey('scan-pending'),
@@ -320,7 +294,7 @@ class QueueScanOverlay extends StatelessWidget {
                         ? const Color(0x9995E6BD)
                         : context.palette.line,
                   ),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.zero,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -359,7 +333,7 @@ class QueueScanOverlay extends StatelessWidget {
                           SizedBox(
                             width: 16,
                             height: 16,
-                            child: M3EProgressIndicator.circularWavy(
+                            child: CampusProgress.compact(
                               strokeWidth: 2,
                               color: context.palette.ink,
                             ),
@@ -428,7 +402,7 @@ class QueueScanOverlay extends StatelessWidget {
                             value > 0 &&
                             value < 1 &&
                             !MediaQuery.disableAnimationsOf(context),
-                        child: M3EProgressIndicator.linearWavy(
+                        child: CampusProgress.linear(
                           value: value,
                           strokeWidth: 4,
                           color: context.palette.success,
@@ -452,16 +426,6 @@ class QueueScanOverlay extends StatelessWidget {
                           return Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              CampusIcon(
-                                approved
-                                    ? Icons.check_circle_rounded
-                                    : Icons.circle_outlined,
-                                color: approved
-                                    ? context.palette.success
-                                    : context.palette.muted,
-                                size: 18,
-                              ),
-                              const SizedBox(width: 9),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,7 +1,4 @@
-import 'icons/campus_icon.dart';
 import 'campus_design.dart';
-
-import 'package:material_3_expressive/material_3_expressive.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -152,7 +149,7 @@ class _NearbySharePageState extends State<NearbySharePage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
+    appBar: CampusAppBar(
       title: Text(tr(context, 'Передать рядом', 'Share nearby')),
       automaticallyImplyLeading: true,
     ),
@@ -169,7 +166,6 @@ class _NearbySharePageState extends State<NearbySharePage> {
                 'Откройте «Получить рядом» на других телефонах в той же Wi‑Fi сети. Сверьте код каждого устройства перед отправкой.',
                 'Open “Receive nearby” on the other phones on the same Wi‑Fi. Match each device code before sending.',
               ),
-              icon: Icons.wifi_tethering_rounded,
             ),
             if (_failed)
               Text(
@@ -182,8 +178,8 @@ class _NearbySharePageState extends State<NearbySharePage> {
             else if (_peers.isEmpty)
               CampusListItem(
                 leading: _ready
-                    ? const CampusIcon(Icons.wifi_find_rounded)
-                    : const M3EProgressIndicator.circularWavy(),
+                    ? const SizedBox.shrink()
+                    : const CampusProgress.compact(),
                 headline: (tr(
                   context,
                   'Ищем получателей…',
@@ -191,7 +187,7 @@ class _NearbySharePageState extends State<NearbySharePage> {
                 )),
               ),
             for (final entry in _peers.entries)
-              M3EListItem(
+              CampusListItem(
                 headline: entry.value.service.name,
                 supportingText:
                     '${tr(context, 'Код', 'Code')}: ${entry.value.code}'
@@ -200,7 +196,7 @@ class _NearbySharePageState extends State<NearbySharePage> {
                         : _outcomes[entry.key] == false
                         ? tr(context, ' · Ошибка отправки', ' · Send failed')
                         : ''}',
-                leading: M3ECheckbox(
+                leading: CampusCheckbox(
                   value: _selected.contains(entry.key),
                   onChanged: _sending
                       ? null

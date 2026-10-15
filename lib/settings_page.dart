@@ -1,10 +1,7 @@
-import 'icons/campus_icon.dart';
 import 'updates_page.dart';
 import 'session_server_page.dart';
 import 'expressive.dart';
 import 'campus_design.dart';
-
-import 'package:material_3_expressive/material_3_expressive.dart';
 
 import 'dart:async';
 import 'dart:io';
@@ -37,10 +34,7 @@ class SettingsPage extends StatefulWidget {
     required this.onLanguageChanged,
     this.themeMode = AppThemeMode.light,
     this.onThemeModeChanged,
-    this.monetEnabled = false,
-    this.monetSeed,
-    this.monetAvailable = false,
-    this.onMonetChanged,
+    this.embedded = false,
     this.updates,
     this.downloadApk,
     this.installApk,
@@ -48,6 +42,7 @@ class SettingsPage extends StatefulWidget {
     this.accounts = const [],
   });
 
+  final bool embedded;
   final ScheduleApi? scheduleApi;
   final List<SavedAccount> accounts;
   final AppSettingsStore store;
@@ -55,10 +50,6 @@ class SettingsPage extends StatefulWidget {
   final ValueChanged<String?> onLanguageChanged;
   final AppThemeMode themeMode;
   final ValueChanged<AppThemeMode>? onThemeModeChanged;
-  final bool monetEnabled;
-  final Color? monetSeed;
-  final bool monetAvailable;
-  final ValueChanged<bool>? onMonetChanged;
   final UpdateController? updates;
   final Future<File> Function(
     AppRelease release,
@@ -74,17 +65,10 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   late String? _language = widget.language;
   late AppThemeMode _themeMode = widget.themeMode;
-  late bool _monetEnabled = widget.monetEnabled;
-  Color? _previewSeed;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _previewSeed ??= widget.monetSeed ?? Theme.of(context).colorScheme.primary;
-  }
-
   bool _saving = false;
   bool _daySummary = false;
+  bool _summarySaving = false;
+  bool _summaryTouched = false;
   ScheduleGroup? _myGroup;
 
   @override
@@ -99,7 +83,7 @@ class _SettingsPageState extends State<SettingsPage> {
     widget.store
         .loadDaySummaryEnabled()
         .then((value) {
-          if (mounted) setState(() => _daySummary = value);
+          if (mounted && !_summaryTouched) setState(() => _daySummary = value);
         })
         .catchError((Object _) {});
   }
@@ -148,7 +132,6 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             CampusListItem(
               headline: tr(context, 'Найти группу', 'Find a group'),
-              leading: const CampusIcon(Icons.search_rounded),
               onTap: () => Navigator.pop(context, 'search'),
             ),
           ],
@@ -182,7 +165,7 @@ class _SettingsPageState extends State<SettingsPage> {
       if (mounted) setState(() => _myGroup = group);
     } catch (_) {
       if (mounted) {
-        M3ESnackbar.show(
+        CampusNotice.show(
           context,
           message: tr(
             context,
@@ -197,8 +180,15 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _chooseSummary(bool enabled) async {
-    if (_saving) return;
-    setState(() => _saving = true);
+    if (_summarySaving || enabled == _daySummary) return;
+    final previous = _daySummary;
+    var committed = false;
+    var nativeChanged = false;
+    setState(() {
+      _summaryTouched = true;
+      _summarySaving = true;
+      _daySummary = enabled;
+    });
     try {
       if (enabled) {
         final allowed =
@@ -206,7 +196,7 @@ class _SettingsPageState extends State<SettingsPage> {
             false;
         if (!allowed) {
           if (mounted) {
-            M3ESnackbar.show(
+            CampusNotice.show(
               context,
               message: tr(
                 context,
@@ -218,20 +208,29 @@ class _SettingsPageState extends State<SettingsPage> {
           return;
         }
       }
-      await widget.store.saveDaySummaryEnabled(enabled);
       await studySummaryChannel.invokeMethod('enable', {'enabled': enabled});
-      if (mounted) setState(() => _daySummary = enabled);
+      nativeChanged = true;
+      await widget.store.saveDaySummaryEnabled(enabled);
+      committed = true;
       if (enabled) {
         final service = StudySummaryService(settings: widget.store);
-        try {
-          await service.sync();
-        } finally {
-          service.close();
-        }
+        unawaited(
+          service.sync().catchError((Object _) {}).whenComplete(service.close),
+        );
       }
     } catch (_) {
+      if (nativeChanged) {
+        try {
+          await studySummaryChannel.invokeMethod('enable', {
+            'enabled': previous,
+          });
+          await widget.store.saveDaySummaryEnabled(previous);
+        } catch (_) {
+          // The original failure is reported below; retry remains available.
+        }
+      }
       if (mounted) {
-        M3ESnackbar.show(
+        CampusNotice.show(
           context,
           message: tr(
             context,
@@ -241,7 +240,12 @@ class _SettingsPageState extends State<SettingsPage> {
         );
       }
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) {
+        setState(() {
+          if (!committed) _daySummary = previous;
+          _summarySaving = false;
+        });
+      }
     }
   }
 
@@ -253,7 +257,7 @@ class _SettingsPageState extends State<SettingsPage> {
         'antiattendance/launcher_widget',
       ).invokeMethod<bool>('pinScanWidget', {'compact': compact});
       if (supported != true && mounted) {
-        M3ESnackbar.show(
+        CampusNotice.show(
           context,
           message: tr(
             context,
@@ -264,7 +268,7 @@ class _SettingsPageState extends State<SettingsPage> {
       }
     } catch (_) {
       if (mounted) {
-        M3ESnackbar.show(
+        CampusNotice.show(
           context,
           message: tr(
             context,
@@ -282,9 +286,6 @@ class _SettingsPageState extends State<SettingsPage> {
     if (_saving) return;
     if (widget.language != oldWidget.language) _language = widget.language;
     if (widget.themeMode != oldWidget.themeMode) _themeMode = widget.themeMode;
-    if (widget.monetEnabled != oldWidget.monetEnabled) {
-      _monetEnabled = widget.monetEnabled;
-    }
   }
 
   Future<void> _choose(String? language) async {
@@ -297,7 +298,7 @@ class _SettingsPageState extends State<SettingsPage> {
       widget.onLanguageChanged(language);
     } catch (_) {
       if (!mounted) return;
-      M3ESnackbar.show(
+      CampusNotice.show(
         context,
         message: tr(
           context,
@@ -312,35 +313,26 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _chooseTheme(AppThemeMode mode) async {
     if (_saving || mode == _themeMode) return;
-    setState(() => _saving = true);
+    final previous = _themeMode;
+    setState(() {
+      _saving = true;
+      _themeMode = mode;
+    });
+    widget.onThemeModeChanged?.call(mode);
     try {
       await widget.store.saveThemeMode(mode);
-      if (!mounted) return;
-      setState(() => _themeMode = mode);
-      widget.onThemeModeChanged?.call(mode);
     } catch (_) {
-      if (mounted) _saveAppearanceError();
+      if (mounted) {
+        setState(() => _themeMode = previous);
+        widget.onThemeModeChanged?.call(previous);
+        _saveAppearanceError();
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
 
-  Future<void> _chooseMonet(bool enabled) async {
-    if (_saving || !widget.monetAvailable) return;
-    setState(() => _saving = true);
-    try {
-      await widget.store.saveMonetEnabled(enabled);
-      if (!mounted) return;
-      setState(() => _monetEnabled = enabled);
-      widget.onMonetChanged?.call(enabled);
-    } catch (_) {
-      if (mounted) _saveAppearanceError();
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  void _saveAppearanceError() => M3ESnackbar.show(
+  void _saveAppearanceError() => CampusNotice.show(
     context,
     message: tr(
       context,
@@ -394,24 +386,24 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: Text(tr(context, 'Настройки', 'Settings')),
-      automaticallyImplyLeading: true,
-    ),
+    appBar: widget.embedded
+        ? null
+        : CampusAppBar(
+            title: Text(tr(context, 'Настройки', 'Settings')),
+            automaticallyImplyLeading: true,
+          ),
     body: Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 640),
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
           children: [
+            if (widget.embedded)
+              CampusHeader(title: tr(context, 'Настройки', 'Settings')),
             CampusSectionTitle(tr(context, 'Моя группа', 'My group')),
             CampusPanel(
               padding: EdgeInsets.zero,
               child: CampusListItem(
-                leading: CampusIcon(
-                  Icons.groups_rounded,
-                  color: context.palette.blue,
-                ),
                 headline:
                     _myGroup?.name ?? tr(context, 'Все группы', 'All groups'),
                 supportingText: tr(
@@ -419,7 +411,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   'С сервера загружаются только аккаунты и пропуска выбранной группы.',
                   'Only the selected group’s accounts and passes are fetched from the server.',
                 ),
-                trailing: const CampusIcon(Icons.unfold_more_rounded),
                 onTap: _saving ? null : _chooseMyGroup,
               ),
             ),
@@ -446,9 +437,6 @@ class _SettingsPageState extends State<SettingsPage> {
                           mode: mode,
                           title: title,
                           selected: mode == _themeMode,
-                          seed: _monetEnabled
-                              ? widget.monetSeed ?? _previewSeed
-                              : null,
                           onTap: _saving ? null : () => _chooseTheme(mode),
                         ),
                       ),
@@ -457,38 +445,6 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             const SizedBox(height: 12),
-            if (Theme.of(context).platform == TargetPlatform.android ||
-                widget.monetAvailable)
-              CampusPanel(
-                padding: EdgeInsets.zero,
-                child: CampusListItem(
-                  headline: (tr(
-                    context,
-                    'Цвета телефона',
-                    'Phone colors (Monet)',
-                  )),
-                  supportingText: (widget.monetAvailable
-                      ? tr(
-                          context,
-                          'Цвет оформления подстраивается под обои.',
-                          'Use your wallpaper colors for any theme.',
-                        )
-                      : tr(
-                          context,
-                          'Доступно на Android 12 и новее.',
-                          'Available on Android 12 and newer.',
-                        )),
-                  onTap: _saving || !widget.monetAvailable
-                      ? null
-                      : () => _chooseMonet(!_monetEnabled),
-                  trailing: M3ESwitch(
-                    value: _monetEnabled && widget.monetAvailable,
-                    onChanged: _saving || !widget.monetAvailable
-                        ? null
-                        : _chooseMonet,
-                  ),
-                ),
-              ),
             const SizedBox(height: 28),
             Text(
               tr(context, 'Язык приложения', 'App language'),
@@ -510,11 +466,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 headline:
                     _languages[_language] ??
                     tr(context, 'Как на телефоне', 'Use phone language'),
-                leading: CampusIcon(
-                  Icons.language_rounded,
-                  color: context.palette.blue,
-                ),
-                trailing: const CampusIcon(Icons.unfold_more_rounded),
                 onTap: _saving ? null : _openLanguages,
               ),
             ),
@@ -527,17 +478,12 @@ class _SettingsPageState extends State<SettingsPage> {
             CampusPanel(
               padding: EdgeInsets.zero,
               child: CampusListItem(
-                leading: CampusIcon(
-                  Icons.nfc_rounded,
-                  color: context.palette.blue,
-                ),
                 headline: (tr(context, 'Проверка NFC', 'NFC diagnostics')),
                 supportingText: (tr(
                   context,
                   'Посмотреть сведения о найденном NFC-устройстве',
                   'View detected NFC connection details',
                 )),
-                trailing: CampusIcon(Icons.chevron_right_rounded),
                 onTap: () => Navigator.of(context).push<void>(
                   MaterialPageRoute(builder: (_) => const NfcDiagnosticsPage()),
                 ),
@@ -547,17 +493,12 @@ class _SettingsPageState extends State<SettingsPage> {
             CampusPanel(
               padding: EdgeInsets.zero,
               child: CampusListItem(
-                leading: CampusIcon(
-                  Icons.sensors_rounded,
-                  color: context.palette.blue,
-                ),
                 headline: (tr(context, 'Сигнал турникета', 'Turnstile signal')),
                 supportingText: (tr(
                   context,
                   'Посмотреть опрос NFC-считывателя',
                   'Observe NFC reader polling',
                 )),
-                trailing: CampusIcon(Icons.chevron_right_rounded),
                 onTap: () => Navigator.of(context).push<void>(
                   MaterialPageRoute(builder: (_) => const TurnstileProbePage()),
                 ),
@@ -572,17 +513,12 @@ class _SettingsPageState extends State<SettingsPage> {
             CampusPanel(
               padding: EdgeInsets.zero,
               child: CampusListItem(
-                leading: CampusIcon(
-                  Icons.dns_rounded,
-                  color: context.palette.blue,
-                ),
                 headline: tr(context, 'Сервер сессий', 'Session server'),
                 supportingText: tr(
                   context,
                   'Адрес сервера и автоматическая синхронизация',
                   'Server address and automatic synchronization',
                 ),
-                trailing: const CampusIcon(Icons.chevron_right_rounded),
                 onTap: () => Navigator.of(context).push<void>(
                   MaterialPageRoute(builder: (_) => const SessionServerPage()),
                 ),
@@ -592,7 +528,7 @@ class _SettingsPageState extends State<SettingsPage> {
             if (Theme.of(context).platform == TargetPlatform.android) ...[
               CampusPanel(
                 padding: EdgeInsets.zero,
-                child: M3EListItem(
+                child: CampusListItem(
                   headline: tr(
                     context,
                     'Итоги учебного дня',
@@ -603,15 +539,13 @@ class _SettingsPageState extends State<SettingsPage> {
                     'После последнего занятия: подтверждения каждого человека и истёкшие сессии.',
                     'After the last class: each person’s confirmations and expired sessions.',
                   ),
-                  leading: CampusIcon(
-                    Icons.notifications_outlined,
-                    color: context.palette.blue,
-                  ),
-                  trailing: M3ESwitch(
+                  trailing: CampusSwitch(
                     value: _daySummary,
-                    onChanged: _saving ? null : _chooseSummary,
+                    onChanged: _summarySaving ? null : _chooseSummary,
                   ),
-                  onTap: _saving ? null : () => _chooseSummary(!_daySummary),
+                  onTap: _summarySaving
+                      ? null
+                      : () => _chooseSummary(!_daySummary),
                 ),
               ),
               CampusButton.text(
@@ -626,7 +560,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               CampusPanel(
                 padding: EdgeInsets.zero,
-                child: M3EListItem(
+                child: CampusListItem(
                   headline: tr(
                     context,
                     'Виджет отметки всех',
@@ -636,10 +570,6 @@ class _SettingsPageState extends State<SettingsPage> {
                     context,
                     'Предпросмотр виджета',
                     'Widget preview',
-                  ),
-                  leading: CampusIcon(
-                    Icons.widgets_outlined,
-                    color: context.palette.blue,
                   ),
                   onTap: _pinScanWidget,
                 ),
@@ -661,14 +591,6 @@ class _SettingsPageState extends State<SettingsPage> {
                             {'version': widget.updates!.release!.tag},
                           )
                         : tr(context, 'Проверить', 'Check now'),
-                    leading: Badge(
-                      isLabelVisible: widget.updates!.updateAvailable,
-                      child: CampusIcon(
-                        Icons.system_update_rounded,
-                        color: context.palette.blue,
-                      ),
-                    ),
-                    trailing: const CampusIcon(Icons.chevron_right_rounded),
                     onTap: () => Navigator.of(context).push<void>(
                       MaterialPageRoute(
                         builder: (_) => UpdatesPage(
@@ -686,16 +608,11 @@ class _SettingsPageState extends State<SettingsPage> {
             CampusPanel(
               padding: EdgeInsets.zero,
               child: CampusListItem(
-                leading: CampusIcon(
-                  Icons.info_outline_rounded,
-                  color: context.palette.blue,
-                ),
                 headline: (tr(
                   context,
                   'О AntiAttendance',
                   'About AntiAttendance',
                 )),
-                trailing: CampusIcon(Icons.chevron_right_rounded),
                 onTap: () => Navigator.of(context).push<void>(
                   MaterialPageRoute(builder: (_) => const AboutPage()),
                 ),
@@ -726,7 +643,7 @@ class _Choice extends StatelessWidget {
           : const Duration(milliseconds: 160),
       decoration: BoxDecoration(
         color: selected ? context.palette.selected : context.palette.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.zero,
         border: Border.all(
           color: selected
               ? context.palette.blue.withValues(alpha: .4)
@@ -735,7 +652,7 @@ class _Choice extends StatelessWidget {
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.zero,
         child: CampusListItem(
           selected: selected,
           headline: title,
@@ -743,11 +660,7 @@ class _Choice extends StatelessWidget {
             duration: MediaQuery.disableAnimationsOf(context)
                 ? Duration.zero
                 : const Duration(milliseconds: 140),
-            child: CampusIcon(
-              selected ? Icons.check_circle_rounded : Icons.circle_outlined,
-              key: ValueKey(selected),
-              color: selected ? context.palette.blue : context.palette.muted,
-            ),
+            child: Text(selected ? '×' : '', key: ValueKey(selected)),
           ),
           onTap: onTap,
         ),
@@ -762,135 +675,74 @@ class _ThemePreview extends StatelessWidget {
     required this.title,
     required this.selected,
     required this.onTap,
-    this.seed,
   });
   final AppThemeMode mode;
   final String title;
   final bool selected;
   final VoidCallback? onTap;
-  final Color? seed;
   @override
   Widget build(BuildContext context) {
-    final preview = AppTheme.build(mode, monetSeed: seed);
-    final duration = MediaQuery.disableAnimationsOf(context)
-        ? Duration.zero
-        : const Duration(milliseconds: 160);
+    final preview = AppTheme.build(mode);
     return Semantics(
       selected: selected,
-      button: true,
-      child: CampusPressable(
-        enabled: onTap != null,
-        child: Container(
-          decoration: BoxDecoration(
-            color: selected
-                ? context.palette.selected
-                : context.palette.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: selected ? context.palette.blue : context.palette.line,
-            ),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(16),
-            child: InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(16),
-              child: Padding(
-                padding: const EdgeInsets.all(10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      child: EditorialAction(
+        onPressed: onTap,
+        padding: EdgeInsets.zero,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ExcludeSemantics(
+              child: Container(
+                height: 92,
+                decoration: BoxDecoration(
+                  color: preview.scaffoldBackgroundColor,
+                  border: Border.all(
+                    color: selected
+                        ? context.palette.ink
+                        : context.palette.line,
+                    width: selected ? 1.5 : .5,
+                  ),
+                ),
+                child: Row(
                   children: [
-                    ExcludeSemantics(
-                      child: Container(
-                        height: 92,
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(9),
-                        decoration: BoxDecoration(
-                          color: preview.scaffoldBackgroundColor,
-                          borderRadius: BorderRadius.circular(9),
-                          border: Border.all(
+                    Container(
+                      width: 10,
+                      decoration: BoxDecoration(
+                        border: Border(
+                          right: BorderSide(
                             color: preview.colorScheme.outlineVariant,
+                            width: .5,
                           ),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: 22,
-                              height: 4,
+                      ),
+                    ),
+                    Expanded(
+                      child: Center(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            'Aa',
+                            style: TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 32,
+                              fontWeight: FontWeight.w300,
                               color: preview.colorScheme.onSurface,
                             ),
-                            const SizedBox(height: 10),
-                            Container(
-                              height: 17,
-                              decoration: BoxDecoration(
-                                color: preview.colorScheme.primary,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Container(
-                              height: 17,
-                              decoration: BoxDecoration(
-                                color: preview.colorScheme.primaryContainer,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                            const Spacer(),
-                            Row(
-                              children: [
-                                for (var i = 0; i < 3; i++)
-                                  Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 2,
-                                      ),
-                                      child: Container(
-                                        height: 5,
-                                        color: i == 0
-                                            ? preview.colorScheme.primary
-                                            : preview
-                                                  .colorScheme
-                                                  .outlineVariant,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: context.palette.ink,
-                      ),
-                    ),
-                    const Spacer(),
-                    const SizedBox(height: 8),
-                    AnimatedSwitcher(
-                      duration: duration,
-                      child: CampusIcon(
-                        selected
-                            ? Icons.check_circle_rounded
-                            : Icons.circle_outlined,
-                        key: ValueKey(selected),
-                        size: 20,
-                        color: selected
-                            ? context.palette.blue
-                            : context.palette.muted,
                       ),
                     ),
                   ],
                 ),
               ),
             ),
-          ),
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.only(left: 2),
+              child: Text(title, style: Theme.of(context).textTheme.bodySmall),
+            ),
+            const SizedBox(height: 8),
+          ],
         ),
       ),
     );

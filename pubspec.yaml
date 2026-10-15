@@ -51,7 +51,6 @@ dependencies:
   crypto: ^3.0.7
   nfc_pass_client:
     path: third_party/nfc_pass_client
-  material_3_expressive: 1.1.5
   material_ui: ^1.5.0
   geolocator: ^14.1.1
   collection: ^1.19.1

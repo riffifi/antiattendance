@@ -1,7 +1,3 @@
-import 'icons/campus_icon.dart';
-
-import 'package:material_3_expressive/material_3_expressive.dart';
-
 import 'dart:async';
 import 'dart:convert';
 
@@ -161,7 +157,7 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
                 ),
               ),
               const SizedBox(height: 20),
-              const M3EProgressIndicator.linearWavy(),
+              const CampusProgress.linear(),
               const SizedBox(height: 12),
               CampusButton.text(
                 onPressed: _refreshLogin,
@@ -359,7 +355,7 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
       if (mounted) setState(() => _zoom = target);
     } catch (_) {
       if (mounted) {
-        M3ESnackbar.show(
+        CampusNotice.show(
           context,
           message: tr(
             context,
@@ -375,7 +371,7 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
+    appBar: CampusAppBar(
       title: Text(
         widget.accountLabel ??
             tr(context, 'Войти через МИРЭА', 'Sign in through MIREA'),
@@ -385,7 +381,7 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
     body: _error != null
         ? Center(child: Text(trMessage(context, _error!)))
         : !_ready
-        ? const Center(child: M3EProgressIndicator.circularWavy())
+        ? const Center(child: CampusProgress.compact())
         : Column(
             children: [
               if (_sessionMessage != null)
@@ -491,8 +487,7 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
                             style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                         ),
-                        M3EIconButton(
-                          suppressInk: true,
+                        CampusTextAction(
                           onPressed:
                               _zooming ||
                                   !_pageReady ||
@@ -500,9 +495,8 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
                                   _zoom <= 0.5
                               ? null
                               : () => _changeZoom(_zoom - 0.15),
-                          icon: const CampusIcon(Icons.remove_rounded),
                           tooltip: tr(context, 'Уменьшить', 'Zoom out'),
-                          variant: M3EIconButtonVariant.filled,
+                          label: tr(context, 'Уменьшить', 'Zoom out'),
                         ),
                         SizedBox(
                           width: 52,
@@ -512,8 +506,7 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
                             style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                         ),
-                        M3EIconButton(
-                          suppressInk: true,
+                        CampusTextAction(
                           onPressed:
                               _zooming ||
                                   !_pageReady ||
@@ -521,9 +514,8 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
                                   _zoom >= 2.0
                               ? null
                               : () => _changeZoom(_zoom + 0.15),
-                          icon: const CampusIcon(Icons.add_rounded),
                           tooltip: tr(context, 'Увеличить', 'Zoom in'),
-                          variant: M3EIconButtonVariant.filled,
+                          label: tr(context, 'Увеличить', 'Zoom in'),
                         ),
                       ],
                     ),

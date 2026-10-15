@@ -7,14 +7,12 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import 'accounts.dart';
 import 'app_settings.dart';
 import 'app_theme.dart';
 import 'campus_design.dart';
-import 'icons/campus_icon.dart';
 import 'l10n.dart';
 import 'nfc_diagnostics_page.dart';
 import 'nfc_pass.dart';
@@ -339,14 +337,14 @@ class _DebugMenuPageState extends State<DebugMenuPage> {
         ),
       );
       if (mounted) {
-        M3ESnackbar.show(
+        CampusNotice.show(
           context,
           message: tr(context, 'Отчёт скопирован.', 'Report copied.'),
         );
       }
     } catch (_) {
       if (mounted) {
-        M3ESnackbar.show(
+        CampusNotice.show(
           context,
           message: tr(
             context,
@@ -363,18 +361,18 @@ class _DebugMenuPageState extends State<DebugMenuPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
+    appBar: CampusAppBar(
       title: Text(tr(context, 'Меню отладки', 'Debug menu')),
       actions: [
-        IconButton(
-          tooltip: tr(context, 'Обновить', 'Refresh'),
+        CampusTextAction(
           onPressed: _loading ? null : _refresh,
-          icon: const CampusIcon(Icons.refresh_rounded),
+          tooltip: tr(context, 'Обновить', 'Refresh'),
+          label: tr(context, 'Обновить', 'Refresh'),
         ),
-        IconButton(
-          tooltip: tr(context, 'Копировать отчёт', 'Copy report'),
+        CampusTextAction(
           onPressed: _report == null || _loading ? null : _copy,
-          icon: const CampusIcon(Icons.copy_rounded),
+          tooltip: tr(context, 'Копировать отчёт', 'Copy report'),
+          label: tr(context, 'Копировать отчёт', 'Copy report'),
         ),
       ],
     ),
@@ -411,6 +409,10 @@ class _DebugMenuPageState extends State<DebugMenuPage> {
               CampusPanel(
                 padding: EdgeInsets.zero,
                 child: ExpansionTile(
+                  trailing: const Text(
+                    '+',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w300),
+                  ),
                   key: PageStorageKey('debug-${section.key}'),
                   title: Text(
                     section.key,
@@ -444,29 +446,19 @@ class _DebugMenuPageState extends State<DebugMenuPage> {
           ),
           CampusListItem(
             headline: tr(context, 'Проверка NFC', 'NFC diagnostics'),
-            leading: CampusIcon(Icons.nfc_rounded, color: context.palette.blue),
             onTap: () => _open(const NfcDiagnosticsPage()),
           ),
           CampusListItem(
             headline: tr(context, 'Сигнал турникета', 'Turnstile signal'),
-            leading: CampusIcon(
-              Icons.sensors_rounded,
-              color: context.palette.blue,
-            ),
             onTap: () => _open(const TurnstileProbePage()),
           ),
           CampusListItem(
             headline: tr(context, 'Сервер сессий', 'Session server'),
-            leading: CampusIcon(Icons.dns_rounded, color: context.palette.blue),
             onTap: () => _open(const SessionServerPage()),
           ),
           if (widget.updates != null)
             CampusListItem(
               headline: tr(context, 'Обновления', 'Updates'),
-              leading: CampusIcon(
-                Icons.system_update_rounded,
-                color: context.palette.blue,
-              ),
               onTap: () => _open(UpdatesPage(updates: widget.updates!)),
             ),
         ],

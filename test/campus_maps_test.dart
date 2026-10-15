@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:antiattendance/campus_maps_page.dart';
 import 'package:antiattendance/campus_design.dart';
 import 'package:antiattendance/app_theme.dart';
@@ -101,7 +100,7 @@ void main() {
     expect(canvas.floor.paths[canvas.selected!.id], isNotNull);
     await tester.tap(
       find.byWidgetPredicate(
-        (w) => w is M3EIconButton && w.tooltip == 'Save place',
+        (w) => w is CampusTextAction && w.tooltip == 'Save place',
       ),
     );
     await tester.pumpAndSettle();
@@ -133,7 +132,7 @@ void main() {
     await showMap(tester, location: location);
     await tester.tap(
       find.byWidgetPredicate(
-        (w) => w is M3EIconButton && w.tooltip == 'My location',
+        (w) => w is CampusTextAction && w.tooltip == 'My location',
       ),
     );
     await tester.pumpAndSettle();
@@ -164,7 +163,7 @@ void main() {
     await showMap(tester, location: location);
     await tester.tap(
       find.byWidgetPredicate(
-        (w) => w is M3EIconButton && w.tooltip == 'My location',
+        (w) => w is CampusTextAction && w.tooltip == 'My location',
       ),
     );
     await tester.pumpAndSettle();
@@ -214,6 +213,11 @@ void main() {
       await tester.ensureVisible(find.textContaining('Route steps'));
       await tester.tap(find.textContaining('Route steps'));
       await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.textContaining('Take the stairs'),
+        120,
+        scrollable: find.byType(Scrollable).last,
+      );
       expect(find.textContaining('Take the stairs'), findsWidgets);
       expect(tester.takeException(), isNull);
     },

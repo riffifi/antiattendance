@@ -1,8 +1,5 @@
-import 'icons/campus_icon.dart';
 import 'campus_design.dart';
 import 'expressive.dart';
-
-import 'package:material_3_expressive/material_3_expressive.dart';
 
 import 'dart:async';
 
@@ -471,7 +468,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                   shrinkWrap: true,
                   children: [
                     for (final account in widget.accounts)
-                      M3EListItem(
+                      CampusListItem(
                         headline: account.label,
                         supportingText: _numbers.containsKey(account.id)
                             ? tr(
@@ -484,7 +481,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                                 'Подключите пропуск',
                                 'Enroll a pass',
                               ),
-                        leading: M3ECheckbox(
+                        leading: CampusCheckbox(
                           value: picked.contains(account.id),
                           onChanged: (_) => update(() {
                             if (!picked.add(account.id)) {
@@ -817,19 +814,14 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
     final selected = _activeIds.contains(account.id);
     final own = !_single && account.id == _ownId;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.zero,
       child: CampusPressable(
         enabled: enabled && enrolled,
         child: Material(
           animationDuration: Duration.zero,
           color: context.palette.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-            side: BorderSide(
-              color: selected
-                  ? context.palette.blue.withValues(alpha: .45)
-                  : context.palette.line,
-            ),
+          shape: Border(
+            bottom: BorderSide(color: context.palette.line, width: .5),
           ),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
@@ -839,25 +831,16 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
               child: Row(
                 children: [
                   if (enrolled && _single)
-                    M3ERadio<String>(
+                    CampusRadio<String>(
                       value: account.id,
                       groupValue: _singleId,
                       onChanged: enabled ? (_) => _toggle(account) : null,
                     )
                   else if (enrolled)
-                    M3ECheckbox(
+                    CampusCheckbox(
                       value: selected,
                       onChanged: enabled ? (_) => _toggle(account) : null,
-                    )
-                  else
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: CampusIcon(
-                        Icons.badge_outlined,
-                        color: context.palette.muted,
-                      ),
                     ),
-                  const SizedBox(width: 6),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -866,7 +849,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                           account.label,
                           style: const TextStyle(
                             fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w400,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -899,15 +882,10 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                     ),
                   ),
                   if (enrolled)
-                    M3EIconButton(
-                      suppressInk: true,
-                      tooltip: tr(context, 'Удалить пропуск', 'Remove pass'),
-                      icon: CampusIcon(
-                        Icons.more_horiz_rounded,
-                        color: context.palette.muted,
-                      ),
+                    CampusTextAction(
                       onPressed: enabled ? () => _passMenu(account) : null,
-                      variant: M3EIconButtonVariant.standard,
+                      tooltip: tr(context, 'Удалить пропуск', 'Remove pass'),
+                      label: tr(context, 'удалить', 'remove'),
                     )
                   else
                     CampusButton.text(
@@ -932,7 +910,6 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
           child: CampusListItem(
-            leading: const CampusIcon(Icons.delete_outline_rounded),
             headline: (tr(context, 'Удалить пропуск', 'Remove pass')),
             supportingText: (account.label),
             onTap: () => Navigator.pop(context, true),
@@ -975,7 +952,6 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                         'Все пропуска. Одна очередь. Ваш — последним.',
                         'One queue for your passes. Yours goes last.',
                       ),
-                icon: Icons.nfc_rounded,
               ),
               if (_numbers.isNotEmpty)
                 Padding(
@@ -983,26 +959,25 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                   child: Row(
                     children: [
                       Expanded(
-                        child: CampusButton.icon(
+                        child: CampusButton.action(
                           style: _single
-                              ? M3EButtonStyle.outlined
-                              : M3EButtonStyle.tonal,
+                              ? CampusButtonStyle.outlined
+                              : CampusButtonStyle.tonal,
                           onPressed: enabled
                               ? () {
                                   setState(() => _single = false);
                                   unawaited(_savePreferences());
                                 }
                               : null,
-                          icon: const CampusIcon(Icons.queue_outlined),
                           label: Text(tr(context, 'Очередь', 'Queue')),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: CampusButton.icon(
+                        child: CampusButton.action(
                           style: _single
-                              ? M3EButtonStyle.tonal
-                              : M3EButtonStyle.outlined,
+                              ? CampusButtonStyle.tonal
+                              : CampusButtonStyle.outlined,
                           onPressed: enabled
                               ? () {
                                   setState(() {
@@ -1012,7 +987,6 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                                   unawaited(_savePreferences());
                                 }
                               : null,
-                          icon: const CampusIcon(Icons.badge_outlined),
                           label: Text(
                             tr(context, 'Один пропуск', 'Single pass'),
                           ),
@@ -1036,11 +1010,10 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
               if (_numbers.isNotEmpty)
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: CampusButton.icon(
+                  child: CampusButton.action(
                     onPressed: enabled && widget.accounts.isNotEmpty
                         ? _bulkEnroll
                         : null,
-                    icon: const CampusIcon(Icons.playlist_add_check_rounded),
                     label: Text(
                       tr(
                         context,
@@ -1048,7 +1021,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                         'Enroll passes together',
                       ),
                     ),
-                    style: M3EButtonStyle.tonal,
+                    style: CampusButtonStyle.tonal,
                   ),
                 ),
               const SizedBox(height: 12),
@@ -1061,21 +1034,6 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                   children: [
                     Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: context.palette.blue.withValues(alpha: .12),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: CampusIcon(
-                            Icons.nfc_rounded,
-                            color: (_running
-                                ? scheme.onPrimaryContainer
-                                : context.palette.ink),
-                            size: 28,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             _running
@@ -1106,7 +1064,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                                   ? scheme.onPrimaryContainer
                                   : context.palette.ink),
                               fontSize: 18,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w400,
                             ),
                           ),
                         ),
@@ -1140,7 +1098,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                               ? scheme.onPrimaryContainer
                               : context.palette.ink),
                           fontSize: 24,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w400,
                         ),
                       ),
                     ],
@@ -1193,7 +1151,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                     ),
                     if (_running && !_single) ...[
                       const SizedBox(height: 16),
-                      M3EProgressIndicator.linearWavy(
+                      CampusProgress.linear(
                         value: _queue.isEmpty ? 0 : presented / _queue.length,
                       ),
                       const SizedBox(height: 8),
@@ -1224,7 +1182,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                       tr(context, 'Пропуска', 'Passes'),
                       style: const TextStyle(
                         fontSize: 21,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
                   ),
@@ -1257,12 +1215,6 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                 _card(
                   child: Column(
                     children: [
-                      CampusIcon(
-                        Icons.badge_outlined,
-                        color: context.palette.muted,
-                        size: 36,
-                      ),
-                      const SizedBox(height: 12),
                       Text(
                         tr(
                           context,
@@ -1278,22 +1230,19 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                 CampusTextField(
                   controller: _search,
                   label: tr(context, 'Найти пропуск', 'Search passes'),
-                  leading: const CampusIcon(Icons.search_rounded),
                   trailing: _query.isEmpty
                       ? null
-                      : M3EIconButton(
-                          suppressInk: true,
+                      : CampusTextAction(
+                          onPressed: () {
+                            _search.clear();
+                            setState(() => _query = '');
+                          },
                           tooltip: tr(
                             context,
                             'Очистить поиск',
                             'Clear search',
                           ),
-                          icon: const CampusIcon(Icons.close_rounded),
-                          onPressed: () {
-                            _search.clear();
-                            setState(() => _query = '');
-                          },
-                          variant: M3EIconButtonVariant.standard,
+                          label: tr(context, 'очистить', 'clear'),
                         ),
                   onChanged: (value) =>
                       setState(() => _query = value.trim().toLowerCase()),
@@ -1318,6 +1267,10 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                 _accountCard(account, enabled),
               if (!_single && _numbers.isNotEmpty)
                 ExpansionTile(
+                  trailing: const Text(
+                    '+',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w300),
+                  ),
                   key: const PageStorageKey('nfc-queue-options'),
                   tilePadding: EdgeInsets.zero,
                   title: Text(
@@ -1331,12 +1284,6 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                         children: [
                           Row(
                             children: [
-                              CampusIcon(
-                                Icons.timer_outlined,
-                                color: context.palette.muted,
-                                size: 22,
-                              ),
-                              const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1348,7 +1295,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                                         'Between passes',
                                       ),
                                       style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
+                                        fontWeight: FontWeight.w400,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
@@ -1402,13 +1349,13 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                             enabled: enabled,
                             hint: tr(context, 'Ваш аккаунт', 'Your account'),
                             items: [
-                              M3EDropdownItem(
+                              PassPickerItem(
                                 value: '',
                                 label: tr(context, 'Не выбран', 'Not selected'),
                                 selected: _ownId == null,
                               ),
                               for (final account in widget.accounts)
-                                M3EDropdownItem(
+                                PassPickerItem(
                                   value: account.id,
                                   label: account.label,
                                   selected: account.id == _ownId,
@@ -1447,7 +1394,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
               if (_busy)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
-                  child: M3EProgressIndicator.linearWavy(),
+                  child: CampusProgress.linear(),
                 ),
 
               if (!(defaultTargetPlatform == TargetPlatform.android))
@@ -1467,11 +1414,6 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                 _card(
                   child: Row(
                     children: [
-                      CampusIcon(
-                        Icons.widgets_outlined,
-                        color: context.palette.blue,
-                      ),
-                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1483,7 +1425,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                                 'On your home screen',
                               ),
                               style: const TextStyle(
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w400,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -1513,8 +1455,6 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
               const SizedBox(height: 8),
               CampusListItem(
                 headline: tr(context, 'Как пользоваться', 'How to use'),
-                leading: const CampusIcon(Icons.help_outline),
-                trailing: const CampusIcon(Icons.chevron_right),
                 onTap: _showPassGuide,
               ),
             ],
@@ -1532,12 +1472,6 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                     liveRegion: true,
                     child: Row(
                       children: [
-                        CampusIcon(
-                          Icons.info_outline_rounded,
-                          color: context.palette.blue,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             _message!,
@@ -1547,12 +1481,10 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                             ),
                           ),
                         ),
-                        M3EIconButton(
-                          suppressInk: true,
-                          tooltip: tr(context, 'Закрыть', 'Dismiss'),
-                          icon: const CampusIcon(Icons.close_rounded, size: 18),
+                        CampusTextAction(
                           onPressed: () => setState(() => _message = null),
-                          variant: M3EIconButtonVariant.standard,
+                          tooltip: tr(context, 'Закрыть', 'Dismiss'),
+                          label: tr(context, 'Закрыть', 'Dismiss'),
                         ),
                       ],
                     ),
@@ -1564,16 +1496,15 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                   child: Text(tr(context, 'Войти снова', 'Sign in again')),
                 ),
               if (_nfcDisabled)
-                CampusButton.icon(
+                CampusButton.action(
                   onPressed: () =>
                       nfcPassChannel.invokeMethod<void>('openNfcSettings'),
-                  icon: const CampusIcon(Icons.settings_outlined),
                   label: Text(tr(context, 'Настройки NFC', 'NFC settings')),
-                  style: M3EButtonStyle.text,
+                  style: CampusButtonStyle.text,
                 ),
               SizedBox(
                 width: double.infinity,
-                child: CampusButton.icon(
+                child: CampusButton.action(
                   onPressed: _running
                       ? _stop
                       : enabled &&
@@ -1583,17 +1514,6 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                       : enabled && _activeIds.isNotEmpty
                       ? _start
                       : null,
-                  icon: _busy
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: M3EProgressIndicator.circularWavy(
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : CampusIcon(
-                          _running ? Icons.stop_rounded : Icons.nfc_rounded,
-                        ),
                   label: Text(
                     _busy
                         ? tr(context, 'Подождите…', 'Please wait…')

@@ -1,9 +1,6 @@
-import 'icons/campus_icon.dart';
 import 'campus_maps_page.dart';
 import 'campus_design.dart';
 import 'expressive.dart';
-
-import 'package:material_3_expressive/material_3_expressive.dart';
 
 import 'dart:async';
 import 'dart:io';
@@ -46,8 +43,7 @@ class SchedulePage extends StatefulWidget {
   State<SchedulePage> createState() => _SchedulePageState();
 }
 
-class _SchedulePageState extends State<SchedulePage>
-    with SingleTickerProviderStateMixin {
+class _SchedulePageState extends State<SchedulePage> {
   int? _groupId;
   late DateTime _day = widget.initialDay ?? _today();
   List<ScheduleLesson> _lessons = [];
@@ -56,10 +52,6 @@ class _SchedulePageState extends State<SchedulePage>
   String? _error;
   int _generation = 0;
   Timer? _clock;
-  late final AnimationController _refreshRotation = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 850),
-  );
 
   static DateTime _moscowNow() {
     final moscow = DateTime.now().toUtc().add(const Duration(hours: 3));
@@ -111,7 +103,6 @@ class _SchedulePageState extends State<SchedulePage>
   @override
   void dispose() {
     _clock?.cancel();
-    _refreshRotation.dispose();
     super.dispose();
   }
 
@@ -142,7 +133,6 @@ class _SchedulePageState extends State<SchedulePage>
   Future<void> _refresh({bool force = false}) async {
     final generation = ++_generation;
     final groupId = _groupId;
-    _refreshRotation.repeat();
     setState(() {
       _loading = true;
       _error = null;
@@ -178,8 +168,6 @@ class _SchedulePageState extends State<SchedulePage>
       }
     } finally {
       if (mounted && generation == _generation) {
-        _refreshRotation.stop();
-        _refreshRotation.reset();
         setState(() => _loading = false);
       }
     }
@@ -231,7 +219,7 @@ class _SchedulePageState extends State<SchedulePage>
                   const SizedBox(height: 8),
                   Text(
                     lesson.subject,
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w400),
                   ),
                   if (lesson.type.isNotEmpty ||
                       lesson.location.isNotEmpty ||
@@ -250,7 +238,7 @@ class _SchedulePageState extends State<SchedulePage>
                     ),
                   ],
                   if (lesson.location.isNotEmpty)
-                    CampusButton.icon(
+                    CampusButton.action(
                       onPressed: () => Navigator.of(context).push<void>(
                         MaterialPageRoute(
                           builder: (_) => CampusMapsPage(
@@ -259,13 +247,12 @@ class _SchedulePageState extends State<SchedulePage>
                           ),
                         ),
                       ),
-                      icon: const CampusIcon(Icons.map_outlined),
                       label: Text(tr(context, 'Найти аудиторию', 'Find room')),
                     ),
                   const SizedBox(height: 22),
                   Text(
                     tr(context, 'Подтверждённые Пульсом', 'Confirmed by Pulse'),
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                    style: TextStyle(fontWeight: FontWeight.w400),
                   ),
                   const SizedBox(height: 8),
                   if (confirmed.isEmpty)
@@ -280,11 +267,6 @@ class _SchedulePageState extends State<SchedulePage>
                       children: [
                         for (final mark in confirmed)
                           Chip(
-                            avatar: CampusIcon(
-                              Icons.check_rounded,
-                              size: 16,
-                              color: context.palette.success,
-                            ),
                             label: Text(mark.accountLabel),
                             backgroundColor: context.palette.mint,
                             side: BorderSide.none,
@@ -294,7 +276,7 @@ class _SchedulePageState extends State<SchedulePage>
                   const SizedBox(height: 22),
                   SizedBox(
                     width: double.infinity,
-                    child: CampusButton.icon(
+                    child: CampusButton.action(
                       onPressed: groupAccounts.isEmpty
                           ? null
                           : () => Navigator.pop(
@@ -303,11 +285,6 @@ class _SchedulePageState extends State<SchedulePage>
                                   ? 'scan'
                                   : 'paste',
                             ),
-                      icon: CampusIcon(
-                        Platform.isAndroid || Platform.isIOS
-                            ? Icons.qr_code_scanner_rounded
-                            : Icons.link_rounded,
-                      ),
                       label: Text(
                         Platform.isAndroid || Platform.isIOS
                             ? tr(context, 'Сканировать QR', 'Scan QR')
@@ -318,15 +295,14 @@ class _SchedulePageState extends State<SchedulePage>
                   if (Platform.isAndroid || Platform.isIOS)
                     SizedBox(
                       width: double.infinity,
-                      child: CampusButton.icon(
+                      child: CampusButton.action(
                         onPressed: groupAccounts.isEmpty
                             ? null
                             : () => Navigator.pop(context, 'paste'),
-                        icon: CampusIcon(Icons.link_rounded, size: 18),
                         label: Text(
                           tr(context, 'Вставить ссылку', 'Paste link'),
                         ),
-                        style: M3EButtonStyle.text,
+                        style: CampusButtonStyle.text,
                       ),
                     ),
                 ],
@@ -390,58 +366,52 @@ class _SchedulePageState extends State<SchedulePage>
           MediaQuery.paddingOf(context).bottom + 32,
         ),
         children: [
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(
-                  tr(context, 'Расписание', 'Schedule'),
-                  style: Theme.of(context).textTheme.headlineLarge,
-                ),
+              Text(
+                tr(context, 'Расписание', 'Schedule'),
+                style: Theme.of(context).textTheme.headlineLarge,
               ),
-              M3EIconButton(
-                suppressInk: true,
-                tooltip: tr(context, 'Карты кампусов', 'Campus maps'),
-                icon: CampusIcon(
-                  Icons.map_outlined,
-                  color: context.palette.blue,
-                ),
-                variant: M3EIconButtonVariant.standard,
-                onPressed: () => Navigator.of(context).push<void>(
-                  MaterialPageRoute(
-                    builder: (_) => CampusMapsPage(lessons: dailyLessons),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 12,
+                children: [
+                  CampusTextAction(
+                    onPressed: () => Navigator.of(context).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) => CampusMapsPage(lessons: dailyLessons),
+                      ),
+                    ),
+                    tooltip: tr(context, 'Карты кампусов', 'Campus maps'),
+                    label: tr(context, 'карты', 'maps'),
                   ),
-                ),
-              ),
-              M3EIconButton(
-                suppressInk: true,
-                tooltip: tr(context, 'Обновить', 'Refresh'),
-                onPressed: groups.isEmpty || _loading
-                    ? null
-                    : () => _refresh(force: true),
-                icon: RotationTransition(
-                  turns: _refreshRotation,
-                  child: const CampusIcon(Icons.refresh_rounded),
-                ),
-                variant: M3EIconButtonVariant.standard,
+                  CampusTextAction(
+                    onPressed: groups.isEmpty || _loading
+                        ? null
+                        : () => _refresh(force: true),
+                    tooltip: tr(context, 'Обновить', 'Refresh'),
+                    label: tr(context, 'Обновить', 'Refresh'),
+                  ),
+                ],
               ),
             ],
           ),
           const SizedBox(height: 12),
           if (groups.isEmpty)
             _EmptyPanel(
-              icon: Icons.group_add_outlined,
               title: tr(context, 'Выберите группу', 'Choose a group'),
               detail: tr(
                 context,
-                'Выберите группу в меню ⋮ у аккаунта на вкладке «Посещаемость».',
-                'Assign a group to an account using the ⋮ menu on the attendance tab.',
+                'Выберите группу в меню действий аккаунта на экране посещаемости.',
+                'Assign a group to an account using its actions menu on the attendance screen.',
               ),
             )
           else ...[
             AppActionMenu(
               entries: [
                 for (final entry in groups.entries)
-                  M3EMenuEntry(value: entry.key, label: entry.value),
+                  CampusMenuEntry(value: entry.key, label: entry.value),
               ],
               onSelected: (value) {
                 final id = value as int;
@@ -458,28 +428,18 @@ class _SchedulePageState extends State<SchedulePage>
                   ),
                   decoration: BoxDecoration(
                     color: context.palette.surface,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.zero,
                     border: Border.all(color: context.palette.line),
                   ),
                   child: Row(
                     children: [
-                      CampusIcon(
-                        Icons.groups_rounded,
-                        color: context.palette.blue,
-                        size: 21,
-                      ),
-                      const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           groups[_groupId] ?? '',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontWeight: FontWeight.w700),
+                          style: TextStyle(fontWeight: FontWeight.w400),
                         ),
-                      ),
-                      CampusIcon(
-                        Icons.keyboard_arrow_down_rounded,
-                        color: context.palette.muted,
                       ),
                     ],
                   ),
@@ -487,47 +447,59 @@ class _SchedulePageState extends State<SchedulePage>
               ),
             ),
             const SizedBox(height: 8),
-            Row(
+            Column(
               children: [
-                M3EIconButton(
-                  suppressInk: true,
-                  onPressed: () =>
-                      _selectDay(_day.subtract(const Duration(days: 7))),
-                  icon: CampusIcon(Icons.chevron_left_rounded),
-                  tooltip: tr(context, 'Предыдущая неделя', 'Previous week'),
-                  variant: M3EIconButtonVariant.standard,
+                Text(
+                  '${_date(week)} — ${_date(week.add(const Duration(days: 6)))}',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontWeight: FontWeight.w400),
                 ),
-                M3EIconButton(
-                  suppressInk: true,
-                  variant: M3EIconButtonVariant.standard,
-                  icon: const CampusIcon(Icons.date_range_outlined),
-                  tooltip: tr(context, 'Выбрать дату', 'Choose date'),
-                  onPressed: () async {
-                    final date = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime(_day.year, _day.month, _day.day),
-                      firstDate: DateTime(today.year - 1),
-                      lastDate: DateTime(today.year + 2),
-                    );
-                    if (date != null && mounted) {
-                      _selectDay(DateTime.utc(date.year, date.month, date.day));
-                    }
-                  },
-                ),
-                Expanded(
-                  child: Text(
-                    '${_date(week)} — ${_date(week.add(const Duration(days: 6)))}',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ),
-                M3EIconButton(
-                  suppressInk: true,
-                  onPressed: () =>
-                      _selectDay(_day.add(const Duration(days: 7))),
-                  icon: CampusIcon(Icons.chevron_right_rounded),
-                  tooltip: tr(context, 'Следующая неделя', 'Next week'),
-                  variant: M3EIconButtonVariant.standard,
+                Row(
+                  children: [
+                    Expanded(
+                      child: CampusTextAction(
+                        onPressed: () =>
+                            _selectDay(_day.subtract(const Duration(days: 7))),
+                        tooltip: tr(
+                          context,
+                          'Предыдущая неделя',
+                          'Previous week',
+                        ),
+                        label: tr(context, 'назад', 'previous'),
+                      ),
+                    ),
+                    Expanded(
+                      child: CampusTextAction(
+                        onPressed: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime(
+                              _day.year,
+                              _day.month,
+                              _day.day,
+                            ),
+                            firstDate: DateTime(today.year - 1),
+                            lastDate: DateTime(today.year + 2),
+                          );
+                          if (date != null && mounted) {
+                            _selectDay(
+                              DateTime.utc(date.year, date.month, date.day),
+                            );
+                          }
+                        },
+                        tooltip: tr(context, 'Выбрать дату', 'Choose date'),
+                        label: tr(context, 'дата', 'date'),
+                      ),
+                    ),
+                    Expanded(
+                      child: CampusTextAction(
+                        onPressed: () =>
+                            _selectDay(_day.add(const Duration(days: 7))),
+                        tooltip: tr(context, 'Следующая неделя', 'Next week'),
+                        label: tr(context, 'вперёд', 'next'),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -566,7 +538,7 @@ class _SchedulePageState extends State<SchedulePage>
                             : dateText,
                         style: TextStyle(
                           fontSize: 22,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w400,
                         ),
                       ),
                       if (!_loading && _error == null)
@@ -605,7 +577,7 @@ class _SchedulePageState extends State<SchedulePage>
                     final minutes = (current ? lesson.end : lesson.start)
                         .difference(now)
                         .inMinutes;
-                    return M3EListItem(
+                    return CampusListItem(
                       headline: lesson.subject,
                       supportingText:
                           '${current ? tr(context, 'Сейчас', 'Now') : tr(context, 'Следующая пара', 'Next class')} · ${_time(lesson.start)}–${_time(lesson.end)} · ${lesson.location}',
@@ -623,10 +595,9 @@ class _SchedulePageState extends State<SchedulePage>
             ],
             if (_loading && dailyLessons.isEmpty) ...[
               const SizedBox(height: 25),
-              const Center(child: M3EProgressIndicator.circularWavy()),
+              const Center(child: CampusProgress.compact()),
             ] else if (_error != null && dailyLessons.isEmpty) ...[
               _EmptyPanel(
-                icon: Icons.wifi_off_rounded,
                 title: _error!,
                 detail: tr(
                   context,
@@ -636,7 +607,6 @@ class _SchedulePageState extends State<SchedulePage>
               ),
             ] else if (dailyLessons.isEmpty) ...[
               _EmptyPanel(
-                icon: Icons.event_available_rounded,
                 title: tr(context, 'Свободный день', 'A free day'),
                 detail: tr(
                   context,
@@ -672,7 +642,7 @@ class _SchedulePageState extends State<SchedulePage>
               const SizedBox(height: 24),
               Text(
                 tr(context, 'Другие отметки', 'Other confirmations'),
-                style: TextStyle(fontWeight: FontWeight.w700),
+                style: TextStyle(fontWeight: FontWeight.w400),
               ),
               const SizedBox(height: 7),
               Text(
@@ -713,9 +683,9 @@ class _DayButton extends StatelessWidget {
       child: Material(
         animationDuration: Duration.zero,
         color: selected ? context.palette.selectionSurface : Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.zero,
         child: InkWell(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.zero,
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
@@ -739,7 +709,7 @@ class _DayButton extends StatelessWidget {
                   '${date.day}',
                   style: TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w400,
                     color: selected
                         ? context.palette.blue
                         : context.palette.ink,
@@ -793,14 +763,7 @@ class _LessonRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent =
-        lesson.type.toLowerCase().contains('лаб') ||
-            lesson.type.toLowerCase().contains('lab')
-        ? const Color(0xFF2B9A75)
-        : lesson.type.toLowerCase().contains('пр') ||
-              lesson.type.toLowerCase().contains('prac')
-        ? const Color(0xFFBE7B2B)
-        : context.palette.blue;
+    final accent = context.palette.ink;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -838,17 +801,20 @@ class _LessonRow extends StatelessWidget {
           child: CampusPressable(
             child: Material(
               color: context.palette.surface,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.zero,
               clipBehavior: Clip.antiAlias,
               child: InkWell(
                 onTap: onTap,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.zero,
                 child: Ink(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: isCurrent ? accent : context.palette.line,
+                    borderRadius: BorderRadius.zero,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: isCurrent ? accent : context.palette.line,
+                        width: .5,
+                      ),
                     ),
                     color: isCurrent
                         ? context.palette.selectionSurface
@@ -866,16 +832,11 @@ class _LessonRow extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 15,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w400,
                               ),
                             ),
                           ),
                           const SizedBox(width: 4),
-                          CampusIcon(
-                            Icons.chevron_right_rounded,
-                            color: context.palette.muted,
-                            size: 20,
-                          ),
                         ],
                       ),
                       if (isCurrent) ...[
@@ -885,7 +846,7 @@ class _LessonRow extends StatelessWidget {
                           style: TextStyle(
                             color: context.palette.blue,
                             fontSize: 11,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w400,
                           ),
                         ),
                       ],
@@ -921,16 +882,6 @@ class _LessonRow extends StatelessWidget {
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          CampusIcon(
-                            confirmed.isEmpty
-                                ? Icons.radio_button_unchecked_rounded
-                                : Icons.check_circle_rounded,
-                            color: confirmed.isEmpty
-                                ? context.palette.muted
-                                : context.palette.success,
-                            size: 15,
-                          ),
-                          const SizedBox(width: 5),
                           Expanded(
                             child: Text(
                               confirmed.isEmpty
@@ -970,12 +921,7 @@ class _LessonRow extends StatelessWidget {
 }
 
 class _EmptyPanel extends StatelessWidget {
-  const _EmptyPanel({
-    required this.icon,
-    required this.title,
-    required this.detail,
-  });
-  final IconData icon;
+  const _EmptyPanel({required this.title, required this.detail});
   final String title;
   final String detail;
 
@@ -985,16 +931,14 @@ class _EmptyPanel extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
     decoration: BoxDecoration(
       color: context.palette.surface,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.zero,
     ),
     child: Column(
       children: [
-        CampusIcon(icon, color: context.palette.blue, size: 30),
-        const SizedBox(height: 10),
         Text(
           title,
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
         ),
         const SizedBox(height: 5),
         Text(

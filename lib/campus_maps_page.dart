@@ -1,10 +1,7 @@
-import 'icons/campus_icon.dart';
-
 import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 
 import 'campus_design.dart';
 import 'expressive.dart';
@@ -282,9 +279,8 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                 ),
               ),
               for (final floor in campus.floors)
-                M3EListItem(
+                CampusListItem(
                   headline: campusFloorLabel(context, floor),
-                  leading: const CampusIcon(Icons.layers_outlined),
                   onTap: () => Navigator.pop(context, floor.id),
                 ),
             ],
@@ -392,11 +388,10 @@ class _CampusMapsPageState extends State<CampusMapsPage>
             for (final lesson in widget.lessons.where(
               (l) => l.location.isNotEmpty,
             ))
-              M3EListItem(
+              CampusListItem(
                 headline: lesson.subject,
                 supportingText:
                     '${lesson.start.hour.toString().padLeft(2, '0')}:${lesson.start.minute.toString().padLeft(2, '0')} · ${lesson.location}',
-                leading: const CampusIcon(Icons.meeting_room_outlined),
                 onTap: () => Navigator.pop(context, lesson),
               ),
           ],
@@ -469,11 +464,10 @@ class _CampusMapsPageState extends State<CampusMapsPage>
               ),
             ),
             for (final instruction in route.instructions)
-              M3EListItem(
+              CampusListItem(
                 headline: _instruction(instruction),
                 supportingText:
                     '${campusFloorLabel(context, _map.floor(instruction.floorId))}${instruction.distanceMeters == null || instruction.distanceMeters == 0 ? '' : ' · ≈${instruction.distanceMeters!.round()} m'}',
-                leading: CampusIcon(_maneuverIcon(instruction.maneuver)),
                 onTap: () {
                   setState(() => _floorId = instruction.floorId);
                   Navigator.pop(context);
@@ -517,19 +511,12 @@ class _CampusMapsPageState extends State<CampusMapsPage>
       'Continue straight',
     ),
   };
-  IconData _maneuverIcon(IndoorManeuver maneuver) => switch (maneuver) {
-    IndoorManeuver.turnLeft => Icons.turn_left,
-    IndoorManeuver.turnRight => Icons.turn_right,
-    IndoorManeuver.stairs => Icons.stairs_outlined,
-    IndoorManeuver.arrive => Icons.flag_outlined,
-    _ => Icons.arrow_upward,
-  };
 
   @override
   Widget build(BuildContext context) {
     if (_campuses.isEmpty) {
       return Scaffold(
-        appBar: AppBar(
+        appBar: CampusAppBar(
           title: Text(tr(context, 'Карты кампусов', 'Campus maps')),
         ),
         body: Center(
@@ -550,7 +537,7 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                     ),
                   ],
                 )
-              : const M3EProgressIndicator.circularWavy(),
+              : const CampusProgress.compact(),
         ),
       );
     }
@@ -584,24 +571,17 @@ class _CampusMapsPageState extends State<CampusMapsPage>
         ? null
         : math.sqrt(_position!.accuracy * _position!.accuracy + 25 * 25);
     return Scaffold(
-      appBar: AppBar(
+      appBar: CampusAppBar(
         title: Text(tr(context, 'Карты кампусов', 'Campus maps')),
         actions: [
-          M3EIconButton(
-            variant: M3EIconButtonVariant.standard,
-            icon: _locating
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: M3EProgressIndicator.circularWavy(),
-                  )
-                : const CampusIcon(Icons.my_location),
-            tooltip: tr(context, 'Моё местоположение', 'My location'),
+          CampusTextAction(
             onPressed: _locating ? null : _locate,
+            tooltip: tr(context, 'Моё местоположение', 'My location'),
+            label: tr(context, 'Моё местоположение', 'My location'),
           ),
           AppActionMenu(
             entries: [
-              M3EMenuEntry(
+              CampusMenuEntry(
                 value: 'campus',
                 label: tr(
                   context,
@@ -609,7 +589,7 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                   'Directions to campus',
                 ),
               ),
-              M3EMenuEntry(
+              CampusMenuEntry(
                 value: 'pulse',
                 label: tr(context, 'Открыть в Пульсе', 'Open in Pulse'),
               ),
@@ -621,10 +601,10 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                 _openSource();
               }
             },
-            anchorBuilder: (_, open) => M3EIconButton(
-              variant: M3EIconButtonVariant.standard,
-              icon: const CampusIcon(Icons.more_vert),
+            anchorBuilder: (_, open) => CampusTextAction(
               onPressed: open,
+              tooltip: tr(context, 'Действия', 'Actions'),
+              label: tr(context, 'Действия', 'Actions'),
             ),
           ),
         ],
@@ -638,17 +618,15 @@ class _CampusMapsPageState extends State<CampusMapsPage>
               child: CampusTextField(
                 controller: _search,
                 label: tr(context, 'Аудитория или место', 'Room or place'),
-                leading: const CampusIcon(Icons.search),
-                trailing: M3EIconButton(
-                  variant: M3EIconButtonVariant.standard,
-                  icon: const CampusIcon(Icons.close),
-                  tooltip: tr(context, 'Очистить', 'Clear'),
+                trailing: CampusTextAction(
                   onPressed: () => setState(() {
                     _search.clear();
                     _kind = null;
                     _favoritesOnly = false;
                     _resultsVisible = false;
                   }),
+                  tooltip: tr(context, 'Очистить', 'Clear'),
+                  label: tr(context, 'Очистить', 'Clear'),
                 ),
                 onChanged: (_) => setState(() {}),
               ),
@@ -661,7 +639,7 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                     child: AppActionMenu(
                       entries: [
                         for (var c = 0; c < _campuses.length; c++)
-                          M3EMenuEntry(value: c, label: _campuses[c].title),
+                          CampusMenuEntry(value: c, label: _campuses[c].title),
                       ],
                       onSelected: (value) => setState(() {
                         _campus = value as int;
@@ -670,10 +648,9 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                         _start = null;
                         _invalidateRoute();
                       }),
-                      anchorBuilder: (_, open) => CampusButton.icon(
-                        style: M3EButtonStyle.tonal,
+                      anchorBuilder: (_, open) => CampusButton.action(
+                        style: CampusButtonStyle.tonal,
                         onPressed: open,
-                        icon: const CampusIcon(Icons.school_outlined),
                         label: Text(_map.shortTitle),
                       ),
                     ),
@@ -683,17 +660,16 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                     child: AppActionMenu(
                       entries: [
                         for (final floor in _map.floors)
-                          M3EMenuEntry(
+                          CampusMenuEntry(
                             value: floor.id,
                             label: campusFloorLabel(context, floor),
                           ),
                       ],
                       onSelected: (value) =>
                           setState(() => _floorId = value as String),
-                      anchorBuilder: (_, open) => CampusButton.icon(
-                        style: M3EButtonStyle.tonal,
+                      anchorBuilder: (_, open) => CampusButton.action(
+                        style: CampusButtonStyle.tonal,
                         onPressed: open,
-                        icon: const CampusIcon(Icons.layers_outlined),
                         label: Text(campusFloorLabel(context, _floor)),
                       ),
                     ),
@@ -707,40 +683,17 @@ class _CampusMapsPageState extends State<CampusMapsPage>
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
                 children: [
-                  _tag(
-                    null,
-                    tr(context, 'Все места', 'All places'),
-                    Icons.place_outlined,
-                  ),
-                  _tag('toilet', tr(context, 'Туалеты', 'Toilets'), Icons.wc),
-                  _tag(
-                    'cafeteria',
-                    tr(context, 'Еда', 'Food'),
-                    Icons.restaurant,
-                  ),
-                  _tag(
-                    'entrance',
-                    tr(context, 'Входы', 'Entrances'),
-                    Icons.door_front_door_outlined,
-                  ),
-                  _tag(
-                    'cloakroom',
-                    tr(context, 'Гардероб', 'Cloakroom'),
-                    Icons.checkroom,
-                  ),
-                  _tag(
-                    'medical',
-                    tr(context, 'Медпункт', 'Medical'),
-                    Icons.local_hospital_outlined,
-                  ),
-                  CampusButton.icon(
+                  _tag(null, tr(context, 'Все места', 'All places')),
+                  _tag('toilet', tr(context, 'Туалеты', 'Toilets')),
+                  _tag('cafeteria', tr(context, 'Еда', 'Food')),
+                  _tag('entrance', tr(context, 'Входы', 'Entrances')),
+                  _tag('cloakroom', tr(context, 'Гардероб', 'Cloakroom')),
+                  _tag('medical', tr(context, 'Медпункт', 'Medical')),
+                  CampusButton.action(
                     onPressed: () => setState(() {
                       _favoritesOnly = !_favoritesOnly;
                       _kind = null;
                     }),
-                    icon: CampusIcon(
-                      _favoritesOnly ? Icons.star : Icons.star_outline,
-                    ),
                     label: Text(tr(context, 'Избранное', 'Saved places')),
                   ),
                 ],
@@ -764,10 +717,10 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                         ),
                         child: Text(tr(context, 'Настройки', 'Settings')),
                       ),
-                    M3EIconButton(
-                      variant: M3EIconButtonVariant.standard,
-                      icon: const CampusIcon(Icons.close),
+                    CampusTextAction(
                       onPressed: () => setState(() => _gpsError = null),
+                      tooltip: tr(context, 'Закрыть', 'Dismiss'),
+                      label: tr(context, 'Закрыть', 'Dismiss'),
                     ),
                   ],
                 ),
@@ -793,9 +746,8 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                 ),
               ),
             if (widget.lessons.isNotEmpty && !searching)
-              CampusButton.icon(
+              CampusButton.action(
                 onPressed: _lessonPlaces,
-                icon: const CampusIcon(Icons.calendar_today_outlined),
                 label: Text(
                   tr(context, 'Аудитории из расписания', 'Rooms from schedule'),
                 ),
@@ -841,18 +793,10 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                                   final result = results[index],
                                       place = result.place,
                                       campus = _campuses[result.campus];
-                                  return M3EListItem(
+                                  return CampusListItem(
                                     headline: place.label,
                                     supportingText:
                                         '${campus.shortTitle} · ${campusFloorLabel(context, campus.floor(place.floorId))} · ${placeKindLabel(context, place.kind)}',
-                                    leading: CampusIcon(
-                                      placeKindIcon(place.kind),
-                                    ),
-                                    trailing: CampusIcon(
-                                      _favorites.contains(place.id)
-                                          ? Icons.star
-                                          : Icons.chevron_right,
-                                    ),
                                     onTap: () => _select(place, result.campus),
                                   );
                                 },
@@ -885,18 +829,17 @@ class _CampusMapsPageState extends State<CampusMapsPage>
     );
   }
 
-  Widget _tag(String? kind, String label, IconData icon) => Padding(
+  Widget _tag(String? kind, String label) => Padding(
     padding: const EdgeInsets.only(right: 6),
-    child: CampusButton.icon(
+    child: CampusButton.action(
       style: _kind == kind && !_favoritesOnly
-          ? M3EButtonStyle.tonal
-          : M3EButtonStyle.text,
+          ? CampusButtonStyle.tonal
+          : CampusButtonStyle.text,
       onPressed: () => setState(() {
         _kind = kind;
         _favoritesOnly = false;
         _resultsVisible = false;
       }),
-      icon: CampusIcon(icon),
       label: Text(label),
     ),
   );
@@ -912,14 +855,13 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
-            M3EIconButton(
-              variant: M3EIconButtonVariant.standard,
-              icon: const CampusIcon(Icons.close),
-              tooltip: tr(context, 'Сбросить маршрут', 'Clear route'),
+            CampusTextAction(
               onPressed: () => setState(() {
                 _start = null;
                 _invalidateRoute();
               }),
+              tooltip: tr(context, 'Сбросить маршрут', 'Clear route'),
+              label: tr(context, 'Сбросить маршрут', 'Clear route'),
             ),
           ],
         ),
@@ -932,22 +874,18 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
-            M3EIconButton(
-              variant: M3EIconButtonVariant.standard,
-              icon: CampusIcon(
-                _favorites.contains(place.id) ? Icons.star : Icons.star_outline,
-              ),
-              tooltip: tr(context, 'Сохранить место', 'Save place'),
+            CampusTextAction(
               onPressed: _saving ? null : () => _favorite(place),
+              tooltip: tr(context, 'Сохранить место', 'Save place'),
+              label: tr(context, 'Сохранить место', 'Save place'),
             ),
-            M3EIconButton(
-              variant: M3EIconButtonVariant.standard,
-              icon: const CampusIcon(Icons.close),
-              tooltip: tr(context, 'Закрыть', 'Close'),
+            CampusTextAction(
               onPressed: () => setState(() {
                 _selected = null;
                 _invalidateRoute();
               }),
+              tooltip: tr(context, 'Закрыть', 'Close'),
+              label: tr(context, 'Закрыть', 'Close'),
             ),
           ],
         ),
@@ -961,9 +899,8 @@ class _CampusMapsPageState extends State<CampusMapsPage>
           spacing: 8,
           runSpacing: 4,
           children: [
-            CampusButton.icon(
+            CampusButton.action(
               onPressed: _routing ? null : _directions,
-              icon: const CampusIcon(Icons.route_outlined),
               label: Text(tr(context, 'Маршрут', 'Directions')),
             ),
             CampusButton.text(
@@ -991,7 +928,7 @@ class _CampusMapsPageState extends State<CampusMapsPage>
       if (_routing)
         const Padding(
           padding: EdgeInsets.all(8),
-          child: M3EProgressIndicator.linearWavy(),
+          child: CampusProgress.linear(),
         ),
       if (_routeFailed)
         Text(
@@ -1015,16 +952,11 @@ class _CampusMapsPageState extends State<CampusMapsPage>
               for (final id in route.floorIds)
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
-                  child: CampusButton.icon(
+                  child: CampusButton.action(
                     style: id == _floor.id
-                        ? M3EButtonStyle.tonal
-                        : M3EButtonStyle.text,
+                        ? CampusButtonStyle.tonal
+                        : CampusButtonStyle.text,
                     onPressed: () => setState(() => _floorId = id),
-                    icon: CampusIcon(
-                      id == _floor.id
-                          ? Icons.check_circle_outline
-                          : Icons.layers_outlined,
-                    ),
                     label: Text(campusFloorLabel(context, _map.floor(id))),
                   ),
                 ),
@@ -1039,14 +971,6 @@ class _CampusMapsPageState extends State<CampusMapsPage>
 String campusFloorLabel(BuildContext context, CampusFloor floor) =>
     trf(context, 'Этаж {floor}', 'Floor {floor}', {'floor': floor.level});
 
-IconData placeKindIcon(String kind) => switch (kind) {
-  'toilet' => Icons.wc,
-  'cafeteria' => Icons.restaurant,
-  'entrance' => Icons.door_front_door_outlined,
-  'cloakroom' => Icons.checkroom,
-  'medical' => Icons.local_hospital_outlined,
-  _ => Icons.meeting_room_outlined,
-};
 String placeKindLabel(BuildContext context, String kind) => switch (kind) {
   'toilet' => tr(context, 'Туалеты', 'Toilets'),
   'cafeteria' => tr(context, 'Еда', 'Food'),
@@ -1113,7 +1037,6 @@ class _PlacePickerState extends State<_PlacePicker> {
             child: CampusTextField(
               controller: _search,
               label: tr(context, 'Аудитория или место', 'Room or place'),
-              leading: const CampusIcon(Icons.search),
               onChanged: (_) => setState(() {}),
             ),
           ),
@@ -1133,11 +1056,10 @@ class _PlacePickerState extends State<_PlacePicker> {
               itemCount: places.length,
               itemBuilder: (context, index) {
                 final place = places[index];
-                return M3EListItem(
+                return CampusListItem(
                   headline: place.label,
                   supportingText:
                       '${campusFloorLabel(context, widget.campus.floor(place.floorId))} · ${placeKindLabel(context, place.kind)}',
-                  leading: CampusIcon(placeKindIcon(place.kind)),
                   onTap: () => Navigator.pop(context, place),
                 );
               },

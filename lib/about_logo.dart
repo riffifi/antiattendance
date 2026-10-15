@@ -174,7 +174,7 @@ class _AboutLogoState extends State<AboutLogo>
                                   clipBehavior: Clip.antiAlias,
                                   decoration: BoxDecoration(
                                     color: back ? Colors.white : face,
-                                    borderRadius: BorderRadius.circular(30),
+                                    borderRadius: BorderRadius.zero,
                                     border: Border.all(
                                       color: _focused
                                           ? palette.blue

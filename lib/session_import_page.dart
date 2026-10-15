@@ -1,4 +1,3 @@
-import 'icons/campus_icon.dart';
 import 'qr_tracking.dart';
 import 'app_theme.dart';
 import 'campus_design.dart';
@@ -66,7 +65,7 @@ class _SessionImportPageState extends State<SessionImportPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
+    appBar: CampusAppBar(
       title: Text(tr(context, 'Получить аккаунты', 'Import sessions')),
       automaticallyImplyLeading: true,
     ),
@@ -156,7 +155,6 @@ class _SessionImportPageState extends State<SessionImportPage> {
               'Попросите отправителя открыть «Показать код» и введите его здесь.',
               'Ask the sender to tap “Show code” and enter it here.',
             ),
-            icon: Icons.lock_open_rounded,
           ),
           CampusTextField(
             controller: _code,
@@ -206,10 +204,7 @@ class _SessionImportPageState extends State<SessionImportPage> {
           ),
           const SizedBox(height: 16),
           for (final account in _accounts!)
-            CampusListItem(
-              leading: const CampusIcon(Icons.person_outline),
-              headline: (account.label),
-            ),
+            CampusListItem(headline: (account.label)),
           const SizedBox(height: 16),
           CampusButton.filled(
             onPressed: () => Navigator.of(context).pop(_accounts),

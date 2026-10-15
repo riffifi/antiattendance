@@ -1,8 +1,6 @@
 import 'package:antiattendance/accounts.dart';
 import 'package:antiattendance/app_settings.dart';
 import 'package:antiattendance/app_theme.dart';
-import 'package:antiattendance/campus_design.dart';
-import 'package:antiattendance/icons/campus_icon.dart';
 import 'package:antiattendance/main.dart';
 import 'package:antiattendance/settings_page.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -20,20 +18,20 @@ void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
 
   testWidgets(
-    'Monet preview colours stay stable while the page theme animates',
+    'Monochrome preview colours stay stable while the page theme animates',
     (tester) async {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      const seed = Colors.green;
+
       var mode = AppThemeMode.light;
       final store = _ThemeStore();
       await tester.pumpWidget(
         StatefulBuilder(
           builder: (context, update) {
             return MaterialApp(
-              theme: AppTheme.build(mode, monetSeed: seed),
+              theme: AppTheme.build(mode),
               themeAnimationDuration: const Duration(milliseconds: 320),
               themeAnimationCurve: Curves.easeInOutCubic,
               home: SettingsPage(
@@ -41,9 +39,6 @@ void main() {
                 language: null,
                 onLanguageChanged: (_) {},
                 themeMode: mode,
-                monetEnabled: true,
-                monetAvailable: true,
-                monetSeed: seed,
                 onThemeModeChanged: (value) => update(() => mode = value),
               ),
             );
@@ -73,12 +68,7 @@ void main() {
       expect(during, isNot(light));
       expect(
         during,
-        isNot(
-          AppTheme.build(
-            AppThemeMode.dark,
-            monetSeed: seed,
-          ).scaffoldBackgroundColor,
-        ),
+        isNot(AppTheme.build(AppThemeMode.dark).scaffoldBackgroundColor),
       );
       expect(previewColours(), previews);
       await tester.pumpAndSettle();
@@ -91,35 +81,29 @@ void main() {
     },
   );
 
-  testWidgets(
-    'Settings notification and widget icons follow the Monet accent',
-    (tester) async {
-      final theme = AppTheme.build(
-        AppThemeMode.dark,
-        monetSeed: Colors.green,
-      ).copyWith(platform: TargetPlatform.android);
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: theme,
-          home: SettingsPage(
-            store: _ThemeStore(),
-            language: null,
-            onLanguageChanged: (_) {},
-          ),
+  testWidgets('Settings navigation uses words without decorative icons', (
+    tester,
+  ) async {
+    final theme = AppTheme.build(AppThemeMode.dark)
+        .copyWith(platform: TargetPlatform.android);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: theme,
+        home: SettingsPage(
+          store: _ThemeStore(),
+          language: null,
+          onLanguageChanged: (_) {},
         ),
-      );
-      await tester.pumpAndSettle();
-      for (final (label, glyph) in [
-        ('Study day summary', Icons.notifications_outlined),
-        ('Mark-all widget', Icons.widgets_outlined),
-      ]) {
-        await tester.scrollUntilVisible(find.text(label), 250);
-        final icon = tester.widget<CampusIcon>(find.byIcon(glyph));
-        expect(icon.color, theme.colorScheme.primary);
-      }
-      expect(tester.takeException(), isNull);
-    },
-  );
+      ),
+    );
+    await tester.pumpAndSettle();
+    for (final label in ['Study day summary', 'Mark-all widget']) {
+      await tester.scrollUntilVisible(find.text(label), 250);
+      expect(find.byType(Icon), findsNothing);
+      expect(find.text(label), findsOneWidget);
+    }
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('accounts and scan remain reachable without navigation overlap', (
     tester,
@@ -132,6 +116,7 @@ void main() {
       MaterialApp(
         theme: AppTheme.light,
         home: HomePage(
+          startAtSelector: true,
           store: MemoryAccountStore([
             for (var i = 0; i < 12; i++)
               SavedAccount(id: '$i', label: 'Student $i', cookie: '$i'),
@@ -141,11 +126,14 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('screen-selector-0')));
+    await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.text('Student 0'),
       100,
       scrollable: find.byType(Scrollable).first,
     );
+    await tester.pumpAndSettle();
     expect(
       tester.getRect(find.text('Student 0')).bottom,
       lessThan(tester.getRect(find.text('Scan QR · 12')).top),
@@ -159,7 +147,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester.getRect(find.text('Student 11')).bottom,
-      lessThan(tester.getRect(find.byType(CampusNavigation)).top),
+      lessThan(tester.getRect(find.text('Scan QR · 12')).top),
     );
     expect(find.text('Scan QR · 12'), findsOneWidget);
     expect(tester.takeException(), isNull);

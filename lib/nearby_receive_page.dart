@@ -1,7 +1,4 @@
-import 'icons/campus_icon.dart';
 import 'campus_design.dart';
-
-import 'package:material_3_expressive/material_3_expressive.dart';
 
 import 'dart:async';
 
@@ -52,7 +49,7 @@ class _NearbyReceivePageState extends State<NearbyReceivePage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
+    appBar: CampusAppBar(
       title: Text(tr(context, 'Получить рядом', 'Receive nearby')),
       automaticallyImplyLeading: true,
     ),
@@ -89,10 +86,7 @@ class _NearbyReceivePageState extends State<NearbyReceivePage> {
                     ),
                     const SizedBox(height: 16),
                     for (final account in _incoming!)
-                      CampusListItem(
-                        leading: const CampusIcon(Icons.person_outline),
-                        headline: (account.label),
-                      ),
+                      CampusListItem(headline: (account.label)),
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
@@ -114,8 +108,6 @@ class _NearbyReceivePageState extends State<NearbyReceivePage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const CampusIcon(Icons.wifi_tethering_rounded, size: 64),
-                      const SizedBox(height: 20),
                       Text(
                         _ready
                             ? tr(
@@ -154,7 +146,7 @@ class _NearbyReceivePageState extends State<NearbyReceivePage> {
                           ),
                         )
                       else
-                        const M3EProgressIndicator.circularWavy(),
+                        const CampusProgress.compact(),
                     ],
                   ),
                 ),

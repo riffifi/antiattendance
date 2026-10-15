@@ -1,5 +1,3 @@
-import 'icons/campus_icon.dart';
-
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
@@ -358,7 +356,7 @@ class _BatchLoginPageState extends State<BatchLoginPage> {
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
       color: context.palette.surface,
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.zero,
       border: Border.all(
         color: entry.approved ? context.palette.success : context.palette.line,
       ),
@@ -374,23 +372,14 @@ class _BatchLoginPageState extends State<BatchLoginPage> {
         const SizedBox(height: 12),
         Expanded(
           child: InkWell(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.zero,
             onTap: () => _open(index),
             child: SizedBox.expand(
               child: Center(
                 child: entry.approved
-                    ? Container(
-                        width: 96,
-                        height: 96,
-                        decoration: BoxDecoration(
-                          color: context.palette.success,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const CampusIcon(
-                          Icons.check_rounded,
-                          color: Colors.white,
-                          size: 66,
-                        ),
+                    ? Text(
+                        tr(context, 'Готово', 'Done'),
+                        style: Theme.of(context).textTheme.headlineLarge,
                       )
                     : entry.qr != null
                     ? Container(
@@ -403,7 +392,7 @@ class _BatchLoginPageState extends State<BatchLoginPage> {
                         ),
                       )
                     : entry.error != null
-                    ? const CampusIcon(Icons.refresh_rounded, size: 48)
+                    ? Text(tr(context, 'Повторить', 'Retry'))
                     : const CircularProgressIndicator(),
               ),
             ),
@@ -444,10 +433,10 @@ class _BatchLoginPageState extends State<BatchLoginPage> {
         if (!didPop) unawaited(_leave());
       },
       child: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
+        appBar: CampusAppBar(
+          leading: CampusTextAction(
             onPressed: _leave,
-            icon: const CampusIcon(Icons.arrow_back_rounded),
+            label: tr(context, 'Назад', 'Back'),
           ),
           title: Text(
             active == null
@@ -635,7 +624,7 @@ class _BatchLoginPageState extends State<BatchLoginPage> {
                 bottom: 16,
                 child: Material(
                   color: context.palette.surface,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.zero,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(

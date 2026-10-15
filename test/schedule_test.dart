@@ -1,5 +1,4 @@
 import 'package:antiattendance/campus_design.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -88,61 +87,52 @@ void main() {
     return DateTime.utc(moscow.year, moscow.month, moscow.day, hour, minute);
   }
 
-  testWidgets('schedule refresh spins until loading finishes', (tester) async {
-    final api = DelayedRefreshSchedule();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SchedulePage(
-            accounts: const [
-              SavedAccount(
-                id: 'a',
-                label: 'Anya',
-                cookie: 'one',
-                groupId: 769,
-                groupName: 'ИНБО-10-23',
-              ),
-            ],
-            api: api,
-            log: FakeLog([]),
-            onScanLesson: (_, _) async {},
-            onPasteLesson: (_, _) async {},
+  testWidgets(
+    'schedule refresh shows progress and prevents duplicate requests',
+    (tester) async {
+      final api = DelayedRefreshSchedule();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SchedulePage(
+              accounts: const [
+                SavedAccount(
+                  id: 'a',
+                  label: 'Anya',
+                  cookie: 'one',
+                  groupId: 769,
+                  groupName: 'ИНБО-10-23',
+                ),
+              ],
+              api: api,
+              log: FakeLog([]),
+              onScanLesson: (_, _) async {},
+              onPasteLesson: (_, _) async {},
+            ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    final rotation = find.descendant(
-      of: find.byWidgetPredicate(
-        (w) => w is M3EIconButton && w.tooltip == 'Refresh',
-      ),
-      matching: find.byType(RotationTransition),
-    );
-    await tester.tap(
-      find.byWidgetPredicate(
-        (w) => w is M3EIconButton && w.tooltip == 'Refresh',
-      ),
-    );
-    await tester.pump();
-    final before = tester.widget<RotationTransition>(rotation).turns.value;
-    expect(
-      tester.widget<RotationTransition>(rotation).turns.isAnimating,
-      isTrue,
-    );
-    await tester.pump(const Duration(milliseconds: 250));
-    expect(
-      tester.widget<RotationTransition>(rotation).turns.value,
-      greaterThan(before),
-    );
-    api.refreshDone.complete([]);
-    await tester.pumpAndSettle();
-    expect(
-      tester.widget<RotationTransition>(rotation).turns.isAnimating,
-      isFalse,
-    );
-    expect(tester.widget<RotationTransition>(rotation).turns.value, 0);
-    api.close();
-  });
+      );
+      await tester.pumpAndSettle();
+      final refresh = find.byWidgetPredicate(
+        (w) => w is CampusTextAction && w.tooltip == 'Refresh',
+      );
+      await tester.tap(
+        find.byWidgetPredicate(
+          (w) => w is CampusTextAction && w.tooltip == 'Refresh',
+        ),
+      );
+      await tester.pump();
+      expect(tester.widget<CampusTextAction>(refresh).onPressed, isNull);
+      expect(find.byType(CampusProgress), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(tester.widget<CampusTextAction>(refresh).onPressed, isNull);
+      api.refreshDone.complete([]);
+      await tester.pumpAndSettle();
+      expect(tester.widget<CampusTextAction>(refresh).onPressed, isNotNull);
+      expect(find.byType(CampusProgress), findsNothing);
+      api.close();
+    },
+  );
 
   test('searches only groups and reads the public calendar endpoint', () async {
     final paths = <String>[];
@@ -249,7 +239,7 @@ void main() {
     expect(find.text('Boris'), findsNothing);
     await tester.tap(
       find.byWidgetPredicate(
-        (w) => w is M3EIconButton && w.tooltip == 'Next week',
+        (w) => w is CampusTextAction && w.tooltip == 'Next week',
       ),
     );
     await tester.pumpAndSettle();
@@ -285,7 +275,12 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.calendar_today_outlined).last);
+    await tester.tap(
+      find.descendant(
+        of: find.byType(CampusNavigation),
+        matching: find.text('Schedule'),
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Mathematics'), 150);
     await tester.ensureVisible(find.text('Mathematics'));

@@ -1,9 +1,6 @@
-import 'icons/campus_icon.dart';
-
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'campus_design.dart';
@@ -69,7 +66,7 @@ class _SessionServerPageState extends State<SessionServerPage> {
       await ServerSessions.connect(candidate);
       candidate = null;
       if (mounted) {
-        M3ESnackbar.show(
+        CampusNotice.show(
           context,
           message: tr(context, 'Сервер подключён.', 'Server connected.'),
         );
@@ -170,7 +167,7 @@ class _SessionServerPageState extends State<SessionServerPage> {
   Widget build(BuildContext context) {
     final server = ServerSessions.active;
     return Scaffold(
-      appBar: AppBar(
+      appBar: CampusAppBar(
         title: Text(tr(context, 'Сервер сессий', 'Session server')),
       ),
       body: CampusPageBody(
@@ -181,8 +178,6 @@ class _SessionServerPageState extends State<SessionServerPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const CampusIcon(Icons.sync_rounded, size: 36),
-                  const SizedBox(height: 12),
                   Text(
                     server == null
                         ? tr(

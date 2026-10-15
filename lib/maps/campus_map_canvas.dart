@@ -2,12 +2,12 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 
 import 'campus_map_data.dart';
 import 'floor_georeference.dart';
 import 'indoor_route_planner.dart';
 import '../l10n.dart';
+import '../editorial_controls.dart';
 
 class CampusMapCanvas extends StatefulWidget {
   const CampusMapCanvas({
@@ -215,20 +215,20 @@ class _CampusMapCanvasState extends State<CampusMapCanvas> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    M3EIconButton(
-                      icon: const Icon(Icons.add),
-                      tooltip: tr(context, 'Приблизить', 'Zoom in'),
+                    CampusTextAction(
                       onPressed: () => _zoom(1.5),
+                      tooltip: tr(context, 'Приблизить', 'Zoom in'),
+                      label: tr(context, 'Приблизить', 'Zoom in'),
                     ),
-                    M3EIconButton(
-                      icon: const Icon(Icons.remove),
-                      tooltip: tr(context, 'Отдалить', 'Zoom out'),
+                    CampusTextAction(
                       onPressed: () => _zoom(1 / 1.5),
+                      tooltip: tr(context, 'Отдалить', 'Zoom out'),
+                      label: tr(context, 'Отдалить', 'Zoom out'),
                     ),
-                    M3EIconButton(
-                      icon: const Icon(Icons.center_focus_strong),
-                      tooltip: tr(context, 'Показать на карте', 'Focus map'),
+                    CampusTextAction(
                       onPressed: _focus,
+                      tooltip: tr(context, 'Показать на карте', 'Focus map'),
+                      label: tr(context, 'Показать на карте', 'Focus map'),
                     ),
                   ],
                 ),

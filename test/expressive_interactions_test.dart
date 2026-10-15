@@ -1,7 +1,7 @@
+import 'package:antiattendance/campus_design.dart';
 import 'package:antiattendance/expressive.dart';
 import 'package:antiattendance/app_theme.dart';
 import 'package:flutter/services.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -87,8 +87,8 @@ void main() {
             enabled: true,
             hint: 'Your account',
             items: const [
-              M3EDropdownItem(value: 'a', label: 'Alice', selected: true),
-              M3EDropdownItem(value: 'b', label: 'Bob'),
+              PassPickerItem(value: 'a', label: 'Alice', selected: true),
+              PassPickerItem(value: 'b', label: 'Bob'),
             ],
             onChanged: (_) {},
           ),
@@ -118,10 +118,12 @@ void main() {
         theme: AppTheme.light.copyWith(platform: TargetPlatform.android),
         home: Scaffold(
           body: AppActionMenu(
-            entries: const [M3EMenuEntry(value: 'rename', label: 'Rename')],
+            entries: const [CampusMenuEntry(value: 'rename', label: 'Rename')],
             onSelected: (value) => choice = value,
-            anchorBuilder: (_, open) =>
-                M3EButton.text(onPressed: open, child: const Text('Actions')),
+            anchorBuilder: (_, open) => CampusButton.text(
+              onPressed: open,
+              child: const Text('Actions'),
+            ),
           ),
         ),
       ),
@@ -130,8 +132,8 @@ void main() {
     await tester.tap(find.text('Actions'));
     await tester.pumpAndSettle();
     expect(find.text('Rename'), findsOneWidget);
-    expect(find.byType(M3EMenu), findsOneWidget);
-    expect(find.byType(PopupMenuItem<M3EMenuEntry>), findsNothing);
+    expect(find.byType(CampusListItem), findsOneWidget);
+    expect(find.byType(PopupMenuItem<CampusMenuEntry>), findsNothing);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(find.text('Rename'), findsNothing);

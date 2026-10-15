@@ -1,7 +1,4 @@
-import 'icons/campus_icon.dart';
-
 import 'package:material_ui/material_ui.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 
 import 'app_theme.dart';
 import 'campus_design.dart';
@@ -28,13 +25,13 @@ Future<bool?> showWidgetPreview(BuildContext context, {required bool nfc}) =>
                 for (final small in [false, true])
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: M3EListItem(
+                    child: CampusListItem(
                       headline: small
                           ? tr(context, 'Компактный · 1×1', 'Compact · 1×1')
                           : tr(context, 'С подписью · 2×1', 'Labeled · 2×1'),
                       selected: compact == small,
                       onTap: () => setState(() => compact = small),
-                      leading: M3ECheckbox(
+                      leading: CampusCheckbox(
                         value: compact == small,
                         onChanged: (_) => setState(() => compact = small),
                       ),
@@ -67,7 +64,7 @@ class WidgetPreview extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 10),
     decoration: BoxDecoration(
       color: context.palette.paper,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.zero,
       border: Border.all(color: context.palette.line),
     ),
     child: Row(
@@ -75,10 +72,18 @@ class WidgetPreview extends StatelessWidget {
           ? MainAxisAlignment.center
           : MainAxisAlignment.start,
       children: [
-        CampusIcon(
-          nfc ? Icons.nfc_rounded : Icons.qr_code_scanner_rounded,
-          size: 26,
-          color: context.palette.ink,
+        Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              nfc ? 'NFC' : 'QR',
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: compact ? 16 : 20,
+                fontWeight: FontWeight.w300,
+              ),
+            ),
+          ),
         ),
         if (!compact) ...[
           const SizedBox(width: 8),

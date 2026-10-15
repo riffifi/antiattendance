@@ -1,13 +1,13 @@
-import 'icons/campus_icon.dart';
 import 'debug_menu_page.dart';
 import 'server_sessions.dart';
 import 'session_server_sync.dart';
 import 'session_server_page.dart';
 import 'updates_page.dart';
 import 'campus_design.dart';
+import 'screen_navigation.dart';
+import 'theme_crossfade.dart';
+import 'app_haptics.dart';
 import 'expressive.dart';
-
-import 'package:material_3_expressive/material_3_expressive.dart';
 
 import 'dart:async';
 import 'dart:io';
@@ -59,7 +59,6 @@ class AntiattendanceApp extends StatefulWidget {
 
 class _AntiattendanceAppState extends State<AntiattendanceApp>
     with WidgetsBindingObserver {
-  static const _monetChannel = MethodChannel('antiattendance/monet');
   static const _updatesChannel = MethodChannel('antiattendance/updates');
   final _navigatorKey = GlobalKey<NavigatorState>();
   Timer? _updateTimer;
@@ -68,8 +67,6 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
   final UpdateController _updates = UpdateController();
   String? _language;
   AppThemeMode _themeMode = AppThemeMode.light;
-  bool _monetEnabled = false;
-  Color? _monetSeed;
 
   @override
   void initState() {
@@ -215,28 +212,12 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
 
   Future<void> _loadAppearance() async {
     var mode = AppThemeMode.light;
-    var monet = false;
-    int? color;
     try {
       mode = await _settingsStore.loadThemeMode();
-      monet = await _settingsStore.loadMonetEnabled();
     } catch (_) {
-      // Keep default appearance if saved preferences cannot be read.
+      // Saved appearance is optional at startup.
     }
-    if (Platform.isAndroid) {
-      try {
-        color = await _monetChannel.invokeMethod<int>('getSeedColor');
-      } catch (_) {
-        // Android without wallpaper colors keeps the app accent.
-      }
-    }
-    if (mounted) {
-      setState(() {
-        _themeMode = mode;
-        _monetEnabled = monet;
-        _monetSeed = color == null ? null : Color(color);
-      });
-    }
+    if (mounted) setState(() => _themeMode = mode);
   }
 
   @override
@@ -244,31 +225,25 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
     title: 'AntiAttendance',
     navigatorKey: _navigatorKey,
     debugShowCheckedModeBanner: false,
-    themeAnimationDuration:
-        (MediaQuery.maybeOf(context)?.disableAnimations ??
-            WidgetsBinding
-                .instance
-                .platformDispatcher
-                .accessibilityFeatures
-                .disableAnimations)
-        ? Duration.zero
-        : const Duration(milliseconds: 320),
-    themeAnimationCurve: Curves.easeInOutCubic,
-    theme: AppTheme.build(
-      _themeMode,
-      monetSeed: _monetEnabled ? _monetSeed : null,
-    ),
+    themeAnimationDuration: Duration.zero,
+    theme: AppTheme.build(_themeMode),
     builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: _themeMode == AppThemeMode.light
+            ? Brightness.dark
+            : Brightness.light,
+        statusBarBrightness: _themeMode == AppThemeMode.light
+            ? Brightness.light
+            : Brightness.dark,
         systemNavigationBarColor: Colors.transparent,
         systemNavigationBarDividerColor: Colors.transparent,
         systemNavigationBarIconBrightness: _themeMode == AppThemeMode.light
             ? Brightness.dark
             : Brightness.light,
       ),
-      child: M3ETheme(
-        data: M3EThemeData.fromMaterial(Theme.of(context))
-            .copyWith(fontFamily: 'Geist'),
+      child: ThemeCrossfade(
+        mode: _themeMode,
         child: TickerMode(
           enabled: !MediaQuery.disableAnimationsOf(context),
           child: child!,
@@ -285,6 +260,7 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
     ],
     localizationsDelegates: GlobalMaterialLocalizations.delegates,
     home: HomePage(
+      startAtSelector: true,
       settingsStore: _settingsStore,
       language: _language,
       onLanguageChanged: (language) {
@@ -297,10 +273,6 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
       },
       themeMode: _themeMode,
       onThemeModeChanged: (mode) => setState(() => _themeMode = mode),
-      monetEnabled: _monetEnabled,
-      monetSeed: _monetSeed,
-      monetAvailable: _monetSeed != null,
-      onMonetChanged: (value) => setState(() => _monetEnabled = value),
       updates: _updates,
     ),
   );
@@ -319,14 +291,12 @@ class HomePage extends StatefulWidget {
     this.onLanguageChanged,
     this.themeMode = AppThemeMode.light,
     this.onThemeModeChanged,
-    this.monetEnabled = false,
-    this.monetSeed,
-    this.monetAvailable = false,
-    this.onMonetChanged,
     this.updates,
     this.sessionChecker = checkSession,
+    this.startAtSelector = false,
   });
 
+  final bool startAtSelector;
   final Future<SessionCheckResult> Function(SavedAccount) sessionChecker;
   final AccountStore? store;
   final PulseApi? api;
@@ -337,10 +307,6 @@ class HomePage extends StatefulWidget {
   final ValueChanged<String?>? onLanguageChanged;
   final AppThemeMode themeMode;
   final ValueChanged<AppThemeMode>? onThemeModeChanged;
-  final bool monetEnabled;
-  final Color? monetSeed;
-  final bool monetAvailable;
-  final ValueChanged<bool>? onMonetChanged;
   final UpdateController? updates;
   final Future<String?> Function(BuildContext context)? scanQr;
 
@@ -366,13 +332,36 @@ class _HomePageState extends State<HomePage> {
           ? a.groupId == null
           : a.groupId == _attendanceGroupId);
   int _tab = 0;
+  late bool _showSelector = widget.startAtSelector;
+
+  void _returnToSelector() {
+    if (_tab == 2) {
+      unawaited(
+        _nfcPageKey.currentState?.deactivateQueue() ?? Future<void>.value(),
+      );
+      _nfcPageKey = GlobalKey<NfcPassPageState>();
+    }
+    setState(() => _showSelector = true);
+  }
+
+  void _selectScreen(int index) {
+    _changeTab(index);
+  }
+
   bool _scheduleVisited = false;
+  bool _settingsVisited = false;
   var _nfcPageKey = GlobalKey<NfcPassPageState>();
   StreamSubscription<void>? _serverUpdates;
 
   void _changeTab(int index) {
+    if (_showSelector) setState(() => _showSelector = false);
     if (index == _tab) return;
+    if (_tab == 3) {
+      unawaited(_load(preserveSelection: true));
+      _scheduleSummarySync();
+    }
     if (index == 1) _scheduleVisited = true;
+    if (index == 3) _settingsVisited = true;
     if (_tab == 2 && index != 2) {
       unawaited(
         _nfcPageKey.currentState?.deactivateQueue() ?? Future<void>.value(),
@@ -551,7 +540,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _load({bool preserveSelection = false}) async {
-    if (!_loading && mounted) setState(() => _loading = true);
+    final background = preserveSelection && !_loading && !_loadError;
+    if (!background && !_loading && mounted) setState(() => _loading = true);
     try {
       final accounts = await _store.load();
       if (!mounted) return;
@@ -561,7 +551,9 @@ class _HomePageState extends State<HomePage> {
             !accounts.any(_matchesAttendanceGroup)) {
           _attendanceGroupId = null;
         }
-        _marks = accounts.isEmpty ? [] : null;
+        if (!background || accounts.isEmpty) {
+          _marks = accounts.isEmpty ? [] : null;
+        }
         if (preserveSelection) {
           final mappings =
               ServerSessions.active?.importedIds ?? const <String, String>{};
@@ -586,6 +578,7 @@ class _HomePageState extends State<HomePage> {
       _openPendingWidgetScan();
       _openPendingWidgetNfc();
     } catch (_) {
+      if (background) return;
       if (mounted) {
         setState(() {
           _loading = false;
@@ -606,7 +599,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _message(String message) {
-    M3ESnackbar.show(context, message: trMessage(context, message));
+    CampusNotice.show(context, message: trMessage(context, message));
   }
 
   bool _debugMenuOpen = false;
@@ -633,7 +626,12 @@ class _HomePageState extends State<HomePage> {
                 settings: _settingsStore,
                 updates: widget.updates,
                 appState: {
-                  'active_tab': ['attendance', 'schedule', 'passes'][_tab],
+                  'active_tab': [
+                    'attendance',
+                    'schedule',
+                    'passes',
+                    'settings',
+                  ][_tab],
                   'accounts_loading': _loading,
                   'accounts_load_failed': _loadError,
                   'scanning': _scanning,
@@ -656,8 +654,6 @@ class _HomePageState extends State<HomePage> {
                   'pending_nfc_widget_request': _nfcWidgetPending,
                   'appearance': widget.themeMode.name,
                   'brightness': theme.brightness.name,
-                  'monet_enabled': widget.monetEnabled,
-                  'monet_available': widget.monetAvailable,
                   'accent_argb': hex(theme.colorScheme.primary),
                   'surface_argb': hex(theme.colorScheme.surface),
                   'language_preference': widget.language ?? 'system',
@@ -691,6 +687,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _openSettings() async {
+    if (widget.startAtSelector) {
+      _selectScreen(3);
+      return;
+    }
     await _nfcPageKey.currentState?.deactivateQueue();
     if (!mounted) return;
     await Navigator.of(context).push<void>(
@@ -703,10 +703,6 @@ class _HomePageState extends State<HomePage> {
           onLanguageChanged: widget.onLanguageChanged ?? (_) {},
           themeMode: widget.themeMode,
           onThemeModeChanged: widget.onThemeModeChanged ?? (_) {},
-          monetEnabled: widget.monetEnabled,
-          monetSeed: widget.monetSeed,
-          monetAvailable: widget.monetAvailable,
-          onMonetChanged: widget.onMonetChanged ?? (_) {},
           updates: widget.updates,
         ),
       ),
@@ -805,12 +801,10 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 16),
             ListTile(
-              leading: const CampusIcon(Icons.person_add_rounded),
               title: Text(tr(context, 'Один пользователь', 'Single user')),
               onTap: () => Navigator.pop(context, false),
             ),
             ListTile(
-              leading: const CampusIcon(Icons.group_add_rounded),
               title: Text(
                 tr(context, 'Несколько пользователей', 'Multiple users'),
               ),
@@ -854,9 +848,9 @@ class _HomePageState extends State<HomePage> {
           content: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              IconButton(
+              CampusTextAction(
                 onPressed: count > 1 ? () => update(() => count--) : null,
-                icon: const CampusIcon(Icons.remove_rounded),
+                label: '−',
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -865,9 +859,9 @@ class _HomePageState extends State<HomePage> {
                   style: Theme.of(context).textTheme.headlineLarge,
                 ),
               ),
-              IconButton(
+              CampusTextAction(
                 onPressed: count < 10 ? () => update(() => count++) : null,
-                icon: const CampusIcon(Icons.add_rounded),
+                label: '+',
               ),
             ],
           ),
@@ -1236,7 +1230,6 @@ class _HomePageState extends State<HomePage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             CampusListItem(
-              leading: CampusIcon(Icons.wifi_tethering_rounded),
               headline: (tr(context, 'Передать рядом', 'Share nearby')),
               supportingText: (tr(
                 context,
@@ -1246,7 +1239,6 @@ class _HomePageState extends State<HomePage> {
               onTap: () => Navigator.pop(context, 'nearby'),
             ),
             CampusListItem(
-              leading: CampusIcon(Icons.qr_code_rounded),
               headline: (tr(context, 'Передать через QR', 'Share by QR')),
               onTap: () => Navigator.pop(context, 'qr'),
             ),
@@ -1275,7 +1267,6 @@ class _HomePageState extends State<HomePage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             CampusListItem(
-              leading: CampusIcon(Icons.wifi_tethering_rounded),
               headline: (tr(context, 'Получить рядом', 'Receive nearby')),
               supportingText: (tr(
                 context,
@@ -1285,7 +1276,6 @@ class _HomePageState extends State<HomePage> {
               onTap: () => Navigator.pop(context, 'nearby'),
             ),
             CampusListItem(
-              leading: CampusIcon(Icons.qr_code_scanner_rounded),
               headline: (tr(
                 context,
                 'Сканировать QR передачи',
@@ -1659,17 +1649,19 @@ class _HomePageState extends State<HomePage> {
 
   Widget _settingsButton(BuildContext context) {
     final updates = widget.updates;
-    Widget button(bool available) => M3EIconButton(
-      suppressInk: true,
-      onPressed: _openSettings,
-      tooltip: tr(context, 'Настройки', 'Settings'),
-      icon: Badge(
-        isLabelVisible: available,
-        backgroundColor: context.palette.blue,
-        child: CampusIcon(Icons.settings_outlined),
-      ),
-      variant: M3EIconButtonVariant.standard,
-    );
+    Widget button(bool available) => widget.startAtSelector
+        ? TextButton(
+            onPressed: _openSettings,
+            child: Badge(
+              isLabelVisible: available,
+              child: Text(tr(context, 'Настройки', 'Settings').toUpperCase()),
+            ),
+          )
+        : CampusTextAction(
+            onPressed: _openSettings,
+            tooltip: tr(context, 'Настройки', 'Settings'),
+            label: tr(context, 'Настройки', 'Settings'),
+          );
     if (updates == null) return button(false);
     return AnimatedBuilder(
       animation: updates,
@@ -1691,85 +1683,104 @@ class _HomePageState extends State<HomePage> {
     final countsByAccount = _marks == null
         ? null
         : AttendanceCounts.fromMarks(_marks!);
-    return Scaffold(
+    final content = Scaffold(
       extendBody: false,
-      appBar: AppBar(
-        title: InkWell(
-          onLongPress: _openDebugMenu,
-          borderRadius: BorderRadius.circular(12),
-          child: SizedBox(
-            height: 48,
-            child: CampusBrand(
-              width: 74,
-              height: 34,
-              label: tr(context, 'Логотип приложения', 'App logo'),
+      appBar: widget.startAtSelector
+          ? null
+          : CampusAppBar(
+              leadingWidth: widget.startAtSelector ? 96 : null,
+              leading: widget.startAtSelector
+                  ? TextButton(
+                      onPressed: _returnToSelector,
+                      child: Text(tr(context, 'МЕНЮ', 'INDEX')),
+                    )
+                  : null,
+              title: InkWell(
+                onLongPress: _openDebugMenu,
+                borderRadius: BorderRadius.zero,
+                child: SizedBox(
+                  height: 48,
+                  child: widget.startAtSelector
+                      ? Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '0${_tab + 1} / ${[tr(context, 'Посещаемость', 'Attendance'), tr(context, 'Расписание', 'Schedule'), tr(context, 'Пропуска', 'Passes'), tr(context, 'Настройки', 'Settings')][_tab].toUpperCase()}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelMedium,
+                          ),
+                        )
+                      : CampusBrand(
+                          width: 74,
+                          height: 34,
+                          label: tr(context, 'Логотип приложения', 'App logo'),
+                        ),
+                ),
+              ),
+              actions: [_settingsButton(context), const SizedBox(width: 8)],
+              automaticallyImplyLeading: true,
             ),
-          ),
-        ),
-        actions: [_settingsButton(context), const SizedBox(width: 8)],
-        automaticallyImplyLeading: true,
-      ),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (_tab == 0 && !_loading && !_loadError)
-            Center(
-              heightFactor: 1,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 640),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: CampusButton.icon(
-                          onPressed: _busy || _selected.isEmpty ? null : _scan,
-                          icon: const CampusIcon(Icons.qr_code_scanner_rounded),
-                          label: Text(
-                            trf(
-                              context,
-                              'Сканировать QR · {count}',
-                              'Scan QR · {count}',
-                              {'count': _selected.length},
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_tab == 0 && !_loading && !_loadError)
+              Center(
+                heightFactor: 1,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 640),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: CampusButton.action(
+                            onPressed: _busy || _selected.isEmpty
+                                ? null
+                                : _scan,
+                            label: Text(
+                              trf(
+                                context,
+                                'Сканировать QR · {count}',
+                                'Scan QR · {count}',
+                                {'count': _selected.length},
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      M3EIconButton(
-                        suppressInk: true,
-                        tooltip: tr(context, 'Вставить ссылку', 'Paste link'),
-                        onPressed: _busy || _selected.isEmpty
-                            ? null
-                            : _pasteLink,
-                        icon: CampusIcon(
-                          Icons.link_rounded,
-                          color: context.palette.blue,
+                        const SizedBox(width: 8),
+                        CampusTextAction(
+                          onPressed: _busy || _selected.isEmpty
+                              ? null
+                              : _pasteLink,
+                          tooltip: tr(context, 'Вставить ссылку', 'Paste link'),
+                          label: tr(context, 'вставить', 'paste'),
                         ),
-                        variant: M3EIconButtonVariant.standard,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          CampusNavigation(
-            selectedIndex: _tab,
-            onDestinationSelected: _changeTab,
-            labels: [
-              tr(context, 'Посещаемость', 'Attendance'),
-              tr(context, 'Расписание', 'Schedule'),
-              tr(context, 'Пропуска', 'Passes'),
-            ],
-          ),
-        ],
+            if (!widget.startAtSelector)
+              CampusNavigation(
+                selectedIndex: _tab,
+                onDestinationSelected: _changeTab,
+                labels: [
+                  tr(context, 'Посещаемость', 'Attendance'),
+                  tr(context, 'Расписание', 'Schedule'),
+                  tr(context, 'Пропуска', 'Passes'),
+                ],
+              ),
+          ],
+        ),
       ),
       body: Builder(
         builder: (context) => Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),
             child: _loading
-                ? const Center(child: M3EProgressIndicator.circularWavy())
+                ? const Center(child: CampusProgress.compact())
                 : _loadError
                 ? Center(
                     child: Column(
@@ -1794,7 +1805,7 @@ class _HomePageState extends State<HomePage> {
                     index: _tab,
                     children: [
                       TickerMode(
-                        enabled: _tab == 0,
+                        enabled: _tab == 0 && !_showSelector,
                         child: CustomScrollView(
                           key: const PageStorageKey('attendance-tab'),
                           slivers: [
@@ -1813,13 +1824,12 @@ class _HomePageState extends State<HomePage> {
                                       'Выберите аккаунты и сканируйте QR-код.',
                                       'Choose accounts, then scan a QR.',
                                     ),
-                                    icon: Icons.qr_code_scanner_rounded,
                                   ),
                                   AppPassPicker(
                                     enabled: !_busy,
                                     hint: tr(context, 'Группа', 'Group'),
                                     items: [
-                                      M3EDropdownItem(
+                                      PassPickerItem(
                                         value: '',
                                         label: tr(
                                           context,
@@ -1834,7 +1844,7 @@ class _HomePageState extends State<HomePage> {
                                             a.groupId!:
                                                 a.groupName ?? '${a.groupId}',
                                       }.entries)
-                                        M3EDropdownItem(
+                                        PassPickerItem(
                                           value: '${entry.key}',
                                           label: entry.value,
                                           selected:
@@ -1843,7 +1853,7 @@ class _HomePageState extends State<HomePage> {
                                       if (_accounts.any(
                                         (a) => a.groupId == null,
                                       ))
-                                        M3EDropdownItem(
+                                        PassPickerItem(
                                           value: '0',
                                           label: tr(
                                             context,
@@ -1869,7 +1879,7 @@ class _HomePageState extends State<HomePage> {
                                   const SizedBox(height: 16),
                                   if (_submitting) ...[
                                     const SizedBox(height: 12),
-                                    const M3EProgressIndicator.linearWavy(),
+                                    const CampusProgress.linear(),
                                     const SizedBox(height: 6),
                                     Text(
                                       tr(
@@ -1893,30 +1903,23 @@ class _HomePageState extends State<HomePage> {
                                               .titleLarge,
                                         ),
                                       ),
-                                      CampusButton.icon(
+                                      CampusButton.action(
                                         onPressed: _busy ? null : _addAccounts,
-                                        icon: CampusIcon(
-                                          Icons.add_rounded,
-                                          size: 19,
-                                        ),
                                         label: Text(
                                           tr(context, 'Добавить', 'Add'),
                                         ),
-                                        style: M3EButtonStyle.text,
+                                        style: CampusButtonStyle.text,
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 8),
                                   if (_accounts.isEmpty)
-                                    CampusButton.icon(
+                                    CampusButton.action(
                                       onPressed: _busy ? null : _importSessions,
-                                      icon: const CampusIcon(
-                                        Icons.download_rounded,
-                                      ),
                                       label: Text(
                                         tr(context, 'Получить', 'Receive'),
                                       ),
-                                      style: M3EButtonStyle.text,
+                                      style: CampusButtonStyle.text,
                                     ),
                                   if (_accounts.isEmpty)
                                     Padding(
@@ -1941,7 +1944,7 @@ class _HomePageState extends State<HomePage> {
                                       children: [
                                         AppActionMenu(
                                           entries: [
-                                            M3EMenuEntry(
+                                            CampusMenuEntry(
                                               value: 'share',
                                               label: tr(
                                                 context,
@@ -1949,7 +1952,7 @@ class _HomePageState extends State<HomePage> {
                                                 'Share',
                                               ),
                                             ),
-                                            M3EMenuEntry(
+                                            CampusMenuEntry(
                                               value: 'receive',
                                               label: tr(
                                                 context,
@@ -1958,7 +1961,7 @@ class _HomePageState extends State<HomePage> {
                                               ),
                                             ),
                                             if (_selected.isNotEmpty)
-                                              M3EMenuEntry(
+                                              CampusMenuEntry(
                                                 value: 'group',
                                                 label: tr(
                                                   context,
@@ -1971,7 +1974,7 @@ class _HomePageState extends State<HomePage> {
                                                   _selected.contains(a.id) &&
                                                   a.isExpiredAt(DateTime.now()),
                                             ))
-                                              M3EMenuEntry(
+                                              CampusMenuEntry(
                                                 value: 'restore',
                                                 label: tr(
                                                   context,
@@ -1995,11 +1998,8 @@ class _HomePageState extends State<HomePage> {
                                             }
                                           },
                                           anchorBuilder: (context, open) =>
-                                              CampusButton.icon(
+                                              CampusButton.action(
                                                 onPressed: _busy ? null : open,
-                                                icon: const CampusIcon(
-                                                  Icons.more_horiz_rounded,
-                                                ),
                                                 label: Text(
                                                   tr(
                                                     context,
@@ -2007,7 +2007,7 @@ class _HomePageState extends State<HomePage> {
                                                     'Manage',
                                                   ),
                                                 ),
-                                                style: M3EButtonStyle.text,
+                                                style: CampusButtonStyle.text,
                                               ),
                                         ),
                                         const SizedBox(width: 8),
@@ -2094,29 +2094,25 @@ class _HomePageState extends State<HomePage> {
                                         'Найти аккаунт или группу',
                                         'Search accounts or groups',
                                       ),
-                                      leading: const CampusIcon(
-                                        Icons.search_rounded,
-                                      ),
                                       trailing: _accountQuery.isEmpty
                                           ? null
-                                          : M3EIconButton(
-                                              suppressInk: true,
-                                              tooltip: tr(
-                                                context,
-                                                'Очистить поиск',
-                                                'Clear search',
-                                              ),
-                                              icon: const CampusIcon(
-                                                Icons.close_rounded,
-                                              ),
+                                          : CampusTextAction(
                                               onPressed: () {
                                                 _accountSearch.clear();
                                                 setState(
                                                   () => _accountQuery = '',
                                                 );
                                               },
-                                              variant:
-                                                  M3EIconButtonVariant.standard,
+                                              tooltip: tr(
+                                                context,
+                                                'Очистить поиск',
+                                                'Clear search',
+                                              ),
+                                              label: tr(
+                                                context,
+                                                'очистить',
+                                                'clear',
+                                              ),
                                             ),
                                       onChanged: (value) => setState(
                                         () => _accountQuery = value
@@ -2161,11 +2157,14 @@ class _HomePageState extends State<HomePage> {
                                     busy: _submitting,
                                     result: _results[account.id],
                                     error: _errors[account.id],
-                                    onTap: () => setState(() {
-                                      if (!_selected.add(account.id)) {
-                                        _selected.remove(account.id);
-                                      }
-                                    }),
+                                    onTap: () {
+                                      AppHaptics.selection();
+                                      setState(() {
+                                        if (!_selected.add(account.id)) {
+                                          _selected.remove(account.id);
+                                        }
+                                      });
+                                    },
                                     sessionCheck: _sessionChecks[account.id],
                                     checkingSession: _checkingSessions.contains(
                                       account.id,
@@ -2190,11 +2189,11 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       TickerMode(
-                        enabled: _tab == 1,
+                        enabled: _tab == 1 && !_showSelector,
                         child: _scheduleVisited
                             ? SchedulePage(
                                 key: const ValueKey('schedule-tab'),
-                                active: _tab == 1,
+                                active: _tab == 1 && !_showSelector,
                                 accounts: _accounts,
                                 api: _scheduleApi,
                                 log: _logStore,
@@ -2212,7 +2211,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                       // NFC is deliberately disposed on exit: its queue belongs
                       // to the visible screen and must stop when leaving it.
-                      _tab == 2
+                      _tab == 2 && !_showSelector
                           ? SafeArea(
                               top: false,
                               child: NfcPassPage(
@@ -2224,11 +2223,42 @@ class _HomePageState extends State<HomePage> {
                               ),
                             )
                           : const SizedBox.shrink(),
+                      if (widget.startAtSelector)
+                        _settingsVisited
+                            ? SettingsPage(
+                                embedded: true,
+                                store: _settingsStore,
+                                accounts: _accounts,
+                                scheduleApi: _scheduleApi,
+                                language: widget.language,
+                                onLanguageChanged:
+                                    widget.onLanguageChanged ?? (_) {},
+                                themeMode: widget.themeMode,
+                                onThemeModeChanged:
+                                    widget.onThemeModeChanged ?? (_) {},
+                                updates: widget.updates,
+                              )
+                            : const SizedBox.shrink(),
                     ],
                   ),
           ),
         ),
       ),
+    );
+    return PopScope(
+      canPop: !widget.startAtSelector || _showSelector,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && widget.startAtSelector) _returnToSelector();
+      },
+      child: widget.startAtSelector
+          ? ScreenNavigation(
+              selectorVisible: _showSelector,
+              selectedIndex: _tab,
+              onSelected: _selectScreen,
+              onIndex: _returnToSelector,
+              child: content,
+            )
+          : content,
     );
   }
 }
@@ -2296,199 +2326,203 @@ class _AccountRow extends StatelessWidget {
         : result?.state == ApprovalState.approved
         ? context.palette.success
         : context.palette.muted;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: CampusPressable(
-        enabled: !busy,
-        child: Container(
-          decoration: BoxDecoration(
-            color: selected ? context.palette.surface : context.palette.surface,
-            border: Border.all(
+    return Semantics(
+      selected: selected,
+      child: Padding(
+        padding: EdgeInsets.zero,
+        child: CampusPressable(
+          enabled: !busy,
+          child: Container(
+            decoration: BoxDecoration(
               color: selected
-                  ? context.palette.blue.withValues(alpha: .35)
-                  : context.palette.line,
+                  ? context.palette.surface
+                  : context.palette.surface,
+              border: Border(
+                bottom: BorderSide(color: context.palette.line, width: .5),
+              ),
+              borderRadius: BorderRadius.zero,
             ),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Material(
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(16),
-            child: InkWell(
-              onTap: busy ? null : onTap,
-              borderRadius: BorderRadius.circular(16),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 6, 12),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 28,
-                      height: 28,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? context.palette.selectionSurface
-                            : context.palette.paper,
-                        borderRadius: BorderRadius.circular(12),
+            clipBehavior: Clip.antiAlias,
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.zero,
+              child: InkWell(
+                onTap: busy ? null : onTap,
+                borderRadius: BorderRadius.zero,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 6, 12),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 28,
+                        height: 28,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? context.palette.selectionSurface
+                              : context.palette.paper,
+                          borderRadius: BorderRadius.zero,
+                        ),
+                        child: Text(
+                          selected ? '×' : '',
+                          style: const TextStyle(fontSize: 22, height: 1),
+                        ),
                       ),
-                      child: CampusIcon(
-                        selected ? Icons.check_rounded : Icons.circle_outlined,
-                        size: 18,
-                        color: selected
-                            ? context.palette.blue
-                            : context.palette.muted,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            account.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          if (account.groupName != null)
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Text(
-                              account.groupName!,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: context.palette.muted,
-                              ),
-                            ),
-                          if (status != null)
-                            Text(
-                              trMessage(context, status),
-                              maxLines: 2,
+                              account.label,
+                              maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 12, color: color),
+                              style: Theme.of(context).textTheme.titleLarge,
                             ),
-                          if (expired)
-                            Text(
-                              sessionStatus,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Theme.of(context).colorScheme.error,
+                            if (account.groupName != null)
+                              Text(
+                                account.groupName!,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: context.palette.muted,
+                                ),
                               ),
-                            ),
-                          if (sessionCheck != null &&
-                              sessionCheck != sessionStatus)
-                            Text(
-                              sessionCheck!,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: context.palette.muted,
+                            if (status != null)
+                              Text(
+                                trMessage(context, status),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 12, color: color),
                               ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    AppActionMenu(
-                      entries: [
-                        M3EMenuEntry(
-                          value: 'details',
-                          label: tr(context, 'Подробнее', 'Details'),
+                            if (expired)
+                              Text(
+                                sessionStatus,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                              ),
+                            if (sessionCheck != null &&
+                                sessionCheck != sessionStatus)
+                              Text(
+                                sessionCheck!,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: context.palette.muted,
+                                ),
+                              ),
+                          ],
                         ),
-                        M3EMenuEntry(
-                          value: 'checkSession',
-                          label: tr(
-                            context,
-                            'Проверить сессию',
-                            'Check session',
+                      ),
+                      AppActionMenu(
+                        entries: [
+                          CampusMenuEntry(
+                            value: 'details',
+                            label: tr(context, 'Подробнее', 'Details'),
                           ),
-                        ),
-                        M3EMenuEntry(
-                          value: 'rename',
-                          label: tr(context, 'Переименовать', 'Rename'),
-                        ),
-                        M3EMenuEntry(
-                          value: 'login',
-                          label: tr(context, 'Войти снова', 'Sign in again'),
-                        ),
-                        M3EMenuEntry(
-                          value: 'group',
-                          label: tr(context, 'Выбрать группу', 'Choose group'),
-                        ),
-                        M3EMenuEntry(
-                          value: 'remove',
-                          label: tr(context, 'Удалить', 'Delete'),
-                        ),
-                      ],
-                      onSelected: (value) {
-                        if (value == 'details') {
-                          showExpressiveSheet<void>(
-                            context: context,
-                            compact: true,
-                            builder: (context) => Padding(
-                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    account.label,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleLarge,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(sessionStatus),
-                                  const SizedBox(height: 16),
-                                  Wrap(
-                                    spacing: 16,
-                                    runSpacing: 8,
-                                    children: [
-                                      _countText(
-                                        context,
-                                        'Сегодня',
-                                        'Today',
-                                        counts?.today,
-                                      ),
-                                      _countText(
-                                        context,
-                                        'Неделя',
-                                        'Week',
-                                        counts?.week,
-                                      ),
-                                      _countText(
-                                        context,
-                                        'Всего',
-                                        'Total',
-                                        counts?.total,
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
+                          CampusMenuEntry(
+                            value: 'checkSession',
+                            label: tr(
+                              context,
+                              'Проверить сессию',
+                              'Check session',
                             ),
-                          );
-                        }
+                          ),
+                          CampusMenuEntry(
+                            value: 'rename',
+                            label: tr(context, 'Переименовать', 'Rename'),
+                          ),
+                          CampusMenuEntry(
+                            value: 'login',
+                            label: tr(context, 'Войти снова', 'Sign in again'),
+                          ),
+                          CampusMenuEntry(
+                            value: 'group',
+                            label: tr(
+                              context,
+                              'Выбрать группу',
+                              'Choose group',
+                            ),
+                          ),
+                          CampusMenuEntry(
+                            value: 'remove',
+                            label: tr(context, 'Удалить', 'Delete'),
+                          ),
+                        ],
+                        onSelected: (value) {
+                          if (value == 'details') {
+                            showExpressiveSheet<void>(
+                              context: context,
+                              compact: true,
+                              builder: (context) => Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  20,
+                                  0,
+                                  20,
+                                  24,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      account.label,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(sessionStatus),
+                                    const SizedBox(height: 16),
+                                    Wrap(
+                                      spacing: 16,
+                                      runSpacing: 8,
+                                      children: [
+                                        _countText(
+                                          context,
+                                          'Сегодня',
+                                          'Today',
+                                          counts?.today,
+                                        ),
+                                        _countText(
+                                          context,
+                                          'Неделя',
+                                          'Week',
+                                          counts?.week,
+                                        ),
+                                        _countText(
+                                          context,
+                                          'Всего',
+                                          'Total',
+                                          counts?.total,
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
 
-                        if (value == 'checkSession' && !checkingSession) {
-                          onCheckSession();
-                        }
-                        if (value == 'login') onReauth();
-                        if (value == 'rename') onRename();
-                        if (value == 'group') onGroup();
-                        if (value == 'remove') onRemove();
-                      },
-                      anchorBuilder: (context, open) => M3EIconButton(
-                        suppressInk: true,
-                        variant: M3EIconButtonVariant.standard,
-                        icon: CampusIcon(
-                          Icons.more_vert_rounded,
-                          color: context.palette.muted,
+                          if (value == 'checkSession' && !checkingSession) {
+                            onCheckSession();
+                          }
+                          if (value == 'login') onReauth();
+                          if (value == 'rename') onRename();
+                          if (value == 'group') onGroup();
+                          if (value == 'remove') onRemove();
+                        },
+                        anchorBuilder: (context, open) => CampusTextAction(
+                          onPressed: (!busy) ? open : null,
+                          tooltip: tr(
+                            context,
+                            'Действия с аккаунтом',
+                            'Account actions',
+                          ),
+                          label: tr(context, 'действия', 'actions'),
                         ),
-                        tooltip: tr(
-                          context,
-                          'Действия с аккаунтом',
-                          'Account actions',
-                        ),
-                        onPressed: (!busy) ? open : null,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

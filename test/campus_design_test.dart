@@ -1,3 +1,4 @@
+import 'package:antiattendance/l10n.dart';
 import 'package:antiattendance/update_service.dart';
 import 'package:antiattendance/updates_page.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -230,17 +231,17 @@ void main() {
               language: null,
               onLanguageChanged: (_) {},
               themeMode: mode,
-              monetAvailable: true,
             ),
           ),
         );
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
-        final languageItem = find.byWidgetPredicate(
-          (widget) =>
-              widget is CampusListItem &&
-              widget.leading is Icon &&
-              (widget.leading as Icon).icon == Icons.language_rounded,
+        final languageItem = find.text(
+          tr(
+            tester.element(find.byType(SettingsPage)),
+            'Как на телефоне',
+            'Use phone language',
+          ),
         );
         await tester.scrollUntilVisible(languageItem, 150);
         await tester.pumpAndSettle();
@@ -357,7 +358,6 @@ void main() {
                             store: AppSettingsStore(),
                             language: null,
                             themeMode: mode,
-                            monetAvailable: true,
                             onLanguageChanged: (_) {},
                           )
                         : index == 4

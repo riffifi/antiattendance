@@ -1,5 +1,4 @@
 import 'package:antiattendance/campus_design.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:antiattendance/accounts.dart';
 import 'package:antiattendance/app_theme.dart';
 import 'package:antiattendance/main.dart';
@@ -45,7 +44,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     final menu = find.byWidgetPredicate(
-      (w) => w is M3EIconButton && w.tooltip == 'Account actions',
+      (w) => w is CampusTextAction && w.tooltip == 'Account actions',
     );
     await tester.scrollUntilVisible(
       menu,

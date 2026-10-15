@@ -319,7 +319,7 @@ void main() {
     await tester.tap(find.text('Version v1.2.0 is available'));
     await tester.pumpAndSettle();
     expect(find.text('Open release'), findsOneWidget);
-    expect(find.text('What’s new'), findsOneWidget);
+    expect(find.text('WHAT’S NEW'), findsOneWidget);
     expect(find.text('Improvements'), findsOneWidget);
     expect(find.textContaining('Smooth scrolling'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());

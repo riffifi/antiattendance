@@ -1,7 +1,7 @@
+import 'package:antiattendance/campus_design.dart';
 import 'package:antiattendance/app_theme.dart';
 import 'package:antiattendance/widget_preview.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -19,7 +19,7 @@ void main() {
             theme: AppTheme.light,
             home: Scaffold(
               body: Builder(
-                builder: (context) => M3EButton.text(
+                builder: (context) => CampusButton.text(
                   onPressed: () async {
                     chosen = await showWidgetPreview(context, nfc: nfc);
                   },

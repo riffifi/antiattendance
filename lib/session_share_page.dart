@@ -1,7 +1,5 @@
 import 'campus_design.dart';
 
-import 'package:material_3_expressive/material_3_expressive.dart';
-
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
@@ -63,7 +61,7 @@ class _SessionSharePageState extends State<SessionSharePage> {
   Widget build(BuildContext context) {
     final transfer = _transfer;
     return Scaffold(
-      appBar: AppBar(
+      appBar: CampusAppBar(
         title: Text(tr(context, 'Передать аккаунты', 'Share sessions')),
         automaticallyImplyLeading: true,
       ),
@@ -87,7 +85,7 @@ class _SessionSharePageState extends State<SessionSharePage> {
                       ),
                     )
                   : transfer == null
-                  ? const M3EProgressIndicator.circularWavy()
+                  ? const CampusProgress.compact()
                   : Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [

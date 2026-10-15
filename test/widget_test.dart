@@ -6,7 +6,6 @@ import 'package:antiattendance/attendance_log.dart';
 import 'package:antiattendance/main.dart';
 import 'package:antiattendance/pulse_api.dart';
 import 'package:antiattendance/session_check.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:antiattendance/schedule_api.dart';
 import 'package:antiattendance/settings_page.dart';
 import 'package:material_ui/material_ui.dart';
@@ -43,16 +42,12 @@ class MemoryLogStore extends AttendanceLogStore {
 class MemorySettingsStore extends AppSettingsStore {
   String? language;
   AppThemeMode? themeMode;
-  bool? monetEnabled;
 
   @override
   Future<void> saveLanguage(String? value) async => language = value;
 
   @override
   Future<void> saveThemeMode(AppThemeMode value) async => themeMode = value;
-
-  @override
-  Future<void> saveMonetEnabled(bool value) async => monetEnabled = value;
 }
 
 class RecordingApi extends PulseApi {
@@ -104,7 +99,7 @@ void main() {
     await tester.scrollUntilVisible(find.text('User'), 150);
     await tester.tap(
       find.byWidgetPredicate(
-        (w) => w is M3EIconButton && w.tooltip == 'Account actions',
+        (w) => w is CampusTextAction && w.tooltip == 'Account actions',
       ),
     );
     await tester.pumpAndSettle();
@@ -147,7 +142,7 @@ void main() {
     await tester.tap(
       find
           .byWidgetPredicate(
-            (w) => w is M3EIconButton && w.tooltip == 'Account actions',
+            (w) => w is CampusTextAction && w.tooltip == 'Account actions',
           )
           .first,
     );
@@ -162,12 +157,11 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('appearance choices save dark mode and phone colors', (
+  testWidgets('appearance choices save dark mode without wallpaper colors', (
     tester,
   ) async {
     final store = MemorySettingsStore();
     AppThemeMode? chosenMode;
-    bool? chosenMonet;
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light,
@@ -176,19 +170,14 @@ void main() {
           language: null,
           onLanguageChanged: (_) {},
           onThemeModeChanged: (value) => chosenMode = value,
-          onMonetChanged: (value) => chosenMonet = value,
-          monetAvailable: true,
         ),
       ),
     );
     await tester.tap(find.text('Dark'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Phone colors (Monet)'));
-    await tester.pumpAndSettle();
+    expect(find.text('Phone colors (Monet)'), findsNothing);
     expect(store.themeMode, AppThemeMode.dark);
     expect(chosenMode, AppThemeMode.dark);
-    expect(store.monetEnabled, isTrue);
-    expect(chosenMonet, isTrue);
     expect(tester.takeException(), isNull);
   });
 
@@ -240,7 +229,7 @@ void main() {
     await tester.tap(
       find
           .byWidgetPredicate(
-            (w) => w is M3EIconButton && w.tooltip == 'Действия с аккаунтом',
+            (w) => w is CampusTextAction && w.tooltip == 'Действия с аккаунтом',
           )
           .first,
     );
@@ -283,7 +272,7 @@ void main() {
     await tester.tap(find.text('Assign group'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(CampusTextField), 'ИНБО');
-    await tester.tap(find.byIcon(Icons.arrow_forward_rounded));
+    await tester.tap(find.byTooltip('Search'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('ИНБО-10-23'));
     await tester.pumpAndSettle();
@@ -312,7 +301,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(
       find.byWidgetPredicate(
-        (w) => w is M3EIconButton && w.tooltip == 'Вставить ссылку',
+        (w) => w is CampusTextAction && w.tooltip == 'Вставить ссылку',
       ),
     );
     await tester.pumpAndSettle();
@@ -371,7 +360,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byType(CampusBrand), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Use phone language'), 200);
     await tester.tap(find.text('Use phone language'));
@@ -454,7 +443,7 @@ void main() {
         of: find.byType(CampusNavigation),
         matching: find.byType(BackdropFilter),
       ),
-      findsOneWidget,
+      findsNothing,
     );
     expect(
       tester.widget<Scaffold>(find.byType(Scaffold).first).extendBody,

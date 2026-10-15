@@ -1,7 +1,5 @@
-import 'icons/campus_icon.dart';
 import 'campus_design.dart';
 
-import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'l10n.dart';
@@ -63,7 +61,7 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
+    appBar: CampusAppBar(
       title: Text(tr(context, 'Выбрать группу', 'Choose group')),
       automaticallyImplyLeading: true,
     ),
@@ -82,17 +80,15 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
                   'Например, ИНБО-10-23',
                   'For example, ИНБО-10-23',
                 ),
-                leading: const CampusIcon(Icons.search_rounded),
-                trailing: M3EIconButton(
-                  suppressInk: true,
+                trailing: CampusTextAction(
                   onPressed: _search,
-                  icon: const CampusIcon(Icons.arrow_forward_rounded),
-                  variant: M3EIconButtonVariant.standard,
+                  tooltip: tr(context, 'Поиск', 'Search'),
+                  label: tr(context, 'Поиск', 'Search'),
                 ),
                 onSubmitted: (_) => _search(),
               ),
             ),
-            if (_loading) const M3EProgressIndicator.linearWavy(),
+            if (_loading) const CampusProgress.linear(),
             if (_error != null)
               Padding(padding: const EdgeInsets.all(16), child: Text(_error!)),
             Expanded(
@@ -102,7 +98,6 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
                   final group = _groups[index];
                   return CampusListItem(
                     headline: (group.name),
-                    trailing: const CampusIcon(Icons.chevron_right_rounded),
                     onTap: () => Navigator.pop(context, group),
                   );
                 },

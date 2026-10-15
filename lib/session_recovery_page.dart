@@ -1,9 +1,6 @@
-import 'icons/campus_icon.dart';
-
 import 'dart:io';
 
 import 'package:material_ui/material_ui.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 
 import 'accounts.dart';
 import 'app_theme.dart';
@@ -37,7 +34,7 @@ class SessionRecoveryPage extends StatefulWidget {
     SavedAccount account,
   ) async {
     if (!Platform.isAndroid && !Platform.isIOS) {
-      M3ESnackbar.show(
+      CampusNotice.show(
         context,
         message: tr(
           context,
@@ -291,7 +288,7 @@ class _SessionRecoveryPageState extends State<SessionRecoveryPage> {
         .where((a) => _states[a.id] == SessionCheckState.valid)
         .length;
     return Scaffold(
-      appBar: AppBar(
+      appBar: CampusAppBar(
         title: Text(tr(context, 'Восстановить вход', 'Restore sessions')),
       ),
       body: CampusPageBody(
@@ -326,7 +323,7 @@ class _SessionRecoveryPageState extends State<SessionRecoveryPage> {
                           ),
                           if (_busy) ...[
                             const SizedBox(height: 12),
-                            const M3EProgressIndicator.linearWavy(),
+                            const CampusProgress.linear(),
                           ],
                           if (_error != null)
                             Padding(
@@ -354,16 +351,7 @@ class _SessionRecoveryPageState extends State<SessionRecoveryPage> {
                         final state = _states[account.id];
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8),
-                          child: M3EListItem(
-                            leading: CampusIcon(
-                              _restored.contains(account.id) ||
-                                      state == SessionCheckState.valid
-                                  ? Icons.check_circle_outline_rounded
-                                  : Icons.person_outline_rounded,
-                              color: state == SessionCheckState.valid
-                                  ? context.palette.success
-                                  : context.palette.muted,
-                            ),
+                          child: CampusListItem(
                             headline: account.label,
                             supportingText:
                                 '${account.groupName == null ? '' : '${account.groupName}\n'}${_status(account)}',

@@ -1,7 +1,4 @@
-import 'icons/campus_icon.dart';
 import 'campus_design.dart';
-
-import 'package:material_3_expressive/material_3_expressive.dart';
 
 import 'dart:async';
 import 'dart:io';
@@ -173,7 +170,7 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: CampusAppBar(
         title: Text(tr(context, 'Сигнал турникета', 'Turnstile signal')),
         automaticallyImplyLeading: true,
       ),
@@ -187,19 +184,11 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: context.palette.surface,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.zero,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CampusIcon(
-                      _frames.isEmpty
-                          ? Icons.sensors_rounded
-                          : Icons.check_circle_rounded,
-                      color: context.palette.blue,
-                      size: 32,
-                    ),
-                    const SizedBox(height: 12),
                     Text(
                       _message(context),
                       style: TextStyle(
@@ -209,15 +198,14 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
                     ),
                     if (_listening && _frames.isEmpty) ...[
                       const SizedBox(height: 16),
-                      const M3EProgressIndicator.linearWavy(),
+                      const CampusProgress.linear(),
                     ],
                     if (_error != null && Platform.isAndroid) ...[
                       const SizedBox(height: 12),
-                      CampusButton.icon(
+                      CampusButton.action(
                         onPressed: _start,
-                        icon: CampusIcon(Icons.refresh_rounded),
                         label: Text(tr(context, 'Повторить', 'Retry')),
-                        style: M3EButtonStyle.text,
+                        style: CampusButtonStyle.text,
                       ),
                     ],
                   ],
@@ -259,12 +247,10 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
                         ),
                       ),
                     ),
-                    M3EIconButton(
-                      suppressInk: true,
-                      tooltip: tr(context, 'Очистить', 'Clear'),
+                    CampusTextAction(
                       onPressed: () => setState(_frames.clear),
-                      icon: CampusIcon(Icons.delete_outline_rounded),
-                      variant: M3EIconButtonVariant.standard,
+                      tooltip: tr(context, 'Очистить', 'Clear'),
+                      label: tr(context, 'Очистить', 'Clear'),
                     ),
                   ],
                 ),
@@ -276,7 +262,7 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         color: context.palette.surface,
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.zero,
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

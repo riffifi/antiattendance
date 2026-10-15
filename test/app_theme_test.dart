@@ -11,28 +11,10 @@ double contrast(Color a, Color b) {
 }
 
 void main() {
-  test('Monet colors surfaces as well as the accent', () {
-    for (final mode in [AppThemeMode.light, AppThemeMode.dark]) {
-      final green = AppTheme.build(mode, monetSeed: Colors.green);
-      final pink = AppTheme.build(mode, monetSeed: Colors.pink);
-      expect(
-        green.scaffoldBackgroundColor,
-        isNot(pink.scaffoldBackgroundColor),
-      );
-      expect(green.colorScheme.surface, isNot(pink.colorScheme.surface));
-    }
-    expect(
-      AppTheme.build(
-        AppThemeMode.amoled,
-        monetSeed: Colors.pink,
-      ).scaffoldBackgroundColor,
-      Colors.black,
-    );
-  });
   for (final mode in AppThemeMode.values) {
-    for (final seed in <Color?>[null, Colors.green, Colors.pink]) {
-      test('$mode / $seed keeps accent and container text readable', () {
-        final scheme = AppTheme.build(mode, monetSeed: seed).colorScheme;
+    {
+      test('$mode keeps text readable with a neutral palette', () {
+        final scheme = AppTheme.build(mode).colorScheme;
         expect(
           contrast(scheme.primary, scheme.onPrimary),
           greaterThanOrEqualTo(4.5),

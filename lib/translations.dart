@@ -1,6 +1,19 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  'Search': ('Rechercher', 'Pesquisar', '搜索'),
+  'Actions': ('Actions', 'Ações', '操作'),
+  'actions': ('actions', 'ações', '操作'),
+  'maps': ('plans', 'mapas', '地图'),
+  'paste': ('coller', 'colar', '粘贴'),
+  'clear': ('effacer', 'limpar', '清除'),
+  'remove': ('supprimer', 'remover', '移除'),
+  'previous': ('précédent', 'anterior', '上一周'),
+  'next': ('suivant', 'seguinte', '下一周'),
+  'date': ('date', 'data', '日期'),
+  'Back': ('Retour', 'Voltar', '返回'),
+  'Camera error': ('Erreur caméra', 'Erro da câmara', '相机错误'),
+  'INDEX': ('MENU', 'MENU', '目录'),
   'My group': ('Mon groupe', 'O meu grupo', '我的班级'),
   'All groups': ('Tous les groupes', 'Todos os grupos', '所有班级'),
   'No group': ('Sans groupe', 'Sem grupo', '未分组'),
@@ -1234,11 +1247,6 @@ const translations = <String, (String, String, String)>{
   'Light': ('Clair', 'Claro', '浅色'),
   'Dark': ('Sombre', 'Escuro', '深色'),
   'Black (AMOLED)': ('Noir (AMOLED)', 'Preto (AMOLED)', '纯黑（AMOLED）'),
-  'Phone colors (Monet)': (
-    'Couleurs du téléphone (Monet)',
-    'Cores do telemóvel (Monet)',
-    '手机配色（Monet）',
-  ),
   'Use your wallpaper colors for any theme.': (
     'Utilise les couleurs du fond d’écran avec chaque thème.',
     'Usa as cores do papel de parede em qualquer tema.',
@@ -1434,11 +1442,12 @@ const translations = <String, (String, String, String)>{
     '此设备上的考勤确认记录',
   ),
   'Choose a group': ('Choisissez un groupe', 'Escolha uma turma', '请选择班级'),
-  'Assign a group to an account using the ⋮ menu on the attendance tab.': (
-    'Associez un groupe à un compte depuis le menu ⋮ de l’onglet Présences.',
-    'Associe uma turma a uma conta no menu ⋮ do separador Presenças.',
-    '在“考勤”页通过账号的 ⋮ 菜单设置班级。',
-  ),
+  'Assign a group to an account using its actions menu on the attendance screen.':
+      (
+        'Associez un groupe à un compte depuis son menu d’actions sur l’écran Présences.',
+        'Associe uma turma a uma conta no menu de ações do ecrã Presenças.',
+        '在“考勤”页通过账号的操作菜单设置班级。',
+      ),
   'Previous week': ('Semaine précédente', 'Semana anterior', '上一周'),
   'Next week': ('Semaine suivante', 'Semana seguinte', '下一周'),
   'Mon': ('Lun', 'Seg', '周一'),

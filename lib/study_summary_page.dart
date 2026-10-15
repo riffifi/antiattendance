@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:material_ui/material_ui.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 
 import 'app_theme.dart';
 import 'campus_design.dart';
@@ -43,12 +42,12 @@ class _StudySummaryPageState extends State<StudySummaryPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
+    appBar: CampusAppBar(
       title: Text(tr(context, 'Итоги учебного дня', 'Study day summary')),
     ),
     body: CampusPageBody(
       child: _loading
-          ? const Center(child: M3EProgressIndicator.circularWavy())
+          ? const Center(child: CampusProgress.compact())
           : ListView(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
               children: [

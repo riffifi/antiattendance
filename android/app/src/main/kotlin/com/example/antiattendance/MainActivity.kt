@@ -370,18 +370,7 @@ class MainActivity : FlutterActivity() {
                     result.error("INSTALLER_UNAVAILABLE", error.message, null)
                 }
             }
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "antiattendance/monet")
-            .setMethodCallHandler { call, result ->
-                if (call.method != "getSeedColor") {
-                    result.notImplemented()
-                } else if (Build.VERSION.SDK_INT < 31) {
-                    result.success(null)
-                } else {
-                    result.success(runCatching {
-                        getColor(android.R.color.system_accent1_500)
-                    }.getOrNull())
-                }
-            }
+
     }
 
     private fun launchUpdateInstaller(apk: File) {

@@ -1,8 +1,8 @@
-import 'icons/campus_icon.dart';
+import 'campus_design.dart';
+import 'app_haptics.dart';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 
 Future<T?> showExpressiveDialog<T>({
   required BuildContext context,
@@ -23,13 +23,18 @@ Future<T?> showExpressiveSheet<T>({
   context: context,
   isScrollControlled: true,
   useSafeArea: true,
-  showDragHandle: showDragHandle,
+  showDragHandle: false,
   builder: (context) => PredictiveBackSurface(
-    child: Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: compact
-          ? SingleChildScrollView(child: builder(context))
-          : builder(context),
+    child: SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom + 12,
+        ),
+        child: compact
+            ? SingleChildScrollView(child: builder(context))
+            : builder(context),
+      ),
     ),
   ),
 );
@@ -43,13 +48,14 @@ class AppPassPicker extends StatelessWidget {
     required this.hint,
     required this.onChanged,
   });
-  final List<M3EDropdownItem<String>> items;
+  final List<PassPickerItem<String>> items;
   final bool enabled;
   final String hint;
-  final ValueChanged<List<M3EDropdownItem<String>>> onChanged;
+  final ValueChanged<List<PassPickerItem<String>>> onChanged;
 
   Future<void> _open(BuildContext context) async {
-    final item = await showExpressiveSheet<M3EDropdownItem<String>>(
+    AppHaptics.selection();
+    final item = await showExpressiveSheet<PassPickerItem<String>>(
       context: context,
       showDragHandle: true,
       builder: (context) => ListView(
@@ -61,13 +67,11 @@ class AppPassPicker extends StatelessWidget {
             child: Text(hint, style: Theme.of(context).textTheme.titleLarge),
           ),
           for (final item in items)
-            M3EListItem(
+            CampusListItem(
               headline: item.label,
               selected: item.selected,
-              trailing: item.selected
-                  ? const CampusIcon(Icons.check_rounded)
-                  : null,
-              onTap: () => Navigator.pop(context, item),
+              trailing: item.selected ? const Text('×') : null,
+              onTap: item.disabled ? null : () => Navigator.pop(context, item),
             ),
         ],
       ),
@@ -76,7 +80,7 @@ class AppPassPicker extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => M3EButton.outlined(
+  Widget build(BuildContext context) => OutlinedButton(
     onPressed: enabled ? () => _open(context) : null,
     child: Row(
       children: [
@@ -86,7 +90,6 @@ class AppPassPicker extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        const CampusIcon(Icons.unfold_more_rounded, size: 20),
       ],
     ),
   );
@@ -164,15 +167,37 @@ class AppActionMenu extends StatelessWidget {
     required this.anchorBuilder,
     required this.onSelected,
   });
-  final List<M3EMenuEntry> entries;
-  final M3EMenuAnchorBuilder anchorBuilder;
+  final List<CampusMenuEntry> entries;
+  final CampusMenuAnchorBuilder anchorBuilder;
   final ValueChanged<Object?> onSelected;
 
   @override
-  Widget build(BuildContext context) => M3EMenu.entries(
-    entries: entries,
-    anchorBuilder: anchorBuilder,
-    onSelected: onSelected,
-    position: M3EMenuAnchorPosition.bottomEnd,
-  );
+  Widget build(BuildContext context) => anchorBuilder(context, () async {
+    final selected = await showExpressiveSheet<CampusMenuEntry>(
+      context: context,
+      compact: true,
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final entry in entries)
+              CampusListItem(
+                headline: entry.label,
+                supportingText: entry.supportingText,
+                leading: entry.leading,
+                trailing: entry.trailing,
+                onTap: entry.enabled
+                    ? () => Navigator.pop(context, entry)
+                    : null,
+              ),
+          ],
+        ),
+      ),
+    );
+    if (selected != null && context.mounted) {
+      selected.onPressed?.call();
+      onSelected(selected.value);
+    }
+  });
 }

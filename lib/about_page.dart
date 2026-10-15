@@ -1,8 +1,5 @@
-import 'icons/campus_icon.dart';
 import 'campus_design.dart';
 import 'about_logo.dart';
-
-import 'package:material_3_expressive/material_3_expressive.dart';
 
 import 'dart:async';
 
@@ -47,7 +44,7 @@ class _AboutPageState extends State<AboutPage> {
       Clipboard.setData(ClipboardData(text: _repository.toString()))
           .catchError((Object _) {}),
     );
-    M3ESnackbar.show(
+    CampusNotice.show(
       context,
       message: tr(
         context,
@@ -59,7 +56,7 @@ class _AboutPageState extends State<AboutPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(tr(context, 'О приложении', 'About'))),
+    appBar: CampusAppBar(title: Text(tr(context, 'О приложении', 'About'))),
     bottomNavigationBar: SafeArea(
       top: false,
       child: Center(
@@ -70,9 +67,8 @@ class _AboutPageState extends State<AboutPage> {
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
             child: SizedBox(
               width: double.infinity,
-              child: CampusButton.icon(
+              child: CampusButton.action(
                 onPressed: _openRepository,
-                icon: const CampusIcon(Icons.open_in_new_rounded, size: 20),
                 label: const Text('GitHub'),
               ),
             ),
@@ -138,7 +134,7 @@ class _AboutPageState extends State<AboutPage> {
                               decoration: BoxDecoration(
                                 color: context.palette.surface,
                                 border: Border.all(color: context.palette.line),
-                                borderRadius: BorderRadius.circular(20),
+                                borderRadius: BorderRadius.zero,
                               ),
                               child: Text(
                                 'v${snapshot.data}',
@@ -159,18 +155,9 @@ class _AboutPageState extends State<AboutPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _Feature(
-                    icon: Icons.qr_code_scanner_rounded,
-                    label: tr(context, 'Посещаемость', 'Attendance'),
-                  ),
-                  _Feature(
-                    icon: Icons.calendar_today_outlined,
-                    label: tr(context, 'Расписание', 'Schedule'),
-                  ),
-                  _Feature(
-                    icon: Icons.devices_rounded,
-                    label: tr(context, 'Передача', 'Transfer'),
-                  ),
+                  _Feature(label: tr(context, 'Посещаемость', 'Attendance')),
+                  _Feature(label: tr(context, 'Расписание', 'Schedule')),
+                  _Feature(label: tr(context, 'Передача', 'Transfer')),
                 ],
               ),
             ),
@@ -179,12 +166,6 @@ class _AboutPageState extends State<AboutPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CampusIcon(
-                    Icons.lock_outline_rounded,
-                    color: context.palette.blue,
-                    size: 22,
-                  ),
-                  const SizedBox(width: 14),
                   Expanded(
                     child: Text(
                       tr(
@@ -210,8 +191,7 @@ class _AboutPageState extends State<AboutPage> {
 }
 
 class _Feature extends StatelessWidget {
-  const _Feature({required this.icon, required this.label});
-  final IconData icon;
+  const _Feature({required this.label});
   final String label;
   @override
   Widget build(BuildContext context) => Expanded(
@@ -219,8 +199,6 @@ class _Feature extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Column(
         children: [
-          CampusIcon(icon, size: 24, color: context.palette.blue),
-          const SizedBox(height: 10),
           Text(
             label,
             textAlign: TextAlign.center,

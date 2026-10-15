@@ -6,12 +6,12 @@ import 'package:flutter/services.dart';
 enum AppThemeMode { light, dark, amoled }
 
 abstract final class AppColors {
-  static const paper = Color(0xFFFAFAFA);
-  static const ink = Color(0xFF20232B);
-  static const muted = Color(0xFF636774);
-  static const blue = Color(0xFF234CDB);
-  static const deepBlue = Color(0xFF152B62);
-  static const line = Color(0xFFE2E3E9);
+  static const paper = Color(0xFFEEEEEE);
+  static const ink = Color(0xFF111111);
+  static const muted = Color(0xFF6C6C6C);
+  static const blue = Color(0xFF202020);
+  static const deepBlue = Color(0xFF202020);
+  static const line = Color(0xFFC9C9C9);
   static const lime = Color(0xFFD9F36B);
   static const mint = Color(0xFFE7F6EE);
   static const red = Color(0xFFFCE9E4);
@@ -74,61 +74,43 @@ extension AppPaletteContext on BuildContext {
 abstract final class AppTheme {
   static ThemeData get light => build(AppThemeMode.light);
 
-  static final _cache = <(AppThemeMode, Color?, TargetPlatform), ThemeData>{};
+  static final _cache = <(AppThemeMode, TargetPlatform), ThemeData>{};
 
-  static ThemeData build(AppThemeMode mode, {Color? monetSeed}) {
-    final key = (mode, monetSeed, defaultTargetPlatform);
-    final cached = _cache[key];
-    if (cached != null) return cached;
-    final theme = _build(mode, monetSeed: monetSeed);
-    // Wallpaper changes should not retain an unlimited number of palettes.
-    if (_cache.length >= 12) _cache.remove(_cache.keys.first);
-    return _cache[key] = theme;
-  }
+  static ThemeData build(AppThemeMode mode) =>
+      _cache.putIfAbsent((mode, defaultTargetPlatform), () => _build(mode));
 
-  static ThemeData _build(AppThemeMode mode, {Color? monetSeed}) {
+  static ThemeData _build(AppThemeMode mode) {
     final isDark = mode != AppThemeMode.light;
-    final amoled = mode == AppThemeMode.amoled;
-    final generated = ColorScheme.fromSeed(
-      seedColor: monetSeed ?? AppColors.blue,
-      brightness: isDark ? Brightness.dark : Brightness.light,
-    );
-    final paper = amoled
+    final paper = mode == AppThemeMode.amoled
         ? Colors.black
-        : monetSeed != null
-        ? generated.surface
         : isDark
-        ? const Color(0xFF14151A)
-        : AppColors.paper;
-    final surface = monetSeed != null
-        ? generated.surfaceContainerLow
-        : amoled
         ? const Color(0xFF0A0A0A)
-        : isDark
-        ? const Color(0xFF202127)
-        : Colors.white;
-    final ink = monetSeed != null
-        ? generated.onSurface
-        : isDark
-        ? const Color(0xFFF2F5F8)
-        : AppColors.ink;
-    final muted = monetSeed != null
-        ? generated.onSurfaceVariant
-        : isDark
-        ? const Color(0xFFA7ADBD)
-        : AppColors.muted;
-    final line = monetSeed != null
-        ? generated.outlineVariant
-        : isDark
-        ? const Color(0xFF3B3D47)
-        : AppColors.line;
-    final scheme = generated.copyWith(
-      primary: monetSeed == null && !isDark ? AppColors.blue : null,
-      onPrimary: monetSeed == null && !isDark ? Colors.white : null,
+        : AppColors.paper;
+    final surface = paper;
+    final ink = isDark ? const Color(0xFFEEEEEE) : AppColors.ink;
+    final muted = isDark ? const Color(0xFF999999) : AppColors.muted;
+    final line = isDark ? const Color(0xFF333333) : AppColors.line;
+    final container = isDark
+        ? const Color(0xFF252525)
+        : const Color(0xFFDDDDDD);
+    final scheme = ColorScheme(
+      brightness: isDark ? Brightness.dark : Brightness.light,
+      primary: ink,
+      onPrimary: paper,
+      primaryContainer: container,
+      onPrimaryContainer: ink,
+      secondary: ink,
+      onSecondary: paper,
+      secondaryContainer: container,
+      onSecondaryContainer: ink,
+      error: isDark ? const Color(0xFFFFB4AB) : const Color(0xFF9C2929),
+      onError: paper,
       surface: surface,
       onSurface: ink,
       onSurfaceVariant: muted,
+      outline: line,
       outlineVariant: line,
+      surfaceTint: Colors.transparent,
     );
     final base = ThemeData(
       useMaterial3: true,
@@ -167,23 +149,23 @@ abstract final class AppTheme {
       textTheme: base.textTheme
           .copyWith(
             headlineLarge: TextStyle(
-              fontSize: 32,
-              height: 1.15,
-              letterSpacing: -1,
-              fontWeight: FontWeight.w700,
+              fontSize: 48,
+              height: 1.05,
+              letterSpacing: -2,
+              fontWeight: FontWeight.w300,
               color: ink,
             ),
             titleLarge: TextStyle(
               fontSize: 22,
               height: 1.25,
               letterSpacing: -.6,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w400,
               color: ink,
             ),
             titleMedium: TextStyle(
               fontSize: 16,
               height: 1.35,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w400,
               letterSpacing: -.2,
               color: ink,
             ),
@@ -193,24 +175,43 @@ abstract final class AppTheme {
             labelLarge: TextStyle(
               fontSize: 14,
               height: 1.2,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w400,
               color: ink,
             ),
           )
-          .apply(fontFamily: 'Geist', bodyColor: ink, displayColor: ink),
+          .apply(fontFamily: 'Geist', bodyColor: ink, displayColor: ink)
+          .copyWith(
+            bodySmall: TextStyle(
+              fontFamily: 'GeistMono',
+              fontSize: 11,
+              height: 1.5,
+              color: muted,
+            ),
+            labelLarge: TextStyle(
+              fontFamily: 'GeistMono',
+              fontSize: 12,
+              height: 1.2,
+              letterSpacing: .4,
+              color: ink,
+            ),
+            labelMedium: TextStyle(
+              fontFamily: 'GeistMono',
+              fontSize: 11,
+              height: 1.3,
+              color: muted,
+            ),
+          ),
       dividerTheme: DividerThemeData(color: line, thickness: 1, space: 1),
       listTileTheme: ListTileThemeData(
         iconColor: muted,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: surface,
         surfaceTintColor: Colors.transparent,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        showDragHandle: true,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+        showDragHandle: false,
       ),
       appBarTheme: AppBarTheme(
         toolbarHeight: 64,
@@ -225,7 +226,7 @@ abstract final class AppTheme {
           fontFamily: 'Geist',
           fontSize: 18,
           letterSpacing: -.3,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w400,
           color: ink,
         ),
         systemOverlayStyle: SystemUiOverlayStyle(
@@ -268,13 +269,11 @@ abstract final class AppTheme {
           disabledBackgroundColor: line,
           disabledForegroundColor: muted,
           minimumSize: const Size(0, 52),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
           textStyle: const TextStyle(
-            fontFamily: 'Geist',
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
+            fontFamily: 'GeistMono',
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
           ),
         ).copyWith(overlayColor: feedback),
       ),
@@ -283,21 +282,18 @@ abstract final class AppTheme {
           foregroundColor: scheme.primary,
           side: BorderSide(color: line),
           minimumSize: const Size(0, 48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         ).copyWith(overlayColor: feedback),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: scheme.primary,
           minimumSize: const Size(0, 44),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
           textStyle: const TextStyle(
-            fontFamily: 'Geist',
-            fontWeight: FontWeight.w600,
+            fontFamily: 'GeistMono',
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
           ),
         ).copyWith(overlayColor: feedback),
       ),
@@ -305,20 +301,20 @@ abstract final class AppTheme {
         color: surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.zero,
           side: BorderSide(color: line),
         ),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: surface,
         side: BorderSide(color: line),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: surface,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.zero,
           borderSide: BorderSide(color: line),
         ),
         contentPadding: const EdgeInsets.symmetric(
@@ -328,7 +324,7 @@ abstract final class AppTheme {
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: isDark ? const Color(0xFF2E3B49) : AppColors.ink,
@@ -336,7 +332,7 @@ abstract final class AppTheme {
           fontFamily: 'Geist',
           color: Colors.white,
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         behavior: SnackBarBehavior.floating,
       ),
     );

@@ -1,6 +1,4 @@
-import 'icons/campus_icon.dart';
-
-import 'package:material_3_expressive/material_3_expressive.dart';
+import 'campus_design.dart';
 
 import 'dart:async';
 import 'dart:io';
@@ -121,7 +119,7 @@ class _NfcDiagnosticsPageState extends State<NfcDiagnosticsPage> {
     final tag = _tag;
     final technologies = (tag?['technologies'] as List?)?.join(', ') ?? '—';
     return Scaffold(
-      appBar: AppBar(
+      appBar: CampusAppBar(
         title: Text(tr(context, 'Проверка NFC', 'NFC diagnostics')),
         automaticallyImplyLeading: true,
       ),
@@ -135,19 +133,11 @@ class _NfcDiagnosticsPageState extends State<NfcDiagnosticsPage> {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: context.palette.surface,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.zero,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CampusIcon(
-                      tag == null
-                          ? Icons.nfc_rounded
-                          : Icons.check_circle_rounded,
-                      color: context.palette.blue,
-                      size: 32,
-                    ),
-                    const SizedBox(height: 12),
                     Text(
                       _status(context),
                       style: TextStyle(
@@ -157,7 +147,7 @@ class _NfcDiagnosticsPageState extends State<NfcDiagnosticsPage> {
                     ),
                     if (_scanning && tag == null) ...[
                       const SizedBox(height: 16),
-                      const M3EProgressIndicator.linearWavy(),
+                      const CampusProgress.linear(),
                     ],
                   ],
                 ),
@@ -173,7 +163,7 @@ class _NfcDiagnosticsPageState extends State<NfcDiagnosticsPage> {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: context.palette.surface,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.zero,
                   ),
                   child: Column(
                     children: [

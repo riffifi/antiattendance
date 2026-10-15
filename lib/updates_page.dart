@@ -1,11 +1,8 @@
-import 'icons/campus_icon.dart';
-
 import 'dart:async';
 import 'dart:io';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 
 import 'apk_update.dart';
 import 'app_theme.dart';
@@ -94,7 +91,7 @@ class _UpdatesPageState extends State<UpdatesPage> {
       if (!mounted) return;
       await (widget.installApk ?? openAndroidInstaller)(apk);
       if (!mounted) return;
-      M3ESnackbar.show(
+      CampusNotice.show(
         context,
         message: tr(
           context,
@@ -145,7 +142,7 @@ class _UpdatesPageState extends State<UpdatesPage> {
   Future<void> _openRelease(Uri uri) async {
     if (!await openWebPage(uri)) {
       if (mounted) {
-        M3ESnackbar.show(
+        CampusNotice.show(
           context,
           message: tr(
             context,
@@ -193,14 +190,13 @@ class _UpdatesPageState extends State<UpdatesPage> {
       final release = updates.release;
       final available = updates.updateAvailable && release != null;
       return Scaffold(
-        appBar: AppBar(
+        appBar: CampusAppBar(
           title: Text(tr(context, 'Обновления', 'Updates')),
           actions: [
-            M3EIconButton(
-              suppressInk: true,
+            CampusTextAction(
               onPressed: updates.checking ? null : () => updates.check(),
               tooltip: tr(context, 'Обновить', 'Refresh'),
-              icon: const CampusIcon(Icons.refresh_rounded),
+              label: tr(context, 'Обновить', 'Refresh'),
             ),
           ],
         ),
@@ -216,7 +212,7 @@ class _UpdatesPageState extends State<UpdatesPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (_downloading) ...[
-                      M3EProgressIndicator.linearWavy(value: _downloadProgress),
+                      CampusProgress.linear(value: _downloadProgress),
                       const SizedBox(height: 12),
                     ],
                     if (_downloadError != null)
@@ -234,7 +230,7 @@ class _UpdatesPageState extends State<UpdatesPage> {
                       ),
                     SizedBox(
                       width: double.infinity,
-                      child: CampusButton.icon(
+                      child: CampusButton.action(
                         onPressed: _downloading || updates.checking
                             ? null
                             : available
@@ -244,11 +240,6 @@ class _UpdatesPageState extends State<UpdatesPage> {
                                   ? () => _downloadAndInstall(release)
                                   : () => _openRelease(release.page)
                             : () => updates.check(),
-                        icon: CampusIcon(
-                          available
-                              ? Icons.system_update_rounded
-                              : Icons.refresh_rounded,
-                        ),
                         label: Text(
                           _downloading
                               ? _downloadProgress == null
@@ -301,7 +292,7 @@ class _UpdatesPageState extends State<UpdatesPage> {
                     color: available
                         ? context.palette.selected
                         : context.palette.surface,
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.zero,
                     border: Border.all(color: context.palette.line),
                     boxShadow: available
                         ? [
@@ -322,22 +313,9 @@ class _UpdatesPageState extends State<UpdatesPage> {
                         const SizedBox(
                           width: 32,
                           height: 32,
-                          child: M3EProgressIndicator.circularWavy(
-                            strokeWidth: 2,
-                          ),
+                          child: CampusProgress.compact(strokeWidth: 2),
                         )
-                      else
-                        CampusIcon(
-                          available
-                              ? Icons.system_update_rounded
-                              : updates.error != null
-                              ? Icons.cloud_off_rounded
-                              : Icons.check_circle_outline_rounded,
-                          size: 36,
-                          color: context.palette.blue,
-                        ),
-                      const SizedBox(height: 20),
-                      if (available) ...[
+                      else if (available) ...[
                         Text(
                           release.tag,
                           style: Theme.of(context).textTheme.headlineLarge,
@@ -392,11 +370,10 @@ class _UpdatesPageState extends State<UpdatesPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  CampusButton.icon(
+                  CampusButton.action(
                     onPressed: () => _openRelease(release.page),
-                    icon: const CampusIcon(Icons.open_in_new_rounded, size: 18),
                     label: Text(tr(context, 'Страница релиза', 'Release page')),
-                    style: M3EButtonStyle.text,
+                    style: CampusButtonStyle.text,
                   ),
                 ],
               ],

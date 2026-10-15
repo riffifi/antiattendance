@@ -1,13 +1,13 @@
-import 'icons/campus_icon.dart';
-
-import 'dart:ui' as ui;
-
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import 'app_theme.dart';
+import 'l10n.dart';
+import 'editorial_controls.dart';
+export 'editorial_controls.dart';
+export 'campus_models.dart';
+import 'campus_models.dart';
 
 /// Compact, outlined lettermark that remains readable in every appearance.
 class CampusBrand extends StatelessWidget {
@@ -49,18 +49,16 @@ class CampusPageBody extends StatelessWidget {
   );
 }
 
-// Custom design built on material 3 expressive
+// Shared typographic layout primitives.
 class CampusHeader extends StatelessWidget {
   const CampusHeader({
     super.key,
     required this.title,
-    required this.subtitle,
-    required this.icon,
+    this.subtitle = '',
     this.trailing,
   });
   final String title;
   final String subtitle;
-  final IconData icon;
   final Widget? trailing;
 
   @override
@@ -156,14 +154,17 @@ class CampusPanel extends StatelessWidget {
   final Color? color;
   final EdgeInsets padding;
   @override
-  Widget build(BuildContext context) => Material(
-    color: color ?? context.palette.surface,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(24),
-      side: BorderSide(color: context.palette.line),
+  Widget build(BuildContext context) => Container(
+    foregroundDecoration: BoxDecoration(
+      border: Border(
+        top: BorderSide(color: context.palette.line, width: .5),
+        bottom: BorderSide(color: context.palette.line, width: .5),
+      ),
     ),
-    clipBehavior: Clip.antiAlias,
-    child: Padding(padding: padding, child: child),
+    child: Material(
+      color: color ?? context.palette.paper,
+      child: Padding(padding: padding, child: child),
+    ),
   );
 }
 
@@ -173,7 +174,11 @@ class CampusSectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
-    child: Text(title, style: Theme.of(context).textTheme.titleLarge),
+    child: Text(
+      title.toUpperCase(),
+      style: Theme.of(context).textTheme.labelMedium
+          ?.copyWith(letterSpacing: 1.2),
+    ),
   );
 }
 
@@ -182,42 +187,39 @@ class CampusButton extends StatelessWidget {
     super.key,
     required this.onPressed,
     required this.child,
-  }) : icon = null,
-       style = M3EButtonStyle.filled;
+  }) : style = CampusButtonStyle.filled;
   const CampusButton.text({
     super.key,
     required this.onPressed,
     required this.child,
-  }) : icon = null,
-       style = M3EButtonStyle.text;
-  const CampusButton.icon({
+  }) : style = CampusButtonStyle.text;
+  const CampusButton.action({
     super.key,
     required this.onPressed,
     required Widget label,
-    required this.icon,
-    this.style = M3EButtonStyle.filled,
+    this.style = CampusButtonStyle.filled,
   }) : child = label;
   final VoidCallback? onPressed;
   final Widget child;
-  final Widget? icon;
-  final M3EButtonStyle style;
+  final CampusButtonStyle style;
 
   @override
-  Widget build(BuildContext context) => M3EButton(
-    onPressed: onPressed,
-    style: style,
-    splashFactory: NoSplash.splashFactory,
-    child: icon == null
-        ? child
-        : Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              icon!,
-              const SizedBox(width: 9),
-              Flexible(child: child),
-            ],
-          ),
-  );
+  Widget build(BuildContext context) {
+    return EditorialAction(
+      onPressed: onPressed,
+      filled:
+          style == CampusButtonStyle.filled || style == CampusButtonStyle.tonal,
+      outlined: style == CampusButtonStyle.outlined,
+      child: Center(
+        widthFactor: 1,
+        heightFactor: 1,
+        child: DefaultTextStyle.merge(
+          textAlign: TextAlign.center,
+          child: child,
+        ),
+      ),
+    );
+  }
 }
 
 class CampusNavigation extends StatefulWidget {
@@ -230,11 +232,6 @@ class CampusNavigation extends StatefulWidget {
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
   final List<String> labels;
-  static const icons = [
-    Icons.qr_code_scanner_rounded,
-    Icons.calendar_today_outlined,
-    Icons.nfc_rounded,
-  ];
   @override
   State<CampusNavigation> createState() => _CampusNavigationState();
 }
@@ -257,134 +254,119 @@ class _CampusNavigationState extends State<CampusNavigation> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 600),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: BackdropFilter(
-              filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: context.palette.surface.withValues(alpha: .72),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: context.palette.line.withValues(alpha: .65),
-                  ),
+            borderRadius: BorderRadius.zero,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: context.palette.paper,
+                borderRadius: BorderRadius.zero,
+                border: Border.all(
+                  color: context.palette.line.withValues(alpha: .65),
                 ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: Padding(
-                    padding: const EdgeInsets.all(5),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) => GestureDetector(
-                        onHorizontalDragStart: (details) => _track(
-                          details.localPosition.dx,
-                          constraints.maxWidth,
-                        ),
-                        onHorizontalDragUpdate: (details) => _track(
-                          details.localPosition.dx,
-                          constraints.maxWidth,
-                        ),
-                        onHorizontalDragCancel: () =>
-                            setState(() => _dragPosition = null),
-                        onHorizontalDragEnd: (_) {
-                          final index =
-                              (_dragPosition ?? widget.selectedIndex.toDouble())
-                                  .round();
-                          setState(() => _dragPosition = null);
-                          widget.onDestinationSelected(index);
-                        },
-                        child: Stack(
-                          children: [
-                            Positioned.fill(
-                              child: TweenAnimationBuilder<double>(
-                                tween: Tween(
-                                  end:
-                                      _dragPosition ??
-                                      widget.selectedIndex.toDouble(),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: Padding(
+                  padding: const EdgeInsets.all(5),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) => GestureDetector(
+                      onHorizontalDragStart: (details) => _track(
+                        details.localPosition.dx,
+                        constraints.maxWidth,
+                      ),
+                      onHorizontalDragUpdate: (details) => _track(
+                        details.localPosition.dx,
+                        constraints.maxWidth,
+                      ),
+                      onHorizontalDragCancel: () =>
+                          setState(() => _dragPosition = null),
+                      onHorizontalDragEnd: (_) {
+                        final index =
+                            (_dragPosition ?? widget.selectedIndex.toDouble())
+                                .round();
+                        setState(() => _dragPosition = null);
+                        widget.onDestinationSelected(index);
+                      },
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: TweenAnimationBuilder<double>(
+                              tween: Tween(
+                                end:
+                                    _dragPosition ??
+                                    widget.selectedIndex.toDouble(),
+                              ),
+                              duration:
+                                  _dragPosition != null ||
+                                      MediaQuery.disableAnimationsOf(context)
+                                  ? Duration.zero
+                                  : const Duration(milliseconds: 280),
+                              curve: Curves.easeOutCubic,
+                              builder: (context, position, child) => Align(
+                                alignment: Alignment(
+                                  -1 +
+                                      2 * position / (widget.labels.length - 1),
+                                  0,
                                 ),
-                                duration:
-                                    _dragPosition != null ||
-                                        MediaQuery.disableAnimationsOf(context)
-                                    ? Duration.zero
-                                    : const Duration(milliseconds: 280),
-                                curve: Curves.easeOutCubic,
-                                builder: (context, position, child) => Align(
-                                  alignment: Alignment(
-                                    -1 +
-                                        2 *
-                                            position /
-                                            (widget.labels.length - 1),
-                                    0,
-                                  ),
-                                  child: FractionallySizedBox(
-                                    widthFactor: 1 / widget.labels.length,
-                                    heightFactor: 1,
-                                    child: child,
-                                  ),
+                                child: FractionallySizedBox(
+                                  widthFactor: 1 / widget.labels.length,
+                                  heightFactor: 1,
+                                  child: child,
                                 ),
-                                child: DecoratedBox(
-                                  key: const ValueKey('navigation-pill'),
-                                  decoration: BoxDecoration(
-                                    color: context.palette.selectionSurface,
-                                    borderRadius: BorderRadius.circular(19),
-                                  ),
+                              ),
+                              child: DecoratedBox(
+                                key: const ValueKey('navigation-pill'),
+                                decoration: BoxDecoration(
+                                  color: context.palette.selectionSurface,
+                                  borderRadius: BorderRadius.zero,
                                 ),
                               ),
                             ),
-                            Row(
-                              children: [
-                                for (
-                                  var index = 0;
-                                  index < widget.labels.length;
-                                  index++
-                                )
-                                  Expanded(
-                                    child: Semantics(
-                                      selected: widget.selectedIndex == index,
-                                      button: true,
-                                      child: InkWell(
-                                        borderRadius: BorderRadius.circular(19),
-                                        onTap: () =>
-                                            widget.onDestinationSelected(index),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 4,
-                                            vertical: 8,
-                                          ),
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              CampusIcon(
-                                                CampusNavigation.icons[index],
-                                                size: 22,
+                          ),
+                          Row(
+                            children: [
+                              for (
+                                var index = 0;
+                                index < widget.labels.length;
+                                index++
+                              )
+                                Expanded(
+                                  child: Semantics(
+                                    selected: widget.selectedIndex == index,
+                                    button: true,
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.zero,
+                                      onTap: () =>
+                                          widget.onDestinationSelected(index),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 4,
+                                          vertical: 8,
+                                        ),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              widget.labels[index],
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
                                                 color:
                                                     widget.selectedIndex ==
                                                         index
-                                                    ? context.palette.blue
+                                                    ? context.palette.ink
                                                     : context.palette.muted,
                                               ),
-                                              const SizedBox(height: 5),
-                                              Text(
-                                                widget.labels[index],
-                                                textAlign: TextAlign.center,
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w600,
-                                                  color:
-                                                      widget.selectedIndex ==
-                                                          index
-                                                      ? context.palette.ink
-                                                      : context.palette.muted,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ),
                                   ),
-                              ],
-                            ),
-                          ],
-                        ),
+                                ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -407,7 +389,6 @@ class CampusListItem extends StatelessWidget {
     this.trailing,
     this.onTap,
     this.selected = false,
-    this.expanded,
   });
   final String headline;
   final String? supportingText;
@@ -415,16 +396,48 @@ class CampusListItem extends StatelessWidget {
   final Widget? trailing;
   final VoidCallback? onTap;
   final bool selected;
-  final M3EExpandableExpanded? expanded;
   @override
-  Widget build(BuildContext context) => M3EListItem(
-    headline: headline,
-    supportingText: supportingText,
-    leading: leading,
-    trailing: trailing,
-    onTap: onTap,
+  Widget build(BuildContext context) => Semantics(
     selected: selected,
-    expanded: expanded,
+    child: Column(
+      children: [
+        EditorialAction(
+          onPressed: onTap,
+          invertOnInteraction: false,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          child: Row(
+            children: [
+              if (leading != null) ...[leading!, const SizedBox(width: 12)],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      headline,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    if (supportingText != null) ...[
+                      const SizedBox(height: 5),
+                      Text(
+                        supportingText!,
+                        style: Theme.of(context).textTheme.bodySmall
+                            ?.copyWith(color: context.palette.muted),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+              if (trailing == null && selected) ...[
+                const SizedBox(width: 8),
+                const Text('×'),
+              ],
+            ],
+          ),
+        ),
+        Divider(height: .5, thickness: .5, color: context.palette.line),
+      ],
+    ),
   );
 }
 
@@ -465,42 +478,42 @@ class CampusTextField extends StatelessWidget {
   final TextAlign textAlign;
   final String? suffixText;
   @override
-  Widget build(BuildContext context) => M3ETextField(
-    variant: M3ETextFieldVariant.outlined,
-    theme: M3ETextFieldTheme(
-      outlinedShape: BorderRadius.circular(16),
-      filledShape: BorderRadius.circular(16),
-      focusOutlineWidth: 2,
-      inputTextStyle: Theme.of(context).textTheme.bodyLarge,
-      labelTextStyle: Theme.of(context).textTheme.bodyLarge,
-      colors: M3ETextFieldColorTheme(
-        outlineColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.error)
-              ? Theme.of(context).colorScheme.error
-              : states.contains(WidgetState.disabled)
-              ? context.palette.line.withValues(alpha: .5)
-              : states.contains(WidgetState.focused)
-              ? context.palette.blue
-              : context.palette.line,
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      if (label != null)
+        Text(label!, style: Theme.of(context).textTheme.labelMedium),
+      if (label != null) const SizedBox(height: 6),
+      TextField(
+        controller: controller,
+        autofocus: autofocus,
+        obscureText: obscureText,
+        enabled: enabled,
+        maxLength: maxLength,
+        keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
+        onChanged: onChanged,
+        onSubmitted: onSubmitted,
+        textCapitalization: textCapitalization,
+        textAlign: textAlign,
+        style: Theme.of(context).textTheme.bodyLarge,
+        decoration: InputDecoration(
+          hintText: placeholder,
+          border: UnderlineInputBorder(
+            borderSide: BorderSide(color: context.palette.line, width: .5),
+          ),
+          enabledBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: context.palette.line, width: .5),
+          ),
+          focusedBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: context.palette.ink),
+          ),
+          prefixIcon: leading,
+          suffixIcon: trailing,
+          suffixText: suffixText,
         ),
       ),
-    ),
-    controller: controller,
-    autofocus: autofocus,
-    obscureText: obscureText,
-    enabled: enabled,
-    maxLength: maxLength,
-    keyboardType: keyboardType,
-    inputFormatters: inputFormatters,
-    onChanged: onChanged,
-    onSubmitted: onSubmitted,
-    textCapitalization: textCapitalization,
-    textAlign: textAlign,
-    label: label,
-    placeholder: placeholder,
-    leading: leading,
-    trailing: trailing,
-    suffixText: suffixText,
+    ],
   );
 }
 
@@ -560,4 +573,37 @@ class _ScanCorners extends CustomPainter {
 
   @override
   bool shouldRepaint(_ScanCorners oldDelegate) => oldDelegate.color != color;
+}
+
+class CampusAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const CampusAppBar({
+    super.key,
+    this.title,
+    this.leading,
+    this.actions,
+    this.automaticallyImplyLeading = true,
+    this.leadingWidth,
+  });
+  final Widget? title;
+  final Widget? leading;
+  final List<Widget>? actions;
+  final bool automaticallyImplyLeading;
+  final double? leadingWidth;
+  @override
+  Size get preferredSize => const Size.fromHeight(64);
+  @override
+  Widget build(BuildContext context) => AppBar(
+    title: title,
+    actions: actions,
+    leadingWidth: leadingWidth ?? 76,
+    automaticallyImplyLeading: false,
+    leading:
+        leading ??
+        (automaticallyImplyLeading && Navigator.of(context).canPop()
+            ? CampusTextAction(
+                label: tr(context, 'Назад', 'Back'),
+                onPressed: () => Navigator.of(context).maybePop(),
+              )
+            : null),
+  );
 }

@@ -1864,6 +1864,7 @@ class _HomePageState extends State<HomePage> {
                               sliver: SliverList.list(
                                 children: [
                                   CampusHeader(
+                                    fitTitle: true,
                                     title: tr(
                                       context,
                                       'Посещаемость',

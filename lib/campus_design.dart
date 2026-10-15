@@ -57,10 +57,12 @@ class CampusHeader extends StatelessWidget {
     required this.title,
     this.subtitle = '',
     this.trailing,
+    this.fitTitle = false,
   });
   final String title;
   final String subtitle;
   final Widget? trailing;
+  final bool fitTitle;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -72,12 +74,22 @@ class CampusHeader extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Text(
-                title,
-                style: Theme.of(context).textTheme.headlineLarge,
-              ),
+              child: fitTitle
+                  ? FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        style: Theme.of(context).textTheme.headlineLarge,
+                      ),
+                    )
+                  : Text(
+                      title,
+                      style: Theme.of(context).textTheme.headlineLarge,
+                    ),
             ),
-            const SizedBox(width: 12),
+            if (trailing != null) const SizedBox(width: 12),
             ?trailing,
           ],
         ),

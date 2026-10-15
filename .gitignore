@@ -49,3 +49,6 @@ app.*.map.json
 
 # Independently versioned session server
 /server/
+
+# Kotlin compiler session files
+/android/.kotlin/

@@ -14,6 +14,7 @@ Icons retain localized tooltips, accessibility labels, focus, and 48-pixel targe
 | Schedule: no group, loading, failed, empty day, lessons/current lesson | Previous/next use directional icons; time column accommodates enlarged text. Retained readable lesson metadata and native localized date picker. |
 | Passes: empty, enrollment, queue, single, running, unsupported/error | Clear checkmarks; bounded widget action row. Verification dialog scrolls and supports keyboard submission. NFC lifecycle unchanged. |
 | Settings: embedded and standalone | Safe bottom inset, clear selection, shared sheet improvements. Existing monochrome previews and responsive theme controls retained. |
+| Legacy local-account view | Available from Settings; retains local login, recovery and transfers using the audited navigation and controls. |
 | Group picker: initial, searching, results, empty, error | Search icon; explicit initial/no-result guidance. Clearing a pending short query resets the spinner and ignores stale results. |
 | Maps: loading/failure, search, favorites, filters, floor/map, route | Compact refresh/clear actions. Starting-place picker now scrolls its entire header/results area above the keyboard. Existing zoom, route instructions and floor controls retained. |
 | Single sign-in: loading/error, QR, browser, session feedback | Back icon, safe system navigation inset; diagnostic sheet scrolls. Browser and QR authentication behavior retained. |
@@ -42,6 +43,7 @@ Every app-authored AlertDialog now scrolls its title/content on constrained scre
 
 | Entry point | Review / change |
 | --- | --- |
+| Daily admin testing password | Scrollable obscured field, keyboard submission, localized labels; requires the separate daily server password. |
 | New account name | Scrollable input; blank submission disabled; keyboard submit. |
 | Rename account | Same input behavior; existing maximum length and initial value retained. |
 | Paste attendance QR / paste lesson QR | Same input behavior; QR validation retained. |
@@ -84,3 +86,5 @@ and installed on the Pixel according to `AGENTS.md`.
 Source review is not a claim that every camera, browser, physical gate, network
 discovery or notification outcome was reproduced on hardware. Those live states
 still depend on devices, service availability and real account responses.
+
+Developer is hidden until five separate downward swipes on the left rail while Attendance (01) is selected. The fifth swipe opens Developer (00), above Attendance in the rail. It remains available only in memory until the app closes. Settings and the logo provide no developer shortcut. The four-column selector stays unchanged.

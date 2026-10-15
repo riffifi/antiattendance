@@ -7,6 +7,97 @@ import 'package:material_ui/material_ui.dart';
 
 void main() {
   testWidgets(
+    'developer reveal requires five separate downward rail gestures at Attendance',
+    (tester) async {
+      var selected = 0;
+      var revealed = false;
+      var reveals = 0;
+      var selector = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: StatefulBuilder(
+            builder: (context, update) => ScreenNavigation(
+              selectorVisible: selector,
+              selectedIndex: selected,
+              debugVisible: revealed,
+              onRevealDebug: () => update(() {
+                revealed = true;
+                selected = 4;
+                reveals++;
+              }),
+              onSelected: (index) => update(() {
+                selected = index;
+                selector = false;
+              }),
+              onIndex: () => update(() => selector = true),
+              child: const ColoredBox(
+                key: ValueKey('page-body'),
+                color: Colors.white,
+                child: SizedBox.expand(),
+              ),
+            ),
+          ),
+        ),
+      );
+      final rail = find.byKey(const ValueKey('screen-rail'));
+      for (var i = 0; i < 5; i++) {
+        await tester.drag(
+          find.byKey(const ValueKey('page-body')),
+          const Offset(0, 160),
+        );
+        await tester.pumpAndSettle();
+      }
+      expect(reveals, 0);
+      // A single long drag produces many overscroll events but counts once.
+      final gesture = await tester.startGesture(
+        tester.getTopLeft(rail) + const Offset(25, 20),
+      );
+      for (var i = 0; i < 12; i++) {
+        await gesture.moveBy(const Offset(0, 30));
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(reveals, 0);
+      for (var i = 0; i < 3; i++) {
+        await tester.drag(rail, const Offset(0, 140));
+        await tester.pumpAndSettle();
+      }
+      expect(reveals, 0);
+      // Cancelled and short gestures reset the sequence.
+      final cancelled = await tester.startGesture(tester.getCenter(rail));
+      await cancelled.moveBy(const Offset(0, 100));
+      await cancelled.cancel();
+      await tester.pumpAndSettle();
+      await tester.drag(rail, const Offset(0, 20));
+      await tester.pumpAndSettle();
+      // Ordinary navigation away from Attendance cannot reveal Developer.
+      await tester.drag(rail, const Offset(0, -420));
+      await tester.pumpAndSettle();
+      expect(selected, 1);
+      await tester.drag(rail, const Offset(0, 420));
+      await tester.pumpAndSettle();
+      expect(selected, 0);
+      for (var i = 0; i < 4; i++) {
+        await tester.drag(rail, const Offset(0, 140));
+        await tester.pumpAndSettle();
+        expect(reveals, 0);
+      }
+      await tester.drag(rail, const Offset(0, 140));
+      await tester.pumpAndSettle();
+      expect(reveals, 1);
+      expect(selected, 4);
+      expect(find.text('00'), findsOneWidget);
+      await tester.tap(find.text('INDEX'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ScreenSelector), findsOneWidget);
+      expect(find.byKey(const ValueKey('screen-selector-4')), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'selected column morphs to rail and swipes both ways with one tick',
     (tester) async {
       tester.view.physicalSize = const Size(390, 844);

@@ -11,6 +11,46 @@ const translations = <String, (String, String, String)>{
     'Introduza pelo menos dois caracteres e pesquise.',
     '输入至少两个字符后搜索。',
   ),
+  'Developer': ('Développeur', 'Programador', '开发者'),
+  'Pass testing': ('Test des badges', 'Teste de passes', '通行证测试'),
+  'Skip agreement for testing': (
+    'Ignorer le consentement pour les tests',
+    'Ignorar consentimento para testes',
+    '测试时跳过同意检查',
+  ),
+  'Connect to a server in Settings.': (
+    'Connectez un serveur dans les paramètres.',
+    'Ligue a um servidor nas definições.',
+    '请在设置中连接服务器。',
+  ),
+  'The daily password is in the admin panel. Testing lasts until midnight in Moscow; saved agreements stay unchanged.':
+      (
+        'Le mot de passe du jour est dans le panneau administrateur. Les tests expirent à minuit à Moscou ; les consentements enregistrés restent inchangés.',
+        'A palavra-passe diária está no painel de administração. O teste expira à meia-noite de Moscovo; os consentimentos guardados mantêm-se.',
+        '每日密码位于管理员面板。测试于莫斯科时间午夜到期，已保存的同意设置保持不变。',
+      ),
+  'Daily admin testing password': (
+    'Mot de passe administrateur de test du jour',
+    'Palavra-passe diária de teste do administrador',
+    '管理员每日测试密码',
+  ),
+  'Enable testing': ('Activer les tests', 'Ativar teste', '启用测试'),
+  'Could not enable testing. Check the daily password in the server panel.': (
+    'Impossible d’activer les tests. Vérifiez le mot de passe du jour dans le panneau serveur.',
+    'Não foi possível ativar o teste. Verifique a palavra-passe diária no painel do servidor.',
+    '无法启用测试。请检查服务器面板中的每日密码。',
+  ),
+  'Legacy': ('Ancien mode', 'Modo anterior', '旧版模式'),
+  'Local accounts, sign-in, recovery and session transfer.': (
+    'Comptes locaux, connexion, récupération et transfert de sessions.',
+    'Contas locais, início de sessão, recuperação e transferência de sessões.',
+    '本地账号、登录、恢复和会话传输。',
+  ),
+  'Connect a server in Settings and add an account on the server.': (
+    'Connectez un serveur dans les paramètres et ajoutez-y un compte.',
+    'Ligue um servidor nas definições e adicione uma conta no servidor.',
+    '在设置中连接服务器并在服务器上添加账号。',
+  ),
   'Search': ('Rechercher', 'Pesquisar', '搜索'),
   'Actions': ('Actions', 'Ações', '操作'),
   'actions': ('actions', 'ações', '操作'),

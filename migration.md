@@ -353,3 +353,29 @@ Feature flags are useful only when both code paths are safe and data-compatible.
 - Do not remove session transfer until the replacement sign-in and recovery paths are proven and the credential-storage policy is finalized.
 - Do not treat every schedule/history feature as a security migration. Only move the parts that need authoritative server data or reduce sensitive local storage.
 
+
+
+## Local implementation status · 16 October 2026
+
+- The UI audit and polish are documented in `docs/ui-audit.md`.
+- Before server changes, the working server source was backed up and force-synced
+  to `origin/main` (`c9ffbca`). Phase 0's endpoint and credential-flow inventory is
+  in `server/docs/migration-baseline.md`.
+- The user chose to retain local sessions, local recovery and session transfer
+  in a Legacy view under Settings. The normal root view now uses server-backed
+  account references and opens the server's sign-in flow.
+- A separate daily admin password, shown only in the authenticated server panel,
+  unlocks pass testing without changing saved agreement flags. It rotates at
+  Moscow midnight, is retained in app secure storage per server until invalid,
+  and is removed on expiry/rejection or when testing is disabled. This implements
+  the user's explicit testing exception to the normal pass-permission rule.
+- Normal snapshots now withhold disabled pass numbers. Pass testing retains Pulse
+  session checks, account-bound tokens, verification and rate limits, and is audited.
+- Session termination is serialized with renewal; failed upstream logout cannot
+  prevent local revocation. Issued tokens and renewal attempts are cleared.
+- These changes do not complete Phase 1's general client-authentication redesign.
+  The daily testing capability is deliberately scoped to pass testing. Existing
+  URL-only compatibility remains; normal client authorization and coordinated
+  rollout still require a separate explicit design decision.
+
+Developer access: five downward swipes on the left rail at Attendance (01) reveal the in-memory Developer (00) destination until app close. This is the only menu entry; pass testing still requires the server-validated daily password.

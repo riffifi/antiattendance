@@ -156,6 +156,33 @@ class AccountStore {
   }
 }
 
+class ServerAccountStore extends AccountStore {
+  @override
+  Future<List<SavedAccount>> load() async => (await super.load())
+      .where((account) => serverAccountId(account.cookie) != null)
+      .toList();
+}
+
+class LegacyAccountStore extends AccountStore {
+  LegacyAccountStore({super.storage});
+  @override
+  Future<List<SavedAccount>> load() => loadLocal();
+
+  @override
+  Future<void> save(List<SavedAccount> accounts) async {
+    final before = await loadLocal();
+    final local = accounts
+        .where((account) => serverAccountId(account.cookie) == null)
+        .toList();
+    await SessionAutoSync.groupChanges(local);
+    await _storage.write(
+      key: AccountStore._key,
+      value: jsonEncode(local.map((account) => account.toJson()).toList()),
+    );
+    await SessionAutoSync.accountChanges(before, local);
+  }
+}
+
 int? transferredPassNumber(Object? raw) {
   if (raw == null) return null;
   if (raw is! String || !RegExp(r'^[1-9][0-9]{0,18}$').hasMatch(raw)) {

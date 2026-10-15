@@ -1,20 +1,53 @@
 # AntiAttendance
 
-Flutter app for Android and iOS. It stores several independently signed-in Пульс sessions on one device and submits one lecture QR code for the selected accounts. Each account owner signs in interactively through МИРЭА or imports a saved session from another phone. Passwords are never saved by this app; session cookies are saved with `flutter_secure_storage`. The interface follows the phone language: Russian, English, French, Portuguese, or Simplified Chinese (English is the fallback), with an optional override in **Settings**.
+Flutter app for Android and iOS with a monochrome, typography-led interface.
+The main view uses server-backed accounts: Pulse credentials stay on the server
+for those accounts, and the app keeps server references and cached metadata.
+**Settings → Legacy** retains local sign-in, recovery, QR/Nearby session transfer
+and platform-secure storage of local Pulse cookies. MIREA passwords are not saved.
+The interface supports Russian, English, French, Portuguese and Simplified Chinese,
+with a language override in Settings.
 
 ## Use
 
-1. Tap **Добавить**, choose **Single user** or **Multiple users**, and finish MIREA sign-in. Give each session a local label.
-2. Select accounts and tap **Сканировать QR**. The scanner submits the first valid lecture QR immediately and keeps trying new QR tokens for accounts still waiting or rejected. It closes once all selected accounts are confirmed; you can close it sooner. Alternatively, paste the Пульс URL and tap **Отправить**.
-3. Use **Войти снова** if a session expires, or **Удалить** to remove it from the device.
+1. Open Settings → Session server and connect to your server. **Add** opens the
+   server's sign-in page; account owners approve MIREA login there.
+2. Select accounts and scan a lecture QR or paste its link to submit attendance.
+3. Use Settings → Legacy for the local-account workflows described below.
 
-**Batch account adding (Android):** choose 1–10 users, name their cards, and scan each QR preview. Tap a card for the full QR and sign-in page; **Overview** returns to the cards without closing the login. Approved previews become green ticks. Open those cards and tap **Continue** inside the MIREA WebView. An account is saved only after Pulse confirms its session; the card then says **Account saved**. Existing saved accounts remain if you leave a batch early. Every login uses its own WebView cookie/storage profile. Devices without WebView multi-profile support and iOS use single sign-in. Update Android System WebView if batch sign-in is unavailable.
+The four-column selector morphs into the left navigation rail. Swipe the rail
+vertically to change screens, or use INDEX to return. Light, Dark and Black
+appearances use Geist typography, thin rules, rectangular controls and small
+utility icons. Dialogs/sheets support native back, safe system insets and reduced
+motion. See [the screen and modal audit](docs/ui-audit.md).
+
+### Pass testing
+
+On **Attendance (01)**, swipe downward on the left navigation rail **five times**.
+The **Developer (00)** tab appears until the app closes; it has no Settings or logo shortcut.
+Open **Pass testing** there and enter the separate daily admin
+password from the authenticated server panel's **Pass testing** section. The app
+saves it in secure storage for that server until expiry or rejection, then asks
+for the new password. The password rotates at midnight in Moscow. Turning testing
+off removes the saved password. Owner agreement flags remain unchanged; Pulse
+sign-in and verification still apply. Test-only pass numbers are not persisted
+in the normal snapshot, and native NFC activation cannot outlive the test deadline.
+
+### Legacy local-account workflows
+
+In Settings → Legacy, tap **Add**, choose Single user or Multiple users, and finish
+MIREA sign-in. Local recovery and QR/Nearby session transfer remain available.
+Existing legacy synchronization compatibility is retained. Local credentials
+therefore still exist on devices using Legacy; the app does not claim a wholly
+server-only credential store.
+
+**Legacy batch account adding (Android):** choose 1–10 users, name their cards, and scan each QR preview. Tap a card for the full QR and sign-in page; **Overview** returns to the cards without closing the login. Approved previews become green ticks. Open those cards and tap **Continue** inside the MIREA WebView. An account is saved only after Pulse confirms its session; the card then says **Account saved**. Existing saved accounts remain if you leave a batch early. Every login uses its own WebView cookie/storage profile. Devices without WebView multi-profile support and iOS use single sign-in. Update Android System WebView if batch sign-in is unavailable.
 
 On Android, add either the 1×1 icon widget or the 2×1 labeled widget to the home screen for a one-tap shortcut to scanning with every saved account. The widget opens the scanner; attendance is sent only after it sees a lecture QR code. Launcher widgets are not available in the iOS build.
 
-Use an account’s **⋮ → Rename** menu to change its local label without signing in again. With several accounts, the account list offers search by name or assigned group; search does not change the selected accounts.
+Use a Legacy account’s **Actions → Rename** menu to change its local label without signing in again. With several accounts, the account list offers search by name or assigned group; search does not change the selected accounts.
 
-The sign-in screen displays MIREA’s current QR challenge directly in the app. Scan it with another device and approve the login; the app checks approval in the university page’s cookie context and submits MIREA’s login continuation. Pulse cookies are checked during redirects as well as after page loads. MIREA handles MFA. **Refresh QR code** starts a new challenge; **Other sign-in options** reveals the original university page. QR challenges remain in memory and are not stored or included in transfers. The sign-in screen has **− / +** controls below the WebView to shrink or enlarge the MIREA page when a form is cut off on a phone. Settings offers Light, Dark, and Black (AMOLED) appearance. On Android 12+, **Phone colors (Monet)** applies the wallpaper accent to any of the three themes. Open the gear icon for appearance, language, and the About screen. Saved appearance and language load before the first Flutter frame, avoiding a flash of the default theme. All app screens use `material_3_expressive` 1.1.5 for navigation, app bars, buttons, fields, lists, selections, menus, dialogs, sheets, snackbars, and progress. Expressive tokens share the saved color scheme and Geist font. The pass picker integrates with Navigator back handling, sheet accessibility labels follow the app language, and the app respects reduced-motion settings. Material widgets use `material_ui`, as required by that package.
+In Legacy, the sign-in screen displays MIREA’s current QR challenge directly in the app. Scan it with another device and approve the login; the app checks approval in the university page’s cookie context and submits MIREA’s login continuation. Pulse cookies are checked during redirects as well as after page loads. MIREA handles MFA. **Refresh QR code** starts a new challenge; **Other sign-in options** reveals the original university page. QR challenges remain in memory and are not stored or included in transfers. The sign-in screen has **− / +** controls below the WebView to shrink or enlarge the MIREA page when a form is cut off on a phone.
 
 Group assignments sync with the session server independently of login cookies.
 Use **Settings → My group** to fetch only that group’s accounts and passes, or
@@ -74,7 +107,7 @@ Run `python3 tool/nfc_probe.py --watch` and hold a card or a phone with its NFC 
 
 On the ACR1281 2S CL, the two slots reporting a `MIFARE Plus SAM` ATR are SAM slots, not the phone. To watch the likely contactless slot alone, run `python3 tool/nfc_probe.py --watch --reader '00 01'`. Try a known ordinary contactless card or NFC tag first: detection there confirms the reader and driver can see a nearby target. An empty slot does not by itself show whether the reader's RF field is on, and a phone pass may require a specific application selection before it responds. This utility cannot determine whether a Pulse pass is compatible with the reader.
 
-Android backups are disabled because device-bound secure storage cannot be restored with its original encryption key on another device. Use the app's QR or nearby session transfer when moving accounts between phones.
+Android backups are disabled because device-bound secure storage cannot be restored with its original encryption key on another device. Use Settings → Legacy for QR or nearby session transfer when moving local accounts between phones.
 
 ### Turnstile NFC diagnostics
 

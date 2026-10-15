@@ -22,6 +22,7 @@ import 'session_server_sync.dart';
 import 'turnstile_probe_page.dart';
 import 'update_service.dart';
 import 'updates_page.dart';
+import 'expressive.dart';
 
 /// A bounded, in-memory sample for investigating jank without collecting logs.
 abstract final class DebugFrameMonitor {
@@ -292,9 +293,15 @@ class DebugReportCollector {
 }
 
 class DebugMenuPage extends StatefulWidget {
-  const DebugMenuPage({super.key, required this.loadReport, this.updates});
+  const DebugMenuPage({
+    super.key,
+    required this.loadReport,
+    this.updates,
+    this.embedded = false,
+  });
   final Future<Map<String, Object?>> Function(BuildContext) loadReport;
   final UpdateController? updates;
+  final bool embedded;
 
   @override
   State<DebugMenuPage> createState() => _DebugMenuPageState();
@@ -304,13 +311,67 @@ class _DebugMenuPageState extends State<DebugMenuPage> {
   Map<String, Object?>? _report;
   bool _loading = false;
   bool _failed = false;
+  bool _testingBusy = false;
+  StreamSubscription<void>? _serverChanges;
+
+  Future<void> _changePassTesting(bool enabled) async {
+    final server = ServerSessions.active;
+    if (server == null || _testingBusy) return;
+    if (!enabled) {
+      await server.disablePassTesting();
+      ServerSessions.notify();
+      SessionAutoSync.request();
+      setState(() {});
+      return;
+    }
+    final password = await showExpressiveDialog<String>(
+      context: context,
+      builder: (_) => const _PassTestingDialog(),
+    );
+    if (password == null ||
+        !mounted ||
+        !identical(server, ServerSessions.active)) {
+      return;
+    }
+    setState(() => _testingBusy = true);
+    try {
+      await server.enablePassTesting(password);
+      if (!identical(server, ServerSessions.active)) return;
+      await server.fetch();
+      ServerSessions.notify();
+      SessionAutoSync.request();
+    } catch (_) {
+      await server.disablePassTesting();
+      if (mounted) {
+        CampusNotice.show(
+          context,
+          message: tr(
+            context,
+            'Не удалось включить тестирование. Проверьте ежедневный пароль в панели сервера.',
+            'Could not enable testing. Check the daily password in the server panel.',
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _testingBusy = false);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    _serverChanges = ServerSessions.changes.listen((_) {
+      if (mounted) setState(() {});
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) unawaited(_refresh());
     });
+  }
+
+  @override
+  void dispose() {
+    unawaited(_serverChanges?.cancel());
+    super.dispose();
   }
 
   Future<void> _refresh() async {
@@ -362,7 +423,12 @@ class _DebugMenuPageState extends State<DebugMenuPage> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: CampusAppBar(
-      title: Text(tr(context, 'Меню отладки', 'Debug menu')),
+      automaticallyImplyLeading: !widget.embedded,
+      title: Text(
+        widget.embedded
+            ? tr(context, 'Разработчик', 'Developer')
+            : tr(context, 'Меню отладки', 'Debug menu'),
+      ),
       actions: [
         CampusTextAction(
           icon: Icons.refresh_rounded,
@@ -444,6 +510,34 @@ class _DebugMenuPageState extends State<DebugMenuPage> {
             ],
           const SizedBox(height: 24),
           CampusSectionTitle(
+            tr(context, 'Тестирование пропусков', 'Pass testing'),
+          ),
+          CampusListItem(
+            headline: tr(
+              context,
+              'Без проверки согласия',
+              'Skip agreement for testing',
+            ),
+            supportingText: ServerSessions.active == null
+                ? tr(
+                    context,
+                    'Подключите сервер в настройках.',
+                    'Connect to a server in Settings.',
+                  )
+                : tr(
+                    context,
+                    'Ежедневный пароль доступен в панели администратора. Режим действует до полуночи по Москве; сохранённые согласия не меняются.',
+                    'The daily password is in the admin panel. Testing lasts until midnight in Moscow; saved agreements stay unchanged.',
+                  ),
+            trailing: CampusSwitch(
+              value: ServerSessions.active?.passTestingActive ?? false,
+              onChanged: ServerSessions.active == null || _testingBusy
+                  ? null
+                  : _changePassTesting,
+            ),
+          ),
+          const SizedBox(height: 24),
+          CampusSectionTitle(
             tr(context, 'Инструменты диагностики', 'Diagnostic tools'),
           ),
           CampusListItem(
@@ -466,5 +560,54 @@ class _DebugMenuPageState extends State<DebugMenuPage> {
         ],
       ),
     ),
+  );
+}
+
+class _PassTestingDialog extends StatefulWidget {
+  const _PassTestingDialog();
+  @override
+  State<_PassTestingDialog> createState() => _PassTestingDialogState();
+}
+
+class _PassTestingDialogState extends State<_PassTestingDialog> {
+  final _password = TextEditingController();
+  void _submit() {
+    if (_password.text.trim().isNotEmpty) {
+      Navigator.pop(context, _password.text.trim());
+    }
+  }
+
+  @override
+  void dispose() {
+    _password.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    scrollable: true,
+    title: Text(tr(context, 'Тестирование пропусков', 'Pass testing')),
+    content: CampusTextField(
+      controller: _password,
+      autofocus: true,
+      obscureText: true,
+      label: tr(
+        context,
+        'Ежедневный пароль администратора',
+        'Daily admin testing password',
+      ),
+      onChanged: (_) => setState(() {}),
+      onSubmitted: (_) => _submit(),
+    ),
+    actions: [
+      CampusButton.text(
+        onPressed: () => Navigator.pop(context),
+        child: Text(tr(context, 'Отмена', 'Cancel')),
+      ),
+      CampusButton.filled(
+        onPressed: _password.text.trim().isEmpty ? null : _submit,
+        child: Text(tr(context, 'Включить тестирование', 'Enable testing')),
+      ),
+    ],
   );
 }

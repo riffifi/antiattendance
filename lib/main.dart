@@ -7,6 +7,7 @@ import 'campus_design.dart';
 import 'screen_navigation.dart';
 import 'theme_crossfade.dart';
 import 'app_haptics.dart';
+import 'external_links.dart';
 import 'expressive.dart';
 
 import 'dart:async';
@@ -261,6 +262,8 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
     localizationsDelegates: GlobalMaterialLocalizations.delegates,
     home: HomePage(
       startAtSelector: true,
+      legacyMode: false,
+      store: ServerAccountStore(),
       settingsStore: _settingsStore,
       language: _language,
       onLanguageChanged: (language) {
@@ -294,9 +297,11 @@ class HomePage extends StatefulWidget {
     this.updates,
     this.sessionChecker = checkSession,
     this.startAtSelector = false,
+    this.legacyMode = true,
   });
 
   final bool startAtSelector;
+  final bool legacyMode;
   final Future<SessionCheckResult> Function(SavedAccount) sessionChecker;
   final AccountStore? store;
   final PulseApi? api;
@@ -602,88 +607,74 @@ class _HomePageState extends State<HomePage> {
     CampusNotice.show(context, message: trMessage(context, message));
   }
 
-  bool _debugMenuOpen = false;
+  bool _debugVisible = false;
 
-  Future<void> _openDebugMenu() async {
-    if (_debugMenuOpen) return;
-    _debugMenuOpen = true;
-    try {
-      await _nfcPageKey.currentState?.deactivateQueue();
-      if (!mounted) return;
-      final collector = DebugReportCollector();
-      await Navigator.of(context).push<void>(
-        MaterialPageRoute(
-          builder: (_) => DebugMenuPage(
-            updates: widget.updates,
-            loadReport: (debugContext) {
-              final media = MediaQuery.of(debugContext);
-              final theme = Theme.of(debugContext);
-              String hex(Color color) =>
-                  '#${color.toARGB32().toRadixString(16).padLeft(8, '0')}';
-              return collector.collect(
-                accounts: List.of(_accounts),
-                selected: Set.of(_selected),
-                settings: _settingsStore,
-                updates: widget.updates,
-                appState: {
-                  'active_tab': [
-                    'attendance',
-                    'schedule',
-                    'passes',
-                    'settings',
-                  ][_tab],
-                  'accounts_loading': _loading,
-                  'accounts_load_failed': _loadError,
-                  'scanning': _scanning,
-                  'submitting': _submitting,
-                  'attendance_log_loaded': _marks != null,
-                  'attendance_records': _marks?.length,
-                  'approval_results': {
-                    for (final state in ApprovalState.values)
-                      state.name: _results.values
-                          .where((r) => r.state == state)
-                          .length,
-                  },
-                  'attendance_errors': _errors.length,
-                  'session_checks_in_progress': _checkingSessions.length,
-                  'completed_session_checks': _sessionChecks.length,
-                  'schedule_visited': _scheduleVisited,
-                  'schedule_day': _scheduleDay?.toIso8601String(),
-                  'schedule_group_assigned': _scheduleGroupId != null,
-                  'pending_scan_widget_request': _widgetScanPending,
-                  'pending_nfc_widget_request': _nfcWidgetPending,
-                  'appearance': widget.themeMode.name,
-                  'brightness': theme.brightness.name,
-                  'accent_argb': hex(theme.colorScheme.primary),
-                  'surface_argb': hex(theme.colorScheme.surface),
-                  'language_preference': widget.language ?? 'system',
-                  'resolved_locale': Localizations.localeOf(debugContext)
-                      .toLanguageTag(),
-                  'lifecycle': WidgetsBinding.instance.lifecycleState?.name,
-                },
-                display: {
-                  'refresh_rate_hz': View.of(debugContext).display.refreshRate,
-                  'logical_width': media.size.width,
-                  'logical_height': media.size.height,
-                  'pixel_ratio': media.devicePixelRatio,
-                  'text_scale_at_16': media.textScaler.scale(16) / 16,
-                  'padding_top': media.padding.top,
-                  'padding_bottom': media.padding.bottom,
-                  'keyboard_inset': media.viewInsets.bottom,
-                  'disable_animations': media.disableAnimations,
-                  'accessible_navigation': media.accessibleNavigation,
-                  'bold_text': media.boldText,
-                  'high_contrast': media.highContrast,
-                  'platform_brightness': media.platformBrightness.name,
-                },
-              );
-            },
-          ),
-        ),
-      );
-    } finally {
-      _debugMenuOpen = false;
-    }
+  void _revealDebug() {
+    setState(() => _debugVisible = true);
+    _selectScreen(4);
+  }
+
+  Future<Map<String, Object?>> _loadDebugReport(BuildContext debugContext) {
+    final collector = DebugReportCollector();
+    final media = MediaQuery.of(debugContext);
+    final theme = Theme.of(debugContext);
+    String hex(Color color) =>
+        '#${color.toARGB32().toRadixString(16).padLeft(8, '0')}';
+    return collector.collect(
+      accounts: List.of(_accounts),
+      selected: Set.of(_selected),
+      settings: _settingsStore,
+      updates: widget.updates,
+      appState: {
+        'active_tab': [
+          'attendance',
+          'schedule',
+          'passes',
+          'settings',
+          'developer',
+        ][_tab],
+        'accounts_loading': _loading,
+        'accounts_load_failed': _loadError,
+        'scanning': _scanning,
+        'submitting': _submitting,
+        'attendance_log_loaded': _marks != null,
+        'attendance_records': _marks?.length,
+        'approval_results': {
+          for (final state in ApprovalState.values)
+            state.name: _results.values.where((r) => r.state == state).length,
+        },
+        'attendance_errors': _errors.length,
+        'session_checks_in_progress': _checkingSessions.length,
+        'completed_session_checks': _sessionChecks.length,
+        'schedule_visited': _scheduleVisited,
+        'schedule_day': _scheduleDay?.toIso8601String(),
+        'schedule_group_assigned': _scheduleGroupId != null,
+        'pending_scan_widget_request': _widgetScanPending,
+        'pending_nfc_widget_request': _nfcWidgetPending,
+        'appearance': widget.themeMode.name,
+        'brightness': theme.brightness.name,
+        'accent_argb': hex(theme.colorScheme.primary),
+        'surface_argb': hex(theme.colorScheme.surface),
+        'language_preference': widget.language ?? 'system',
+        'resolved_locale': Localizations.localeOf(debugContext).toLanguageTag(),
+        'lifecycle': WidgetsBinding.instance.lifecycleState?.name,
+      },
+      display: {
+        'refresh_rate_hz': View.of(debugContext).display.refreshRate,
+        'logical_width': media.size.width,
+        'logical_height': media.size.height,
+        'pixel_ratio': media.devicePixelRatio,
+        'text_scale_at_16': media.textScaler.scale(16) / 16,
+        'padding_top': media.padding.top,
+        'padding_bottom': media.padding.bottom,
+        'keyboard_inset': media.viewInsets.bottom,
+        'disable_animations': media.disableAnimations,
+        'accessible_navigation': media.accessibleNavigation,
+        'bold_text': media.boldText,
+        'high_contrast': media.highContrast,
+        'platform_brightness': media.platformBrightness.name,
+      },
+    );
   }
 
   Future<void> _openSettings() async {
@@ -704,11 +695,47 @@ class _HomePageState extends State<HomePage> {
           themeMode: widget.themeMode,
           onThemeModeChanged: widget.onThemeModeChanged ?? (_) {},
           updates: widget.updates,
+          legacyBuilder: widget.legacyMode ? null : _legacyPage,
         ),
       ),
     );
     if (mounted) await _load(preserveSelection: true);
     _scheduleSummarySync();
+  }
+
+  Widget _legacyPage(BuildContext context) => HomePage(
+    legacyMode: true,
+    store: LegacyAccountStore(),
+    settingsStore: _settingsStore,
+    language: widget.language,
+    onLanguageChanged: widget.onLanguageChanged,
+    themeMode: widget.themeMode,
+    onThemeModeChanged: widget.onThemeModeChanged,
+    updates: widget.updates,
+  );
+
+  Future<void> _openServerLogin([SavedAccount? account]) async {
+    await _nfcPageKey.currentState?.deactivateQueue();
+    if (!mounted) return;
+    await ServerSessions.initialize();
+    final server = ServerSessions.active;
+    if (!mounted) return;
+    if (server == null) {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(builder: (_) => const SessionServerPage()),
+      );
+    } else {
+      final id = account == null ? null : serverAccountId(account.cookie);
+      if (!await openWebPage(
+            server.base.resolve(id == null ? '/login' : '/u/$id'),
+          ) &&
+          mounted) {
+        _message(
+          tr(context, 'Не удалось открыть ссылку.', 'Could not open the link.'),
+        );
+      }
+    }
+    if (mounted) await _load(preserveSelection: true);
   }
 
   Future<String?> _askText({
@@ -745,6 +772,10 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _recoverSessions() async {
     if (_busy) return;
+    if (!widget.legacyMode) {
+      await _openServerLogin();
+      return;
+    }
     final accounts = _accounts.where((a) => _selected.contains(a.id)).toList();
     if (accounts.isEmpty) return;
     if (accounts.any((a) => serverAccountId(a.cookie) != null)) {
@@ -788,6 +819,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _addAccounts() async {
+    if (!widget.legacyMode) {
+      await _openServerLogin();
+      return;
+    }
     final batch = await showExpressiveSheet<bool>(
       context: context,
       compact: true,
@@ -912,6 +947,10 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _login({SavedAccount? replace}) async {
     if (_busy) return;
+    if (!widget.legacyMode) {
+      await _openServerLogin(replace);
+      return;
+    }
     if (replace != null && serverAccountId(replace.cookie) != null) {
       await _manageServerAccounts();
       return;
@@ -1706,7 +1745,6 @@ class _HomePageState extends State<HomePage> {
                     )
                   : null,
               title: InkWell(
-                onLongPress: _openDebugMenu,
                 borderRadius: BorderRadius.zero,
                 child: SizedBox(
                   height: 48,
@@ -1720,6 +1758,8 @@ class _HomePageState extends State<HomePage> {
                             style: Theme.of(context).textTheme.labelMedium,
                           ),
                         )
+                      : widget.legacyMode && Navigator.of(context).canPop()
+                      ? Text(tr(context, 'Старый режим', 'Legacy'))
                       : CampusBrand(
                           width: 74,
                           height: 34,
@@ -1923,7 +1963,7 @@ class _HomePageState extends State<HomePage> {
                                     ],
                                   ),
                                   const SizedBox(height: 8),
-                                  if (_accounts.isEmpty)
+                                  if (_accounts.isEmpty && widget.legacyMode)
                                     CampusButton.action(
                                       onPressed: _busy ? null : _importSessions,
                                       label: Text(
@@ -1939,8 +1979,12 @@ class _HomePageState extends State<HomePage> {
                                       child: Text(
                                         tr(
                                           context,
-                                          'Добавьте первый аккаунт через МИРЭА.',
-                                          'Add your first account through MIREA.',
+                                          widget.legacyMode
+                                              ? 'Добавьте первый аккаунт через МИРЭА.'
+                                              : 'Подключите сервер в настройках и добавьте аккаунт на сервере.',
+                                          widget.legacyMode
+                                              ? 'Add your first account through MIREA.'
+                                              : 'Connect a server in Settings and add an account on the server.',
                                         ),
                                         style: TextStyle(
                                           color: context.palette.muted,
@@ -1954,22 +1998,24 @@ class _HomePageState extends State<HomePage> {
                                       children: [
                                         AppActionMenu(
                                           entries: [
-                                            CampusMenuEntry(
-                                              value: 'share',
-                                              label: tr(
-                                                context,
-                                                'Передать',
-                                                'Share',
+                                            if (widget.legacyMode)
+                                              CampusMenuEntry(
+                                                value: 'share',
+                                                label: tr(
+                                                  context,
+                                                  'Передать',
+                                                  'Share',
+                                                ),
                                               ),
-                                            ),
-                                            CampusMenuEntry(
-                                              value: 'receive',
-                                              label: tr(
-                                                context,
-                                                'Получить',
-                                                'Receive',
+                                            if (widget.legacyMode)
+                                              CampusMenuEntry(
+                                                value: 'receive',
+                                                label: tr(
+                                                  context,
+                                                  'Получить',
+                                                  'Receive',
+                                                ),
                                               ),
-                                            ),
                                             if (_selected.isNotEmpty)
                                               CampusMenuEntry(
                                                 value: 'group',
@@ -2247,8 +2293,20 @@ class _HomePageState extends State<HomePage> {
                                 onThemeModeChanged:
                                     widget.onThemeModeChanged ?? (_) {},
                                 updates: widget.updates,
+                                legacyBuilder: widget.legacyMode
+                                    ? null
+                                    : _legacyPage,
                               )
                             : const SizedBox.shrink(),
+                      if (_debugVisible)
+                        TickerMode(
+                          enabled: _tab == 4 && !_showSelector,
+                          child: DebugMenuPage(
+                            embedded: true,
+                            loadReport: _loadDebugReport,
+                            updates: widget.updates,
+                          ),
+                        ),
                     ],
                   ),
           ),
@@ -2262,6 +2320,8 @@ class _HomePageState extends State<HomePage> {
       },
       child: widget.startAtSelector
           ? ScreenNavigation(
+              debugVisible: _debugVisible,
+              onRevealDebug: _revealDebug,
               selectorVisible: _showSelector,
               selectedIndex: _tab,
               onSelected: _selectScreen,

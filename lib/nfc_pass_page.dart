@@ -14,6 +14,7 @@ import 'l10n.dart';
 import 'nfc_pass.dart';
 import 'session_check.dart';
 import 'widget_preview.dart';
+import 'server_sessions.dart';
 
 class NfcPassPage extends StatefulWidget {
   const NfcPassPage({
@@ -580,10 +581,18 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
         final client = widget.clientFactory(account);
         try {
           final token = await client.getAccessTokenForDigitalPass();
+          var expires = passTokenExpiry(token);
+          final remoteId = serverAccountId(account.cookie);
+          final testExpiry = remoteId == null
+              ? null
+              : ServerSessions.active?.testingExpiryFor(remoteId);
+          if (testExpiry != null && testExpiry.isBefore(expires)) {
+            expires = testExpiry;
+          }
           passes.add({
             'accountId': account.id,
             'number': _numbers[account.id]!,
-            'expiresAt': passTokenExpiry(token).millisecondsSinceEpoch,
+            'expiresAt': expires.millisecondsSinceEpoch,
           });
         } finally {
           client.httpClient.close();
@@ -630,6 +639,13 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
     if (_polling || !_running) return;
     _polling = true;
     try {
+      if (_queue.any((account) {
+        final id = serverAccountId(account.cookie);
+        return id != null && !(ServerSessions.active?.canUsePass(id) ?? false);
+      })) {
+        await _stop();
+        return;
+      }
       final status =
           await nfcPassChannel.invokeMapMethod<String, dynamic>('status') ?? {};
       if (!mounted || !_running) return;

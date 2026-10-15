@@ -17,12 +17,16 @@ class ScreenNavigation extends StatefulWidget {
     required this.onSelected,
     required this.onIndex,
     required this.child,
+    this.debugVisible = false,
+    this.onRevealDebug,
   });
   final bool selectorVisible;
   final int selectedIndex;
   final ValueChanged<int> onSelected;
   final VoidCallback onIndex;
   final Widget child;
+  final bool debugVisible;
+  final VoidCallback? onRevealDebug;
 
   @override
   State<ScreenNavigation> createState() => _ScreenNavigationState();
@@ -35,10 +39,58 @@ class _ScreenNavigationState extends State<ScreenNavigation>
     value: widget.selectorVisible ? 0 : 1,
   );
   late final _arrival = AnimationController(vsync: this, value: 1);
-  late final _pages = PageController(initialPage: widget.selectedIndex)
-    ..addListener(_trackRail);
-  late final _position = ValueNotifier<double>(widget.selectedIndex.toDouble());
-  late int _detent = widget.selectedIndex;
+  late final _pages = PageController(
+    initialPage: _pageFor(widget.selectedIndex),
+  )..addListener(_trackRail);
+  late final _position = ValueNotifier<double>(
+    _pageFor(widget.selectedIndex).toDouble(),
+  );
+  late int _detent = _pageFor(widget.selectedIndex);
+  int _secretSwipes = 0;
+  int? _secretPointer;
+  Offset? _secretStart;
+
+  int get _pageCount => widget.debugVisible ? 5 : 4;
+  int _pageFor(int screen) =>
+      widget.debugVisible ? (screen == 4 ? 0 : screen + 1) : screen;
+  int _screenFor(int page) =>
+      widget.debugVisible ? (page == 0 ? 4 : page - 1) : page;
+
+  void _pointerDown(PointerDownEvent event) {
+    if (!widget.debugVisible &&
+        !widget.selectorVisible &&
+        widget.selectedIndex == 0 &&
+        _position.value.abs() < .01 &&
+        _secretPointer == null) {
+      _secretPointer = event.pointer;
+      _secretStart = event.position;
+    } else {
+      _secretPointer = null;
+      _secretStart = null;
+      _secretSwipes = 0;
+    }
+  }
+
+  void _pointerUp(PointerUpEvent event) {
+    if (_secretPointer != event.pointer || _secretStart == null) return;
+    final delta = event.position - _secretStart!;
+    _secretPointer = null;
+    _secretStart = null;
+    if (delta.dy >= 72 &&
+        delta.dy > delta.dx.abs() * 1.4 &&
+        widget.selectedIndex == 0 &&
+        !widget.selectorVisible) {
+      _secretSwipes++;
+      if (_secretSwipes == 5) {
+        _secretSwipes = 0;
+        AppHaptics.navigation();
+        widget.onRevealDebug?.call();
+      }
+    } else {
+      _secretSwipes = 0;
+    }
+  }
+
   int _origin = 0;
   int? _pendingCommit;
   double _direction = 1;
@@ -53,13 +105,20 @@ class _ScreenNavigationState extends State<ScreenNavigation>
   @override
   void didUpdateWidget(ScreenNavigation oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.selectorVisible || widget.selectedIndex != 0) _secretSwipes = 0;
+    if (oldWidget.debugVisible != widget.debugVisible) {
+      _pendingCommit = null;
+      _detent = _pageFor(widget.selectedIndex);
+      _position.value = _detent.toDouble();
+      if (_pages.hasClients) _pages.jumpToPage(_detent);
+    }
     if (oldWidget.selectorVisible != widget.selectorVisible) {
       _origin = widget.selectedIndex;
       _pendingCommit = null;
       _dragging = false;
-      _detent = widget.selectedIndex;
+      _detent = _pageFor(widget.selectedIndex);
       _arrival.value = 1;
-      if (_pages.hasClients) _pages.jumpToPage(widget.selectedIndex);
+      if (_pages.hasClients) _pages.jumpToPage(_pageFor(widget.selectedIndex));
       final target = widget.selectorVisible ? 0.0 : 1.0;
       final fullDuration = widget.selectorVisible ? 260 : 320;
       final remaining = (fullDuration * (target - _motion.value).abs()).round();
@@ -70,16 +129,19 @@ class _ScreenNavigationState extends State<ScreenNavigation>
       );
     } else if (oldWidget.selectedIndex != widget.selectedIndex) {
       _pendingCommit = null;
-      _direction = widget.selectedIndex > oldWidget.selectedIndex ? 1 : -1;
+      _direction =
+          _pageFor(widget.selectedIndex) > _pageFor(oldWidget.selectedIndex)
+          ? 1
+          : -1;
       _arrival.duration = _time(190);
       _arrival.forward(from: 0);
       if (_pages.hasClients &&
-          (_pages.page! - widget.selectedIndex).abs() > .01) {
+          (_pages.page! - _pageFor(widget.selectedIndex)).abs() > .01) {
         if (_reduced) {
-          _pages.jumpToPage(widget.selectedIndex);
+          _pages.jumpToPage(_pageFor(widget.selectedIndex));
         } else {
           _pages.animateToPage(
-            widget.selectedIndex,
+            _pageFor(widget.selectedIndex),
             duration: _time(230),
             curve: Curves.easeOutCubic,
           );
@@ -90,7 +152,8 @@ class _ScreenNavigationState extends State<ScreenNavigation>
 
   void _trackRail() {
     if (_pages.hasClients) {
-      _position.value = _pages.page ?? widget.selectedIndex.toDouble();
+      _position.value =
+          _pages.page ?? _pageFor(widget.selectedIndex).toDouble();
     }
   }
 
@@ -116,9 +179,9 @@ class _ScreenNavigationState extends State<ScreenNavigation>
     }
     if (notification is ScrollEndNotification) {
       _dragging = false;
-      final index = _position.value.round().clamp(0, 3);
+      final index = _position.value.round().clamp(0, _pageCount - 1);
       if (!widget.selectorVisible &&
-          (index != widget.selectedIndex ||
+          (_screenFor(index) != widget.selectedIndex ||
               (_reduced && (_position.value - index).abs() > .001)) &&
           _pendingCommit != index) {
         _pendingCommit = index;
@@ -129,8 +192,8 @@ class _ScreenNavigationState extends State<ScreenNavigation>
           _pendingCommit = null;
           if (!widget.selectorVisible &&
               _position.value.round() == index &&
-              widget.selectedIndex != index) {
-            widget.onSelected(index);
+              widget.selectedIndex != _screenFor(index)) {
+            widget.onSelected(_screenFor(index));
           }
         });
         WidgetsBinding.instance.ensureVisualUpdate();
@@ -152,7 +215,7 @@ class _ScreenNavigationState extends State<ScreenNavigation>
 
   void _step(int delta) {
     if (!_pages.hasClients || _dragging) return;
-    final next = (_position.value.round() + delta).clamp(0, 3);
+    final next = (_position.value.round() + delta).clamp(0, _pageCount - 1);
     if (next == _position.value.round()) return;
     if (_reduced) {
       _pages.jumpToPage(next);
@@ -197,8 +260,12 @@ class _ScreenNavigationState extends State<ScreenNavigation>
       Expanded(
         child: Semantics(
           label: labels[widget.selectedIndex],
-          onIncrease: widget.selectedIndex < 3 ? () => _step(1) : null,
-          onDecrease: widget.selectedIndex > 0 ? () => _step(-1) : null,
+          onIncrease: _pageFor(widget.selectedIndex) < _pageCount - 1
+              ? () => _step(1)
+              : null,
+          onDecrease: _pageFor(widget.selectedIndex) > 0
+              ? () => _step(-1)
+              : null,
           child: Focus(
             onKeyEvent: (_, event) {
               if (event is! KeyDownEvent) return KeyEventResult.ignored;
@@ -213,6 +280,13 @@ class _ScreenNavigationState extends State<ScreenNavigation>
               return KeyEventResult.ignored;
             },
             child: Listener(
+              onPointerDown: _pointerDown,
+              onPointerUp: _pointerUp,
+              onPointerCancel: (_) {
+                _secretPointer = null;
+                _secretStart = null;
+                _secretSwipes = 0;
+              },
               onPointerSignal: (event) {
                 if (event is PointerScrollEvent && event.scrollDelta.dy != 0) {
                   GestureBinding.instance.pointerSignalResolver.register(
@@ -232,12 +306,12 @@ class _ScreenNavigationState extends State<ScreenNavigation>
                     instant: _reduced,
                     parent: const ClampingScrollPhysics(),
                   ),
-                  itemCount: labels.length,
+                  itemCount: _pageCount,
                   onPageChanged: _tick,
                   itemBuilder: (context, index) => RepaintBoundary(
                     child: SelectorLabel(
-                      index: index,
-                      label: labels[index],
+                      index: _screenFor(index) == 4 ? -1 : _screenFor(index),
+                      label: labels[_screenFor(index)],
                       fontSize: 26,
                       topPadding: 0,
                       onPressed: _index,
@@ -259,6 +333,7 @@ class _ScreenNavigationState extends State<ScreenNavigation>
       tr(context, 'Расписание', 'Schedule'),
       tr(context, 'Пропуска', 'Passes'),
       tr(context, 'Настройки', 'Settings'),
+      tr(context, 'Разработчик', 'Developer'),
     ];
     final rail = _rail(context, labels);
     final content = RepaintBoundary(
@@ -285,7 +360,9 @@ class _ScreenNavigationState extends State<ScreenNavigation>
                         opacity: 1 - t,
                         child: RepaintBoundary(
                           child: ScreenSelector(
-                            hiddenIndex: t == 0 ? null : _origin,
+                            hiddenIndex: t == 0 || _origin == 4
+                                ? null
+                                : _origin,
                             onSelected: _open,
                           ),
                         ),
@@ -308,7 +385,8 @@ class _ScreenNavigationState extends State<ScreenNavigation>
                             builder: (context, content) {
                               final drag = _reduced || widget.selectorVisible
                                   ? 0.0
-                                  : (_position.value - widget.selectedIndex)
+                                  : (_position.value -
+                                            _pageFor(widget.selectedIndex))
                                         .clamp(-1.0, 1.0);
                               final arrival = Curves.easeOutCubic.transform(
                                 _arrival.value,
@@ -345,7 +423,7 @@ class _ScreenNavigationState extends State<ScreenNavigation>
                       ),
                     ),
                   ),
-                  if (t > 0 && t < 1)
+                  if (t > 0 && t < 1 && _origin != 4)
                     Positioned(
                       key: const ValueKey('navigation-morph-layer'),
                       left: lerpDouble(_origin * bounds.maxWidth / 4, 0, t),

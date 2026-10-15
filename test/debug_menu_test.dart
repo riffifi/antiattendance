@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:antiattendance/accounts.dart';
 import 'package:antiattendance/app_settings.dart';
 import 'package:antiattendance/app_theme.dart';
-import 'package:antiattendance/campus_design.dart';
 import 'package:antiattendance/debug_menu_page.dart';
 import 'package:antiattendance/main.dart';
 import 'package:antiattendance/nfc_pass.dart';
@@ -117,7 +116,7 @@ void main() {
   );
 
   testWidgets(
-    'only holding the top-bar logo opens debug menu and report can be copied',
+    'five downward rail swipes reveal session-only developer destination and report can be copied',
     (tester) async {
       PackageInfo.setMockInitialValues(
         appName: 'AntiAttendance',
@@ -152,6 +151,7 @@ void main() {
         MaterialApp(
           theme: AppTheme.light,
           home: HomePage(
+            startAtSelector: true,
             store: MemoryAccountStore([
               const SavedAccount(
                 id: 'a',
@@ -164,12 +164,19 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byType(CampusBrand));
+      await tester.tap(find.byKey(const ValueKey('screen-selector-0')));
       await tester.pumpAndSettle();
-      expect(find.byType(DebugMenuPage), findsNothing);
-      await tester.longPress(find.byType(CampusBrand));
+      final rail = find.byKey(const ValueKey('screen-rail'));
+      for (var swipe = 0; swipe < 4; swipe++) {
+        await tester.drag(rail, const Offset(0, 220));
+        await tester.pumpAndSettle();
+        expect(find.byType(DebugMenuPage), findsNothing);
+      }
+      await tester.drag(rail, const Offset(0, 220));
       await tester.pumpAndSettle();
-      expect(find.text('Debug menu'), findsOneWidget);
+      expect(find.byType(DebugMenuPage), findsOneWidget);
+      expect(find.text('00'), findsOneWidget);
+      expect(find.text('Developer'), findsWidgets);
       expect(find.text('App'), findsOneWidget);
       await tester.tap(find.byTooltip('Copy report'));
       await tester.pumpAndSettle();
@@ -178,7 +185,41 @@ void main() {
       expect((report['Device'] as Map)['model'], 'Test phone');
       expect(copied, isNot(contains('secret-cookie')));
       expect(copied, isNot(contains('Private Name')));
+      await tester.drag(rail, const Offset(0, -420));
+      await tester.pumpAndSettle();
+      expect(find.text('01'), findsOneWidget);
+      await tester.drag(rail, const Offset(0, 420));
+      await tester.pumpAndSettle();
+      expect(find.text('00'), findsOneWidget);
+      await tester.tap(find.text('INDEX'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('screen-selector-4')), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('screen-selector-0')));
+      await tester.pumpAndSettle();
+      await tester.drag(rail, const Offset(0, 420));
+      await tester.pumpAndSettle();
+      expect(find.text('00'), findsOneWidget);
       expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: HomePage(
+            startAtSelector: true,
+            store: MemoryAccountStore([]),
+            logStore: MemoryLogStore(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('screen-selector-0')));
+      await tester.pumpAndSettle();
+      expect(find.byType(DebugMenuPage), findsNothing);
+      expect(
+        tester.widget<PageView>(rail).childrenDelegate.estimatedChildCount,
+        4,
+      );
       await tester.pumpWidget(const SizedBox());
       await tester.pumpAndSettle();
     },

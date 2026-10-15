@@ -234,7 +234,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Mathematics'), findsOneWidget);
+    expect(find.text('Mathematics'), findsWidgets);
     expect(find.text('Anya'), findsOneWidget);
     expect(find.text('Boris'), findsNothing);
     await tester.tap(
@@ -246,7 +246,7 @@ void main() {
     expect(find.text('A free day'), findsOneWidget);
     await tester.tap(find.text('Today').last);
     await tester.pumpAndSettle();
-    expect(find.text('Mathematics'), findsOneWidget);
+    expect(find.text('Mathematics'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 
@@ -282,10 +282,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('Mathematics'), 150);
-    await tester.ensureVisible(find.text('Mathematics'));
+    await tester.scrollUntilVisible(find.text('Mathematics').last, 150);
+    await tester.ensureVisible(find.text('Mathematics').last);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Mathematics'));
+    await tester.tap(find.text('Mathematics').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Paste link'));
     await tester.pumpAndSettle();

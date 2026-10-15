@@ -7,6 +7,7 @@ import 'schedule_api.dart';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:crypto/crypto.dart';
 
 const _referencePrefix = 'server-session:';
 String serverSessionReference(String id) => '$_referencePrefix$id';
@@ -49,6 +50,107 @@ class SessionServerClient {
   final http.Client _http;
   int? groupId;
   Map<String, dynamic> snapshot = {};
+  String? _passTestKey;
+  DateTime? _passTestUntil;
+  Timer? _passTestTimer;
+  static const _testingStorage = FlutterSecureStorage();
+  String get _testingStorageKey =>
+      'pass_testing_${sha256.convert(utf8.encode(base.origin))}';
+
+  bool get passTestingActive =>
+      _passTestKey != null &&
+      (_passTestUntil?.isAfter(DateTime.now()) ?? false);
+  DateTime? get passTestingUntil => passTestingActive ? _passTestUntil : null;
+  Map<String, String> get _testHeaders => {
+    if (passTestingActive) 'x-pass-test-key': _passTestKey!,
+  };
+
+  Future<void> enablePassTesting(String password) async {
+    final result = await _json(
+      '/api/debug/pass-testing',
+      method: 'POST',
+      body: {'password': password},
+    );
+    final seconds = result['expires_at'];
+    if (seconds is! num || !seconds.isFinite) {
+      throw const FormatException('Invalid pass testing expiry.');
+    }
+    final until = DateTime.fromMillisecondsSinceEpoch(
+      (seconds * 1000).round(),
+      isUtc: true,
+    );
+    final remaining = until.difference(DateTime.now());
+    if (remaining <= Duration.zero || remaining > const Duration(hours: 24)) {
+      throw const FormatException('Invalid pass testing expiry.');
+    }
+    await _testingStorage.write(
+      key: _testingStorageKey,
+      value: jsonEncode({
+        'password': password.trim(),
+        'expires_at': until.millisecondsSinceEpoch,
+      }),
+    );
+    _activatePassTesting(password, until);
+  }
+
+  void _activatePassTesting(String password, DateTime until) {
+    _passTestKey = password.trim();
+    _passTestUntil = until;
+    _passTestTimer?.cancel();
+    _passTestTimer = Timer(until.difference(DateTime.now()), () {
+      unawaited(disablePassTesting());
+      ServerSessions.notify();
+      unawaited(ServerSessions.syncHandler?.call());
+    });
+  }
+
+  Future<void> restorePassTesting() async {
+    final raw = await _testingStorage.read(key: _testingStorageKey);
+    if (raw == null) return;
+    try {
+      final saved = jsonDecode(raw) as Map<String, dynamic>;
+      final until = DateTime.fromMillisecondsSinceEpoch(
+        saved['expires_at'] as int,
+        isUtc: true,
+      );
+      if (!until.isAfter(DateTime.now())) {
+        await disablePassTesting();
+        return;
+      }
+      _activatePassTesting(saved['password'] as String, until);
+    } catch (_) {
+      await disablePassTesting();
+    }
+  }
+
+  Future<void> disablePassTesting() async {
+    _passTestTimer?.cancel();
+    _passTestTimer = null;
+    _passTestKey = null;
+    _passTestUntil = null;
+    snapshot = cacheSnapshot;
+    await _testingStorage.delete(key: _testingStorageKey);
+  }
+
+  Map<String, dynamic> get cacheSnapshot {
+    if (snapshot.isEmpty) return {};
+    final denied = accounts
+        .where((row) => row['pass_allowed'] == false)
+        .map((row) => row['id'])
+        .toSet();
+    return {
+      ...snapshot,
+      'pass_testing_expires_at': null,
+      'passes': [
+        for (final row in snapshot['passes'] as List? ?? [])
+          {
+            ...(row as Map).cast<String, dynamic>(),
+            if (denied.contains(row['account_id'])) 'number': null,
+          },
+      ],
+    };
+  }
+
   void setGroupFilter(int? id) {
     if (groupId == id) return;
     pause();
@@ -118,7 +220,7 @@ class SessionServerClient {
   }) async {
     final request = http.Request(method, _url(path))
       ..followRedirects = false
-      ..headers.addAll({'content-type': 'application/json'});
+      ..headers.addAll({'content-type': 'application/json', ..._testHeaders});
     if (body != null) request.body = jsonEncode(body);
     final response = await _http.send(request).timeout(timeout);
     final bytes = BytesBuilder(copy: false);
@@ -144,6 +246,10 @@ class SessionServerClient {
   Future<Map<String, dynamic>> fetch() async {
     final requestedGroup = groupId;
     final result = await _json('/api/accounts${_groupQuery()}');
+    if (passTestingActive && result['pass_testing_expires_at'] == null) {
+      await disablePassTesting();
+      ServerSessions.notify();
+    }
     if (groupId != requestedGroup) {
       throw StateError('Group changed during sync');
     }
@@ -210,6 +316,7 @@ class SessionServerClient {
           .where((a) => groupId == null || a['group_id'] == groupId)
           .toList();
   String? passNumber(String id) {
+    if (!canUsePass(id)) return null;
     for (final record in snapshot['passes'] as List? ?? []) {
       if (record is Map && record['account_id'] == id) {
         final value = record['number'];
@@ -224,6 +331,16 @@ class SessionServerClient {
     }
     return null;
   }
+
+  bool canUsePass(String id) {
+    final row = accounts.where((row) => row['id'] == id).firstOrNull;
+    return row != null && (row['pass_allowed'] != false || passTestingActive);
+  }
+
+  DateTime? testingExpiryFor(String id) =>
+      accounts.any((row) => row['id'] == id && row['pass_allowed'] == false)
+      ? passTestingUntil
+      : null;
 
   int passVersion(String id) =>
       accounts.where((a) => a['id'] == id).firstOrNull?['pass_version']
@@ -298,11 +415,16 @@ class SessionServerClient {
       ..headers.addAll({
         'content-type': 'application/grpc-web+proto',
         'x-pulse-token': ?pulseToken,
+        ..._testHeaders,
       })
       ..bodyBytes = body;
     final response = await (transport ?? _http)
         .send(request)
         .timeout(const Duration(seconds: 20));
+    if (response.headers['x-pass-test-invalid'] == '1') {
+      await disablePassTesting();
+      ServerSessions.notify();
+    }
     if (response.statusCode == 401) {
       await response.stream.listen((_) {}).cancel();
       throw http.ClientException(
@@ -352,6 +474,8 @@ class SessionServerClient {
   }
 
   void close() {
+    _passTestTimer?.cancel();
+    _passTestKey = null;
     _closed = true;
     pause();
     _http.close();
@@ -422,6 +546,7 @@ abstract final class ServerSessions {
     if (cached != null) {
       active!.snapshot = jsonDecode(cached) as Map<String, dynamic>;
     }
+    await active!.restorePassTesting();
     final mappings = await _storage.read(key: 'session_server_mappings_v1');
     if (mappings != null) {
       active!.importedIds.addAll(
@@ -432,6 +557,7 @@ abstract final class ServerSessions {
 
   static Future<void> connect(SessionServerClient client) async {
     client.setGroupFilter((await AppSettingsStore().loadMyGroup())?.id);
+    await client.restorePassTesting();
     await client.fetch();
     await _storage.write(
       key: 'session_server_config_v1',
@@ -464,7 +590,7 @@ abstract final class ServerSessions {
 
   static Future<void> saveSnapshot() => _storage.write(
     key: 'session_server_snapshot_v1',
-    value: jsonEncode(active?.snapshot ?? {}),
+    value: jsonEncode(active?.cacheSnapshot ?? {}),
   );
 
   static Future<void> saveMappings() => _storage.write(

@@ -93,6 +93,7 @@ class _ScreenNavigationState extends State<ScreenNavigation>
 
   int _origin = 0;
   int? _pendingCommit;
+  int? _railSelection;
   double _direction = 1;
   bool _dragging = false;
   bool _edgeFeedback = false;
@@ -133,9 +134,16 @@ class _ScreenNavigationState extends State<ScreenNavigation>
           _pageFor(widget.selectedIndex) > _pageFor(oldWidget.selectedIndex)
           ? 1
           : -1;
-      _arrival.duration = _time(190);
-      _arrival.forward(from: 0);
-      if (_pages.hasClients &&
+      final fromRail = _railSelection == widget.selectedIndex;
+      _railSelection = null;
+      if (fromRail) {
+        _arrival.value = 1;
+      } else {
+        _arrival.duration = _time(190);
+        _arrival.forward(from: 0);
+      }
+      if (!fromRail &&
+          _pages.hasClients &&
           (_pages.page! - _pageFor(widget.selectedIndex)).abs() > .01) {
         if (_reduced) {
           _pages.jumpToPage(_pageFor(widget.selectedIndex));
@@ -160,7 +168,28 @@ class _ScreenNavigationState extends State<ScreenNavigation>
   void _tick(int index) {
     if (index == _detent) return;
     _detent = index;
-    if (!widget.selectorVisible) AppHaptics.selection();
+    if (!widget.selectorVisible) {
+      AppHaptics.selection();
+      if (_screenFor(index) != widget.selectedIndex) _commitRail(index);
+    }
+  }
+
+  void _commitRail(int index, {bool snap = false}) {
+    if (_pendingCommit == index) return;
+    _pendingCommit = index;
+    // Page notifications may arrive during layout.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _pendingCommit != index) return;
+      _pendingCommit = null;
+      if (widget.selectorVisible || _position.value.round() != index) return;
+      if (snap && _pages.hasClients) _pages.jumpToPage(index);
+      final screen = _screenFor(index);
+      if (widget.selectedIndex != screen) {
+        _railSelection = screen;
+        widget.onSelected(screen);
+      }
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   bool _scroll(ScrollNotification notification) {
@@ -184,19 +213,7 @@ class _ScreenNavigationState extends State<ScreenNavigation>
           (_screenFor(index) != widget.selectedIndex ||
               (_reduced && (_position.value - index).abs() > .001)) &&
           _pendingCommit != index) {
-        _pendingCommit = index;
-        // Scroll notifications can arrive during layout; commit after it.
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted || _pendingCommit != index) return;
-          if (_reduced && _pages.hasClients) _pages.jumpToPage(index);
-          _pendingCommit = null;
-          if (!widget.selectorVisible &&
-              _position.value.round() == index &&
-              widget.selectedIndex != _screenFor(index)) {
-            widget.onSelected(_screenFor(index));
-          }
-        });
-        WidgetsBinding.instance.ensureVisualUpdate();
+        _commitRail(index, snap: _reduced);
       }
     }
     return false;

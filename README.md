@@ -21,6 +21,21 @@ appearances use Geist typography, thin rules, rectangular controls and small
 utility icons. Dialogs/sheets support native back, safe system insets and reduced
 motion. See [the screen and modal audit](docs/ui-audit.md).
 
+### Owner approval in Telegram
+
+On Passes, tap **Request access** for a person, then confirm the request in
+`@AntiAttendancebot`. The pass owner first verifies their account through MIREA
+in the bot, then approves or denies each Telegram person separately. Owners can
+revoke a person from the bot's account menu. Return to the app and refresh after
+a decision. Approvals do not replace Pulse sign-in or enrollment verification.
+
+The app keeps a private, random pass credential in secure storage per server.
+Telegram links are expiring handoffs and do not contain that credential. Pass
+numbers obtained through approvals are excluded from the saved snapshot.
+Revocation blocks new server operations and stops active queues on synchronization;
+offline native activation is capped at five minutes. Pass use requires the updated
+server; local Legacy passes cannot bypass owner approvals.
+
 ### Pass testing
 
 On **Attendance (01)**, swipe downward on the left navigation rail **five times**.

@@ -15,18 +15,21 @@ import 'nfc_pass.dart';
 import 'session_check.dart';
 import 'widget_preview.dart';
 import 'server_sessions.dart';
+import 'external_links.dart';
 
 class NfcPassPage extends StatefulWidget {
   const NfcPassPage({
     super.key,
     required this.accounts,
     this.startOnOpen = false,
+    this.requireAgreements = false,
     this.onReauth,
     this.onSessionExpired,
     this.clientFactory = passClient,
   });
   final List<SavedAccount> accounts;
   final bool startOnOpen;
+  final bool requireAgreements;
   final Future<void> Function(SavedAccount)? onReauth;
   final Future<void> Function(SavedAccount)? onSessionExpired;
   final NfcPassClient Function(SavedAccount) clientFactory;
@@ -347,6 +350,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
   }
 
   Future<void> _enroll(SavedAccount account) async {
+    if (!_canUse(account)) return;
     setState(() {
       _busy = true;
       _enrollmentSucceeded = false;
@@ -442,10 +446,14 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
   Future<void> _bulkEnroll() async {
     if (_busy || _running) return;
     final picked = widget.accounts
+        .where(_canUse)
         .where((a) => !_numbers.containsKey(a.id))
         .map((a) => a.id)
         .toSet();
-    if (picked.isEmpty) picked.addAll(widget.accounts.map((a) => a.id));
+    if (picked.isEmpty) {
+      picked.addAll(widget.accounts.where(_canUse).map((a) => a.id));
+    }
+    if (picked.isEmpty) return;
     final ids = await showExpressiveSheet<Set<String>>(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -468,7 +476,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                 child: ListView(
                   shrinkWrap: true,
                   children: [
-                    for (final account in widget.accounts)
+                    for (final account in widget.accounts.where(_canUse))
                       CampusListItem(
                         headline: account.label,
                         supportingText: _numbers.containsKey(account.id)
@@ -514,7 +522,10 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
       ),
     );
     if (!mounted || ids == null) return;
-    final queue = widget.accounts.where((a) => ids.contains(a.id)).toList();
+    final queue = widget.accounts
+        .where(_canUse)
+        .where((a) => ids.contains(a.id))
+        .toList();
     final epoch = _viewEpoch;
     setState(() {
       _bulkEnrolling = true;
@@ -538,7 +549,101 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
     }
   }
 
+  bool _canUse(SavedAccount account) {
+    final id = serverAccountId(account.cookie);
+    final server = ServerSessions.active;
+    if (id == null) return !widget.requireAgreements;
+    if (server == null) return false;
+    if (widget.requireAgreements &&
+        !server.requiresPassAgreements &&
+        !server.passTestingActive) {
+      return false;
+    }
+    return server.canUsePass(id);
+  }
+
+  Future<void> _refreshAgreements() async {
+    final server = ServerSessions.active;
+    if (server == null || _refreshingAgreements) return;
+    _refreshingAgreements = true;
+    try {
+      await server.fetch();
+      if (mounted) {
+        await _load();
+        ServerSessions.notify();
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _message = tr(
+            context,
+            'Не удалось обновить разрешения. Повторите попытку.',
+            'Could not refresh approvals. Try again.',
+          ),
+        );
+      }
+    } finally {
+      _refreshingAgreements = false;
+    }
+  }
+
+  bool _refreshingAgreements = false;
+
+  Future<void> _requestAccess(SavedAccount account) async {
+    final id = serverAccountId(account.cookie);
+    final server = ServerSessions.active;
+    if (id == null || server == null || _busy) return;
+    setState(() => _busy = true);
+    try {
+      final url = await server.requestPassAccess(id);
+      if (!await openWebPage(url)) throw StateError('Could not open Telegram');
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _message = tr(
+            context,
+            'Не удалось открыть запрос. Проверьте настройку Telegram-бота на сервере.',
+            'Could not open the request. Check the server Telegram bot setup.',
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _start() async {
+    if (_busy) return;
+    final server = ServerSessions.active;
+    if (widget.requireAgreements || server?.requiresPassAgreements == true) {
+      try {
+        await server?.fetch();
+      } catch (_) {
+        if (mounted) {
+          setState(
+            () => _message = tr(
+              context,
+              'Не удалось обновить разрешения. Повторите попытку.',
+              'Could not refresh approvals. Try again.',
+            ),
+          );
+        }
+        return;
+      }
+      if (!mounted || _busy) return;
+      if (widget.accounts
+          .where((a) => _activeIds.contains(a.id))
+          .any((a) => !_canUse(a))) {
+        setState(
+          () => _message = tr(
+            context,
+            'Нужно разрешение владельца в Telegram.',
+            'Owner approval in Telegram is required.',
+          ),
+        );
+        return;
+      }
+    }
     if (!_single && _ownId != null && !_selected.contains(_ownId)) {
       setState(
         () => _message = tr(
@@ -640,8 +745,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
     _polling = true;
     try {
       if (_queue.any((account) {
-        final id = serverAccountId(account.cookie);
-        return id != null && !(ServerSessions.active?.canUsePass(id) ?? false);
+        return !_canUse(account);
       })) {
         await _stop();
         return;
@@ -708,7 +812,12 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.resumed) {
+      if (widget.requireAgreements ||
+          ServerSessions.active?.requiresPassAgreements == true) {
+        unawaited(_refreshAgreements());
+      }
+    } else {
       _runEpoch++;
       if (_running) unawaited(_stop());
     }
@@ -826,6 +935,71 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
   }
 
   Widget _accountCard(SavedAccount account, bool enabled) {
+    if (!_canUse(account)) {
+      final server = ServerSessions.active;
+      final id = serverAccountId(account.cookie);
+      final status = id == null ? null : server?.passAccessStatus(id);
+      final supported = server?.requiresPassAgreements == true;
+      final pending = status == 'pending' || status == 'approved';
+      return CampusListItem(
+        headline: account.label,
+        supportingText: id == null
+            ? tr(
+                context,
+                'Для разрешений владельца используйте пропуска с сервера.',
+                'Use server-backed passes for owner approvals.',
+              )
+            : !supported
+            ? tr(
+                context,
+                'Обновите сервер для разрешений через Telegram.',
+                'Update the server for Telegram approvals.',
+              )
+            : status == 'disabled'
+            ? tr(
+                context,
+                'Владелец отключил использование пропуска.',
+                'The owner disabled pass use.',
+              )
+            : status == 'owner_unlinked'
+            ? tr(
+                context,
+                'Владелец должен подтвердить аккаунт в Telegram-боте.',
+                'The owner must verify their account in the Telegram bot.',
+              )
+            : status == 'pending'
+            ? tr(
+                context,
+                'Ожидается решение владельца в Telegram.',
+                'Waiting for the owner’s decision in Telegram.',
+              )
+            : status == 'denied'
+            ? tr(
+                context,
+                'Доступ отклонён или отозван владельцем.',
+                'Access was denied or revoked by the owner.',
+              )
+            : tr(
+                context,
+                'Нужно разрешение владельца в Telegram.',
+                'Owner approval in Telegram is required.',
+              ),
+        trailing: id == null
+            ? null
+            : CampusButton.text(
+                onPressed: !enabled
+                    ? null
+                    : pending || !supported || status == 'disabled'
+                    ? _refreshAgreements
+                    : () => _requestAccess(account),
+                child: Text(
+                  pending || !supported || status == 'disabled'
+                      ? tr(context, 'Обновить', 'Refresh')
+                      : tr(context, 'Запросить доступ', 'Request access'),
+                ),
+              ),
+      );
+    }
     final enrolled = _numbers.containsKey(account.id);
     final selected = _activeIds.contains(account.id);
     final own = !_single && account.id == _ownId;
@@ -1027,7 +1201,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: CampusButton.action(
-                    onPressed: enabled && widget.accounts.isNotEmpty
+                    onPressed: enabled && widget.accounts.any(_canUse)
                         ? _bulkEnroll
                         : null,
                     label: Text(

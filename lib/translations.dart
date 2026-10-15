@@ -1,6 +1,53 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  "Could not refresh approvals. Try again.": (
+    "Impossible d’actualiser les autorisations. Réessayez.",
+    "Não foi possível atualizar as autorizações. Tente novamente.",
+    "无法刷新授权，请重试。",
+  ),
+  "Could not open the request. Check the server Telegram bot setup.": (
+    "Impossible d’ouvrir la demande. Vérifiez la configuration du bot Telegram sur le serveur.",
+    "Não foi possível abrir o pedido. Verifique a configuração do bot Telegram no servidor.",
+    "无法打开请求，请检查服务器的 Telegram 机器人配置。",
+  ),
+  "Owner approval in Telegram is required.": (
+    "L’autorisation du propriétaire sur Telegram est requise.",
+    "É necessária a autorização do titular no Telegram.",
+    "需要所有者在 Telegram 中批准。",
+  ),
+  "Use server-backed passes for owner approvals.": (
+    "Utilisez les badges du serveur pour les autorisations du propriétaire.",
+    "Use passes do servidor para obter a autorização do titular.",
+    "请使用服务器通行证以获取所有者授权。",
+  ),
+  "Update the server for Telegram approvals.": (
+    "Mettez le serveur à jour pour les autorisations Telegram.",
+    "Atualize o servidor para autorizações pelo Telegram.",
+    "请更新服务器以支持 Telegram 授权。",
+  ),
+  "The owner disabled pass use.": (
+    "Le propriétaire a désactivé l’utilisation du badge.",
+    "O titular desativou o uso do passe.",
+    "所有者已禁用通行证。",
+  ),
+  "Waiting for the owner’s decision in Telegram.": (
+    "En attente de la décision du propriétaire sur Telegram.",
+    "A aguardar a decisão do titular no Telegram.",
+    "正在等待所有者在 Telegram 中处理。",
+  ),
+  "Access was denied or revoked by the owner.": (
+    "L’accès a été refusé ou révoqué par le propriétaire.",
+    "O acesso foi recusado ou revogado pelo titular.",
+    "所有者已拒绝或撤销访问权限。",
+  ),
+  "Request access": ("Demander l’accès", "Pedir acesso", "请求访问权限"),
+  "The owner must verify their account in the Telegram bot.": (
+    "Le propriétaire doit vérifier son compte dans le bot Telegram.",
+    "O titular tem de verificar a conta no bot Telegram.",
+    "所有者必须在 Telegram 机器人中验证账号。",
+  ),
+
   'No groups found. Try another name.': (
     'Aucun groupe trouvé. Essayez un autre nom.',
     'Nenhuma turma encontrada. Tente outro nome.',

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:math';
 
 import 'app_settings.dart';
 import 'schedule_api.dart';
@@ -50,6 +51,59 @@ class SessionServerClient {
   final http.Client _http;
   int? groupId;
   Map<String, dynamic> snapshot = {};
+  String? _passClientKey;
+  Future<void>? _passClientLoading;
+  String get _passClientStorageKey =>
+      'pass_client_${sha256.convert(utf8.encode(base.origin))}';
+
+  Future<void> restorePassIdentity() =>
+      _passClientLoading ??= _restorePassIdentity();
+
+  Future<void> _restorePassIdentity() async {
+    final saved = await _testingStorage.read(key: _passClientStorageKey);
+    if (saved != null && RegExp(r'^[A-Za-z0-9_-]{43}$').hasMatch(saved)) {
+      _passClientKey = saved;
+      return;
+    }
+    final random = Random.secure();
+    final key = base64UrlEncode(
+      List<int>.generate(32, (_) => random.nextInt(256)),
+    ).replaceAll('=', '');
+    await _testingStorage.write(key: _passClientStorageKey, value: key);
+    _passClientKey = key;
+  }
+
+  bool get requiresPassAgreements =>
+      snapshot['pass_agreements_required'] == true;
+  String? passAccessStatus(String id) =>
+      accounts.where((a) => a['id'] == id).firstOrNull?['pass_access']
+          as String?;
+  DateTime? get passAccessUntil {
+    final value = snapshot['pass_access_expires_at'];
+    if (value is! num || !value.isFinite) return null;
+    return DateTime.fromMillisecondsSinceEpoch(
+      (value * 1000).round(),
+      isUtc: true,
+    );
+  }
+
+  Future<Uri> requestPassAccess(String id) async {
+    await restorePassIdentity();
+    final result = await _json(
+      '/api/accounts/$id/pass-request',
+      method: 'POST',
+    );
+    final url = Uri.tryParse(result['url'] as String? ?? '');
+    if (url == null ||
+        url.scheme != 'https' ||
+        url.host != 't.me' ||
+        url.userInfo.isNotEmpty ||
+        url.port != 443) {
+      throw const FormatException('Invalid Telegram bot link.');
+    }
+    return url;
+  }
+
   String? _passTestKey;
   DateTime? _passTestUntil;
   Timer? _passTestTimer;
@@ -63,6 +117,7 @@ class SessionServerClient {
   DateTime? get passTestingUntil => passTestingActive ? _passTestUntil : null;
   Map<String, String> get _testHeaders => {
     if (passTestingActive) 'x-pass-test-key': _passTestKey!,
+    'x-pass-client': ?_passClientKey,
   };
 
   Future<void> enablePassTesting(String password) async {
@@ -145,7 +200,8 @@ class SessionServerClient {
         for (final row in snapshot['passes'] as List? ?? [])
           {
             ...(row as Map).cast<String, dynamic>(),
-            if (denied.contains(row['account_id'])) 'number': null,
+            if (requiresPassAgreements || denied.contains(row['account_id']))
+              'number': null,
           },
       ],
     };
@@ -244,6 +300,7 @@ class SessionServerClient {
   }
 
   Future<Map<String, dynamic>> fetch() async {
+    await restorePassIdentity();
     final requestedGroup = groupId;
     final result = await _json('/api/accounts${_groupQuery()}');
     if (passTestingActive && result['pass_testing_expires_at'] == null) {
@@ -334,13 +391,20 @@ class SessionServerClient {
 
   bool canUsePass(String id) {
     final row = accounts.where((row) => row['id'] == id).firstOrNull;
-    return row != null && (row['pass_allowed'] != false || passTestingActive);
+    return row != null &&
+        (passTestingActive ||
+            (row['pass_allowed'] != false &&
+                (!requiresPassAgreements ||
+                    (row['pass_access'] == 'approved' &&
+                        (passAccessUntil?.isAfter(DateTime.now()) ?? false)))));
   }
 
-  DateTime? testingExpiryFor(String id) =>
-      accounts.any((row) => row['id'] == id && row['pass_allowed'] == false)
-      ? passTestingUntil
-      : null;
+  DateTime? testingExpiryFor(String id) {
+    final row = accounts.where((a) => a['id'] == id).firstOrNull;
+    if (row == null) return null;
+    if (passTestingActive) return passTestingUntil;
+    return requiresPassAgreements ? passAccessUntil : null;
+  }
 
   int passVersion(String id) =>
       accounts.where((a) => a['id'] == id).firstOrNull?['pass_version']
@@ -546,6 +610,7 @@ abstract final class ServerSessions {
     if (cached != null) {
       active!.snapshot = jsonDecode(cached) as Map<String, dynamic>;
     }
+    await active!.restorePassIdentity();
     await active!.restorePassTesting();
     final mappings = await _storage.read(key: 'session_server_mappings_v1');
     if (mappings != null) {
@@ -557,6 +622,7 @@ abstract final class ServerSessions {
 
   static Future<void> connect(SessionServerClient client) async {
     client.setGroupFilter((await AppSettingsStore().loadMyGroup())?.id);
+    await client.restorePassIdentity();
     await client.restorePassTesting();
     await client.fetch();
     await _storage.write(

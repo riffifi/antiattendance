@@ -2272,6 +2272,7 @@ class _HomePageState extends State<HomePage> {
                           ? SafeArea(
                               top: false,
                               child: NfcPassPage(
+                                requireAgreements: true,
                                 key: _nfcPageKey,
                                 accounts: _accounts,
                                 startOnOpen: _nfcStartOnOpen,

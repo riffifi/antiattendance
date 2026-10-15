@@ -379,3 +379,5 @@ Feature flags are useful only when both code paths are safe and data-compatible.
   rollout still require a separate explicit design decision.
 
 Developer access: five downward swipes on the left rail at Attendance (01) reveal the in-memory Developer (00) destination until app close. This is the only menu entry; pass testing still requires the server-validated daily password.
+
+Telegram agreements · 16 October 2026: the user chose per-person requests. Pass access now uses a private per-server app credential linked through an expiring Telegram handoff. Only MIREA-verified Telegram owners may approve, deny, or revoke each Telegram person for their own pass. This scopes authorization to pass snapshots, publishing and RPCs; the wider metadata/attendance access-model decision remains separate. Existing alert subscriptions are not ownership proof. Native activation is capped at a five-minute online-refreshed lease; normal approval pass numbers are not persisted. Legacy local pass activation cannot bypass the flow. Daily admin testing remains the explicit exception.

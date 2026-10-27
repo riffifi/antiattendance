@@ -1,3 +1,5 @@
+import 'package:brockmann/brockmann.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:antiattendance/l10n.dart';
 import 'package:antiattendance/update_service.dart';
 import 'package:antiattendance/updates_page.dart';
@@ -16,7 +18,7 @@ import 'package:antiattendance/app_theme.dart';
 import 'package:antiattendance/attendance_log.dart';
 import 'package:antiattendance/campus_design.dart';
 import 'package:antiattendance/main.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -96,6 +98,15 @@ class _Schedule extends ScheduleApi {
 void main() {
   if (Platform.environment.containsKey('CAMPUS_PREVIEW_DIR')) {
     setUpAll(() async {
+      for (final (family, asset) in [
+        ('Geist', 'Geist.ttf'),
+        ('Geist Mono', 'GeistMono.ttf'),
+      ]) {
+        await (FontLoader('packages/brockmann/$family')..addFont(
+              rootBundle.load('packages/brockmann/assets/fonts/$asset'),
+            ))
+            .load();
+      }
       await (FontLoader(
         'Geist',
       )..addFont(rootBundle.load('font/Geist[wght].ttf'))).load();
@@ -155,7 +166,7 @@ void main() {
   }
 
   testWidgets(
-    'navigation pill slides, follows a drag, and commits on release',
+    'Brockmann pivot keeps all destinations available and commits selection',
     (tester) async {
       var selected = 0;
       await tester.pumpWidget(
@@ -173,26 +184,18 @@ void main() {
           ),
         ),
       );
-      final pill = find.byKey(const ValueKey('navigation-pill'));
       await tester.pumpAndSettle();
-      final start = tester.getCenter(pill).dx;
+      expect(find.byType(BrockmannPivot), findsOneWidget);
+      await tester.ensureVisible(find.text('Schedule'));
       await tester.tap(find.text('Schedule'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-      final halfway = tester.getCenter(pill).dx;
       await tester.pumpAndSettle();
-      final end = tester.getCenter(pill).dx;
-      expect(halfway, greaterThan(start));
-      expect(halfway, lessThan(end));
-      final gesture = await tester.startGesture(
-        tester.getCenter(find.text('Schedule')),
-      );
-      await gesture.moveBy(const Offset(90, 0));
-      await tester.pump();
-      expect(tester.getCenter(pill).dx, greaterThan(end));
       expect(selected, 1);
-      await gesture.moveTo(tester.getCenter(find.text('Passes')));
-      await gesture.up();
+      expect(
+        tester.widget<BrockmannPivot>(find.byType(BrockmannPivot)).selected,
+        1,
+      );
+      await tester.ensureVisible(find.text('Passes'));
+      await tester.tap(find.text('Passes'));
       await tester.pumpAndSettle();
       expect(selected, 2);
       expect(tester.takeException(), isNull);

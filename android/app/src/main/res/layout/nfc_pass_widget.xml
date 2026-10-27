@@ -35,6 +35,6 @@
             android:text="@string/nfc_pass_widget_title"
             android:textColor="@color/shortcut_foreground"
             android:textSize="14sp"
-            android:textStyle="bold" />
+            android:textStyle="normal" />
     </LinearLayout>
 </LinearLayout>

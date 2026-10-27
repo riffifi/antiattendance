@@ -1,6 +1,6 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
+import 'package:brockmann/brockmann.dart';
 
-import 'app_theme.dart';
 import 'l10n.dart';
 
 /// The entry point is four full-height typographic destinations.
@@ -19,7 +19,7 @@ class ScreenSelector extends StatelessWidget {
       tr(context, 'Настройки', 'Settings'),
     ];
     return ColoredBox(
-      color: context.palette.paper,
+      color: context.brockmann.background,
       child: LayoutBuilder(
         builder: (context, bounds) => Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -65,88 +65,67 @@ class SelectorLabel extends StatefulWidget {
 }
 
 class _SelectorLabelState extends State<SelectorLabel> {
-  bool _hovered = false;
-  bool _focused = false;
-  bool _pressed = false;
-
   @override
-  Widget build(BuildContext context) {
-    final palette = context.palette;
-    final active = _hovered || _focused || _pressed;
-    final foreground = active ? palette.paper : palette.ink;
-    final padding = MediaQuery.paddingOf(context);
-    return Semantics(
-      button: true,
-      enabled: true,
-      onTap: widget.onPressed,
-      label: widget.label,
-      excludeSemantics: true,
-      child: Material(
-        color: active ? palette.ink : palette.paper,
-        child: InkWell(
-          onTap: widget.onPressed,
-          onHover: (value) => setState(() => _hovered = value),
-          onFocusChange: (value) => setState(() => _focused = value),
-          onHighlightChanged: (value) => setState(() => _pressed = value),
-          splashFactory: NoSplash.splashFactory,
-          overlayColor: const WidgetStatePropertyAll(Colors.transparent),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              border: widget.index == 0
-                  ? null
-                  : Border(left: BorderSide(color: palette.line, width: .5)),
+  Widget build(BuildContext context) => BrockmannPressable(
+    label: widget.label,
+    onPressed: widget.onPressed,
+    builder: (context, pressed) {
+      final t = context.brockmann;
+      final foreground = pressed ? t.background : t.foreground;
+      final padding = MediaQuery.paddingOf(context);
+      return ColoredBox(
+        color: pressed ? t.foreground : t.background,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: widget.index == 0
+                ? null
+                : Border(left: BorderSide(color: t.line, width: .5)),
+          ),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              12,
+              (widget.topPadding ?? padding.top) + 24,
+              12,
+              padding.bottom + 28,
             ),
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                12,
-                (widget.topPadding ?? padding.top) + 24,
-                12,
-                padding.bottom + 28,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    '0${widget.index + 1}',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: 'GeistMono',
-                      fontSize: 11,
-                      letterSpacing: 1,
-                      color: active ? foreground : palette.muted,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  Expanded(
-                    child: RotatedBox(
-                      quarterTurns: 3,
-                      child: Align(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                BrockmannText(
+                  '0${widget.index + 1}',
+                  role: BrockmannType.monoValue,
+                  color: pressed ? foreground : t.secondary,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                Expanded(
+                  child: RotatedBox(
+                    quarterTurns: 3,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
                         alignment: Alignment.centerLeft,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            widget.label.toUpperCase(),
-                            maxLines: 1,
-                            style: TextStyle(
-                              fontFamily: 'Geist',
-                              fontSize: widget.fontSize,
-                              fontWeight: FontWeight.w300,
-                              height: 1,
-                              letterSpacing: -widget.fontSize * .045,
-                              color: foreground,
-                            ),
-                          ),
+                        child: Text(
+                          widget.label.toUpperCase(),
+                          maxLines: 1,
+                          style: BrockmannType.title
+                              .style(color: foreground)
+                              .copyWith(
+                                fontSize: widget.fontSize,
+                                height: 1,
+                                letterSpacing: -widget.fontSize * .045,
+                              ),
                         ),
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
-      ),
-    );
-  }
+      );
+    },
+  );
 }

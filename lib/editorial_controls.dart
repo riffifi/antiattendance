@@ -1,11 +1,11 @@
-import 'package:flutter/services.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
+import 'package:brockmann/brockmann.dart';
 
-import 'app_theme.dart';
 import 'app_haptics.dart';
 import 'icons/campus_icon.dart';
 
-class EditorialAction extends StatefulWidget {
+/// App callback/semantic adapter over Brockmann's shared input foundation.
+class EditorialAction extends StatelessWidget {
   const EditorialAction({
     super.key,
     required this.child,
@@ -17,122 +17,49 @@ class EditorialAction extends StatefulWidget {
   });
   final Widget child;
   final VoidCallback? onPressed;
-  final bool filled;
-  final bool outlined;
-  final bool invertOnInteraction;
+  final bool filled, outlined, invertOnInteraction;
   final EdgeInsets padding;
   @override
-  State<EditorialAction> createState() => _EditorialActionState();
-}
-
-class _EditorialActionState extends State<EditorialAction> {
-  bool _active = false;
-  bool _pressed = false;
-  Offset? _pointerOrigin;
-
-  void _release() {
-    _pointerOrigin = null;
-    if (_pressed) setState(() => _pressed = false);
-  }
-
-  void _activate() {
-    if (widget.onPressed == null) return;
-    AppHaptics.action(primary: widget.filled);
-    widget.onPressed!();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.palette;
-    final enabled = widget.onPressed != null;
-    final inverted =
-        widget.filled != (widget.invertOnInteraction && (_active || _pressed));
-    final foreground = !enabled
-        ? palette.muted
-        : inverted
-        ? palette.paper
-        : palette.ink;
-    return Semantics(
-      onTap: enabled ? _activate : null,
-      button: true,
-      enabled: enabled,
-      child: FocusableActionDetector(
-        enabled: enabled,
-        mouseCursor: enabled
-            ? SystemMouseCursors.click
-            : SystemMouseCursors.basic,
-        onShowFocusHighlight: (value) => setState(() => _active = value),
-        onShowHoverHighlight: (value) => setState(() => _active = value),
-        shortcuts: const {
-          SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
-          SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
-        },
-        actions: {
-          ActivateIntent: CallbackAction<ActivateIntent>(
-            onInvoke: (_) {
-              _activate();
-              return null;
-            },
-          ),
-        },
-        child: Listener(
-          onPointerDown: enabled
-              ? (event) {
-                  _pointerOrigin = event.position;
-                  setState(() => _pressed = true);
-                }
-              : null,
-          onPointerMove: (event) {
-            if (_pointerOrigin != null &&
-                (event.position - _pointerOrigin!).distance > 8) {
-              _release();
-            }
+  Widget build(BuildContext context) => BrockmannPressable(
+    label: '',
+    excludeSemantics: false,
+    onPressed: onPressed == null
+        ? null
+        : () {
+            AppHaptics.action(primary: filled);
+            onPressed!();
           },
-          onPointerUp: (_) => _release(),
-          onPointerCancel: (_) => _release(),
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: enabled ? _activate : null,
-            onTapCancel: _release,
-            child: AnimatedContainer(
-              duration: MediaQuery.disableAnimationsOf(context)
-                  ? Duration.zero
-                  : Duration(milliseconds: _pressed ? 60 : 120),
-              curve: Curves.easeOutCubic,
-              constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
-              padding: widget.padding,
-              decoration: BoxDecoration(
-                color: inverted && enabled
-                    ? palette.ink
-                    : !widget.invertOnInteraction && (_active || _pressed)
-                    ? palette.selectionSurface
-                    : palette.paper,
-                border: widget.outlined || widget.filled
-                    ? Border.all(
-                        color: enabled ? palette.ink : palette.line,
-                        width: .5,
-                      )
-                    : null,
-              ),
-              child: IconTheme(
-                data: IconThemeData(color: foreground, size: 20),
-                child: DefaultTextStyle.merge(
-                  style: TextStyle(
-                    fontFamily: 'Geist',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w400,
-                    height: 1.4,
-                    color: foreground,
-                  ),
-                  child: widget.child,
-                ),
-              ),
-            ),
+    builder: (context, pressed) {
+      final t = context.brockmann;
+      final foreground = onPressed == null
+          ? t.disabled
+          : filled
+          ? t.onAccent
+          : t.foreground;
+      return AnimatedContainer(
+        duration: t.duration(context, pressed ? 60 : 160),
+        constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+        padding: padding,
+        decoration: BoxDecoration(
+          color: filled && onPressed != null
+              ? Color.lerp(t.accent, t.onAccent, pressed ? .12 : 0)
+              : pressed
+              ? t.surface
+              : Colors.transparent,
+          border: outlined
+              ? Border.all(color: onPressed == null ? t.line : t.lineStrong)
+              : null,
+        ),
+        child: IconTheme(
+          data: IconThemeData(color: foreground, size: 20),
+          child: DefaultTextStyle.merge(
+            style: BrockmannType.body.style(color: foreground),
+            child: child,
           ),
         ),
-      ),
-    );
-  }
+      );
+    },
+  );
 }
 
 class CampusTextAction extends StatelessWidget {
@@ -191,26 +118,20 @@ class CampusCheckbox extends StatelessWidget {
   final bool? value;
   final ValueChanged<bool?>? onChanged;
   @override
-  Widget build(BuildContext context) => Semantics(
-    checked: value == true,
-    child: EditorialAction(
-      onPressed: onChanged == null ? null : () => onChanged!(!(value ?? false)),
-      padding: const EdgeInsets.all(14),
-      child: Container(
-        width: 20,
-        height: 20,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: value == true ? context.palette.ink : null,
-          border: Border.all(color: context.palette.ink, width: .5),
-        ),
-        child: value == true
-            ? CampusIcon(
-                Icons.check_rounded,
-                size: 16,
-                color: context.palette.paper,
-              )
-            : null,
+  Widget build(BuildContext context) => SizedBox(
+    width: 48,
+    height: 48,
+    child: Center(
+      child: BrockmannCheckbox(
+        label: '',
+        compact: true,
+        value: value,
+        onChanged: onChanged == null
+            ? null
+            : (value) {
+                AppHaptics.selection();
+                onChanged!(value);
+              },
       ),
     ),
   );
@@ -241,29 +162,17 @@ class CampusSwitch extends StatelessWidget {
   final bool value;
   final ValueChanged<bool>? onChanged;
   @override
-  Widget build(BuildContext context) => Semantics(
-    toggled: value,
-    child: EditorialAction(
-      invertOnInteraction: false,
-      onPressed: onChanged == null ? null : () => onChanged!(!value),
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
-      child: Container(
-        width: 56,
-        height: 28,
-        padding: const EdgeInsets.all(3),
-        decoration: BoxDecoration(
-          border: Border.all(color: context.palette.ink, width: .5),
-        ),
-        child: AnimatedAlign(
-          duration: MediaQuery.disableAnimationsOf(context)
-              ? Duration.zero
-              : const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          alignment: value ? Alignment.centerRight : Alignment.centerLeft,
-          child: Container(width: 18, height: 20, color: context.palette.ink),
-        ),
-      ),
-    ),
+  Widget build(BuildContext context) => BrockmannSwitch(
+    label: '',
+    compact: true,
+    value: value,
+    sound: false,
+    onChanged: onChanged == null
+        ? null
+        : (value) {
+            AppHaptics.selection();
+            onChanged!(value);
+          },
   );
 }
 
@@ -290,22 +199,15 @@ class CampusProgress extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SizedBox(
     width: compact ? 24 : null,
-    height: compact ? 24 : strokeWidth,
+    height: compact ? 24 : 16,
     child: Center(
-      child: LinearProgressIndicator(
-        minHeight: strokeWidth,
-        value: MediaQuery.disableAnimationsOf(context) ? value ?? .5 : value,
-        color: color ?? context.palette.ink,
-        backgroundColor: trackColor ?? context.palette.line,
-        borderRadius: BorderRadius.zero,
-      ),
+      child: BrockmannProgress(label: '', value: value),
     ),
   );
 }
 
 abstract final class CampusNotice {
   static void show(BuildContext context, {required String message}) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    showBrockmannToast(context, message);
   }
 }

@@ -2,7 +2,7 @@ import 'package:antiattendance/accounts.dart';
 import 'package:antiattendance/app_theme.dart';
 import 'package:antiattendance/session_check.dart';
 import 'package:antiattendance/session_recovery_page.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

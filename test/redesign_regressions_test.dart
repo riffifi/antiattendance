@@ -1,3 +1,5 @@
+import 'package:brockmann/brockmann.dart';
+
 import 'dart:async';
 
 import 'package:antiattendance/app_settings.dart';
@@ -10,7 +12,7 @@ import 'package:antiattendance/study_summary.dart';
 import 'package:antiattendance/theme_crossfade.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 
 void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
@@ -60,7 +62,7 @@ void main() {
   });
 
   testWidgets(
-    'switch has a larger rectangular track and never inverts its hit box',
+    'compact Brockmann switch has a 48 dp gesture target and commits on release',
     (tester) async {
       var value = false;
       await tester.pumpWidget(
@@ -78,37 +80,23 @@ void main() {
           ),
         ),
       );
-      final action = find.descendant(
-        of: find.byType(CampusSwitch),
-        matching: find.byType(EditorialAction),
-      );
-      expect(
-        tester.widget<EditorialAction>(action).invertOnInteraction,
-        isFalse,
-      );
+      final control = find.byType(BrockmannSwitch);
+      expect(tester.widget<BrockmannSwitch>(control).compact, isTrue);
       final track = find.descendant(
-        of: find.byType(CampusSwitch),
+        of: control,
         matching: find.byWidgetPredicate(
-          (w) => w is Container && w.constraints?.maxWidth == 56,
+          (w) => w is SizedBox && w.width == 60 && w.height == 48,
         ),
       );
-      expect(tester.getSize(track), const Size(56, 28));
-      final gesture = await tester.startGesture(tester.getCenter(action));
+      expect(tester.getSize(track), const Size(60, 48));
+      final gesture = await tester.startGesture(tester.getCenter(track));
       await tester.pump(const Duration(milliseconds: 80));
-      final surface = tester.widget<AnimatedContainer>(
-        find.descendant(of: action, matching: find.byType(AnimatedContainer)),
-      );
-      expect(
-        (surface.decoration! as BoxDecoration).color,
-        isNot(AppColors.ink),
-      );
+      expect(value, isFalse);
       await gesture.up();
       await tester.pumpAndSettle();
       expect(value, isTrue);
-      expect(
-        tester.widget<AnimatedAlign>(find.byType(AnimatedAlign)).alignment,
-        Alignment.centerRight,
-      );
+      expect(tester.widget<BrockmannSwitch>(control).value, isTrue);
+      expect(tester.takeException(), isNull);
     },
   );
 

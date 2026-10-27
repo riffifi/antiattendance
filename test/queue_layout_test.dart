@@ -2,7 +2,7 @@ import 'package:antiattendance/accounts.dart';
 import 'package:antiattendance/attendance_queue.dart';
 import 'package:antiattendance/pulse_api.dart';
 import 'package:antiattendance/queue_scan_page.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -1,0 +1,46 @@
+name: brockmann
+description: Flat, typographic, touch-first Brockmann UI components and motion, with optional Android sound.
+version: 0.1.0
+publish_to: none
+environment:
+  sdk: '>=3.13.0 <4.0.0'
+  flutter: '>=3.47.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_svg: ^2.3.0
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: dev.brockmann.brockmann
+        pluginClass: BrockmannPlugin
+  assets:
+    - assets/icons/
+    - assets/sounds/
+  fonts:
+    - family: Geist
+      fonts:
+        - asset: assets/fonts/Geist.ttf
+    - family: Geist Mono
+      fonts:
+        - asset: assets/fonts/GeistMono.ttf
+    - family: Geist Pixel Square
+      fonts:
+        - asset: assets/fonts/GeistPixel-Square.ttf
+    - family: Geist Pixel Circle
+      fonts:
+        - asset: assets/fonts/GeistPixel-Circle.ttf
+    - family: Geist Pixel Grid
+      fonts:
+        - asset: assets/fonts/GeistPixel-Grid.ttf
+    - family: Geist Pixel Line
+      fonts:
+        - asset: assets/fonts/GeistPixel-Line.ttf
+    - family: Geist Pixel Triangle
+      fonts:
+        - asset: assets/fonts/GeistPixel-Triangle.ttf

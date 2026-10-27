@@ -1,3 +1,5 @@
+import 'package:brockmann/brockmann.dart';
+
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
@@ -5,7 +7,7 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import 'accounts.dart';
@@ -324,7 +326,7 @@ class _BatchLoginPageState extends State<BatchLoginPage> {
     if (_entries.any((e) => !e.saved)) {
       final close = await showExpressiveDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => BrockmannDialog(
           scrollable: true,
           title: Text(
             tr(context, 'Закончить добавление?', 'Finish adding accounts?'),
@@ -394,7 +396,7 @@ class _BatchLoginPageState extends State<BatchLoginPage> {
                       )
                     : entry.error != null
                     ? Text(tr(context, 'Повторить', 'Retry'))
-                    : const CircularProgressIndicator(),
+                    : const BrockmannProgress(label: ''),
               ),
             ),
           ),
@@ -579,7 +581,7 @@ class _BatchLoginPageState extends State<BatchLoginPage> {
                                 ),
                               )
                             else ...[
-                              const CircularProgressIndicator(),
+                              const BrockmannProgress(label: ''),
                               const SizedBox(height: 12),
                               Text(
                                 tr(

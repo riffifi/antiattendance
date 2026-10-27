@@ -2,7 +2,8 @@ import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
+import 'package:brockmann/brockmann.dart';
 
 import 'app_haptics.dart';
 import 'app_theme.dart';
@@ -93,6 +94,7 @@ class _ScreenNavigationState extends State<ScreenNavigation>
 
   int _origin = 0;
   int? _pendingCommit;
+  bool _pendingSnap = false;
   int? _railSelection;
   double _direction = 1;
   bool _dragging = false;
@@ -126,7 +128,7 @@ class _ScreenNavigationState extends State<ScreenNavigation>
       _motion.animateTo(
         target,
         duration: _time(remaining.clamp(40, fullDuration)),
-        curve: Curves.easeOutCubic,
+        curve: brockmannOutExpo,
       );
     } else if (oldWidget.selectedIndex != widget.selectedIndex) {
       _pendingCommit = null;
@@ -151,7 +153,7 @@ class _ScreenNavigationState extends State<ScreenNavigation>
           _pages.animateToPage(
             _pageFor(widget.selectedIndex),
             duration: _time(230),
-            curve: Curves.easeOutCubic,
+            curve: brockmannOutExpo,
           );
         }
       }
@@ -175,14 +177,20 @@ class _ScreenNavigationState extends State<ScreenNavigation>
   }
 
   void _commitRail(int index, {bool snap = false}) {
-    if (_pendingCommit == index) return;
+    if (_pendingCommit == index) {
+      _pendingSnap |= snap;
+      return;
+    }
     _pendingCommit = index;
+    _pendingSnap = snap;
     // Page notifications may arrive during layout.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _pendingCommit != index) return;
       _pendingCommit = null;
+      final shouldSnap = _pendingSnap;
+      _pendingSnap = false;
       if (widget.selectorVisible || _position.value.round() != index) return;
-      if (snap && _pages.hasClients) _pages.jumpToPage(index);
+      if (shouldSnap && _pages.hasClients) _pages.jumpToPage(index);
       final screen = _screenFor(index);
       if (widget.selectedIndex != screen) {
         _railSelection = screen;
@@ -211,8 +219,7 @@ class _ScreenNavigationState extends State<ScreenNavigation>
       final index = _position.value.round().clamp(0, _pageCount - 1);
       if (!widget.selectorVisible &&
           (_screenFor(index) != widget.selectedIndex ||
-              (_reduced && (_position.value - index).abs() > .001)) &&
-          _pendingCommit != index) {
+              (_reduced && (_position.value - index).abs() > .001))) {
         _commitRail(index, snap: _reduced);
       }
     }
@@ -237,11 +244,7 @@ class _ScreenNavigationState extends State<ScreenNavigation>
     if (_reduced) {
       _pages.jumpToPage(next);
     } else {
-      _pages.animateToPage(
-        next,
-        duration: _time(230),
-        curve: Curves.easeOutCubic,
-      );
+      _pages.animateToPage(next, duration: _time(230), curve: brockmannOutExpo);
     }
   }
 
@@ -261,15 +264,15 @@ class _ScreenNavigationState extends State<ScreenNavigation>
         bottom: false,
         child: SizedBox(
           height: 58,
-          child: TextButton(
-            style: TextButton.styleFrom(
-              padding: EdgeInsets.zero,
-              minimumSize: const Size(48, 48),
-            ),
+          child: BrockmannButton(
+            label: tr(context, 'МЕНЮ', 'INDEX'),
+            style: BrockmannButtonStyle.text,
             onPressed: _index,
-            child: Text(
-              tr(context, 'МЕНЮ', 'INDEX'),
-              style: const TextStyle(fontSize: 9, letterSpacing: 0),
+            child: Center(
+              child: Text(
+                tr(context, 'МЕНЮ', 'INDEX'),
+                style: const TextStyle(fontSize: 9, letterSpacing: 0),
+              ),
             ),
           ),
         ),
@@ -405,7 +408,7 @@ class _ScreenNavigationState extends State<ScreenNavigation>
                                   : (_position.value -
                                             _pageFor(widget.selectedIndex))
                                         .clamp(-1.0, 1.0);
-                              final arrival = Curves.easeOutCubic.transform(
+                              final arrival = brockmannOutExpo.transform(
                                 _arrival.value,
                               );
                               final opening = 1 - t;

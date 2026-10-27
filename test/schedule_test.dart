@@ -9,7 +9,7 @@ import 'package:antiattendance/main.dart';
 import 'package:antiattendance/pulse_api.dart';
 import 'package:antiattendance/schedule_api.dart';
 import 'package:antiattendance/schedule_page.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -282,7 +282,18 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('Mathematics').last, 150);
+    await tester.scrollUntilVisible(
+      find.text('Mathematics').last,
+      150,
+      scrollable: find
+          .byWidgetPredicate(
+            (w) =>
+                w is Scrollable &&
+                (w.axisDirection == AxisDirection.down ||
+                    w.axisDirection == AxisDirection.up),
+          )
+          .first,
+    );
     await tester.ensureVisible(find.text('Mathematics').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Mathematics').last);
@@ -349,6 +360,14 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('A very long class title for a narrow screen'),
       120,
+      scrollable: find
+          .byWidgetPredicate(
+            (w) =>
+                w is Scrollable &&
+                (w.axisDirection == AxisDirection.down ||
+                    w.axisDirection == AxisDirection.up),
+          )
+          .first,
     );
     expect(
       find.text('A very long class title for a narrow screen'),

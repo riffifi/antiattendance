@@ -1,11 +1,14 @@
 import 'package:flutter/services.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
+import 'package:brockmann/brockmann.dart';
+
+import 'app_haptics.dart';
+
 import 'package:flutter_svg/flutter_svg.dart';
 
 import 'app_theme.dart';
 import 'l10n.dart';
 import 'editorial_controls.dart';
-import 'icons/campus_icon.dart';
 export 'editorial_controls.dart';
 export 'campus_models.dart';
 import 'campus_models.dart';
@@ -93,18 +96,20 @@ class CampusHeader extends StatelessWidget {
             ?trailing,
           ],
         ),
-        const SizedBox(height: 8),
-        Text(
-          subtitle,
-          style: Theme.of(context).textTheme.bodyMedium
-              ?.copyWith(color: context.palette.muted),
-        ),
+        if (subtitle.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: Theme.of(context).textTheme.bodyMedium
+                ?.copyWith(color: context.palette.muted),
+          ),
+        ],
       ],
     ),
   );
 }
 
-/// Fast local feedback; dragging a scroll view cancels the pressed state.
+/// Press feedback for content whose inner controls own the action callbacks.
 class CampusPressable extends StatefulWidget {
   const CampusPressable({super.key, required this.child, this.enabled = true});
   final Widget child;
@@ -114,30 +119,21 @@ class CampusPressable extends StatefulWidget {
 }
 
 class _CampusPressableState extends State<CampusPressable> {
-  Offset? _origin;
   bool _pressed = false;
+  Offset? _origin;
   void _release() {
     _origin = null;
     if (_pressed) setState(() => _pressed = false);
   }
 
   @override
-  void didUpdateWidget(CampusPressable oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!widget.enabled) {
-      _pressed = false;
-      _origin = null;
-    }
-  }
-
-  @override
   Widget build(BuildContext context) => Listener(
-    onPointerDown: widget.enabled
-        ? (event) {
+    onPointerDown: !widget.enabled
+        ? null
+        : (event) {
             _origin = event.position;
             setState(() => _pressed = true);
-          }
-        : null,
+          },
     onPointerMove: (event) {
       if (_origin != null && (event.position - _origin!).distance > 8) {
         _release();
@@ -145,13 +141,11 @@ class _CampusPressableState extends State<CampusPressable> {
     },
     onPointerUp: (_) => _release(),
     onPointerCancel: (_) => _release(),
-    child: AnimatedScale(
-      scale: _pressed ? .975 : 1,
-      duration: MediaQuery.disableAnimationsOf(context)
-          ? Duration.zero
-          : Duration(milliseconds: _pressed ? 80 : 150),
-      curve: Curves.easeOutCubic,
-      child: widget.child,
+    child: BrockmannMotion(
+      value: _pressed && widget.enabled ? 1 : 0,
+      milliseconds: _pressed ? 60 : 160,
+      builder: (context, value) =>
+          Transform.scale(scale: 1 - .015 * value, child: widget.child),
     ),
   );
 }
@@ -217,25 +211,26 @@ class CampusButton extends StatelessWidget {
   final CampusButtonStyle style;
 
   @override
-  Widget build(BuildContext context) {
-    return EditorialAction(
-      onPressed: onPressed,
-      filled:
-          style == CampusButtonStyle.filled || style == CampusButtonStyle.tonal,
-      outlined: style == CampusButtonStyle.outlined,
-      child: Center(
-        widthFactor: 1,
-        heightFactor: 1,
-        child: DefaultTextStyle.merge(
-          textAlign: TextAlign.center,
-          child: child,
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => BrockmannButton(
+    label: child is Text ? (child as Text).data ?? '' : '',
+    alignment: Alignment.center,
+    style: switch (style) {
+      CampusButtonStyle.filled => BrockmannButtonStyle.primary,
+      CampusButtonStyle.tonal ||
+      CampusButtonStyle.outlined => BrockmannButtonStyle.secondary,
+      CampusButtonStyle.text => BrockmannButtonStyle.text,
+    },
+    onPressed: onPressed == null
+        ? null
+        : () {
+            AppHaptics.action(primary: style == CampusButtonStyle.filled);
+            onPressed!();
+          },
+    child: DefaultTextStyle.merge(textAlign: TextAlign.center, child: child),
+  );
 }
 
-class CampusNavigation extends StatefulWidget {
+class CampusNavigation extends StatelessWidget {
   const CampusNavigation({
     super.key,
     required this.selectedIndex,
@@ -246,147 +241,17 @@ class CampusNavigation extends StatefulWidget {
   final ValueChanged<int> onDestinationSelected;
   final List<String> labels;
   @override
-  State<CampusNavigation> createState() => _CampusNavigationState();
-}
-
-class _CampusNavigationState extends State<CampusNavigation> {
-  double? _dragPosition;
-  void _track(double x, double width) => setState(() {
-    _dragPosition = (x / (width / widget.labels.length) - .5).clamp(
-      0.0,
-      widget.labels.length - 1.0,
-    );
-  });
-  @override
   Widget build(BuildContext context) => SafeArea(
     top: false,
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
-      child: Center(
-        heightFactor: 1,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: ClipRRect(
-            borderRadius: BorderRadius.zero,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: context.palette.paper,
-                borderRadius: BorderRadius.zero,
-                border: Border.all(
-                  color: context.palette.line.withValues(alpha: .65),
-                ),
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: Padding(
-                  padding: const EdgeInsets.all(5),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) => GestureDetector(
-                      onHorizontalDragStart: (details) => _track(
-                        details.localPosition.dx,
-                        constraints.maxWidth,
-                      ),
-                      onHorizontalDragUpdate: (details) => _track(
-                        details.localPosition.dx,
-                        constraints.maxWidth,
-                      ),
-                      onHorizontalDragCancel: () =>
-                          setState(() => _dragPosition = null),
-                      onHorizontalDragEnd: (_) {
-                        final index =
-                            (_dragPosition ?? widget.selectedIndex.toDouble())
-                                .round();
-                        setState(() => _dragPosition = null);
-                        widget.onDestinationSelected(index);
-                      },
-                      child: Stack(
-                        children: [
-                          Positioned.fill(
-                            child: TweenAnimationBuilder<double>(
-                              tween: Tween(
-                                end:
-                                    _dragPosition ??
-                                    widget.selectedIndex.toDouble(),
-                              ),
-                              duration:
-                                  _dragPosition != null ||
-                                      MediaQuery.disableAnimationsOf(context)
-                                  ? Duration.zero
-                                  : const Duration(milliseconds: 280),
-                              curve: Curves.easeOutCubic,
-                              builder: (context, position, child) => Align(
-                                alignment: Alignment(
-                                  -1 +
-                                      2 * position / (widget.labels.length - 1),
-                                  0,
-                                ),
-                                child: FractionallySizedBox(
-                                  widthFactor: 1 / widget.labels.length,
-                                  heightFactor: 1,
-                                  child: child,
-                                ),
-                              ),
-                              child: DecoratedBox(
-                                key: const ValueKey('navigation-pill'),
-                                decoration: BoxDecoration(
-                                  color: context.palette.selectionSurface,
-                                  borderRadius: BorderRadius.zero,
-                                ),
-                              ),
-                            ),
-                          ),
-                          Row(
-                            children: [
-                              for (
-                                var index = 0;
-                                index < widget.labels.length;
-                                index++
-                              )
-                                Expanded(
-                                  child: Semantics(
-                                    selected: widget.selectedIndex == index,
-                                    button: true,
-                                    child: InkWell(
-                                      borderRadius: BorderRadius.zero,
-                                      onTap: () =>
-                                          widget.onDestinationSelected(index),
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 4,
-                                          vertical: 8,
-                                        ),
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(
-                                              widget.labels[index],
-                                              textAlign: TextAlign.center,
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w600,
-                                                color:
-                                                    widget.selectedIndex ==
-                                                        index
-                                                    ? context.palette.ink
-                                                    : context.palette.muted,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
+    child: Center(
+      heightFactor: 1,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: BrockmannPivot(
+          options: labels,
+          selected: selectedIndex,
+          compact: true,
+          onChanged: onDestinationSelected,
         ),
       ),
     ),
@@ -411,55 +276,35 @@ class CampusListItem extends StatelessWidget {
   final bool selected;
   @override
   Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, bounds) => Semantics(
-      selected: selected,
-      child: Column(
-        children: [
-          EditorialAction(
-            onPressed: onTap,
-            invertOnInteraction: false,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-            child: Row(
-              children: [
-                if (leading != null) ...[leading!, const SizedBox(width: 12)],
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        headline,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      if (supportingText != null) ...[
-                        const SizedBox(height: 5),
-                        Text(
-                          supportingText!,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: context.palette.muted),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                if (trailing != null) ...[
-                  const SizedBox(width: 8),
-                  ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: bounds.maxWidth * .42,
-                    ),
-                    child: trailing!,
-                  ),
-                ],
-                if (trailing == null && selected) ...[
-                  const SizedBox(width: 8),
-                  const CampusIcon(Icons.check_rounded, size: 18),
-                ],
-              ],
+    builder: (context, bounds) => Column(
+      children: [
+        Row(
+          children: [
+            if (leading != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 12, right: 4),
+                child: leading!,
+              ),
+            Expanded(
+              child: BrockmannListItem(
+                label: headline,
+                secondary: supportingText,
+                selected: selected,
+                onPressed: onTap,
+              ),
             ),
-          ),
-          Divider(height: .5, thickness: .5, color: context.palette.line),
-        ],
-      ),
+            if (trailing != null)
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: bounds.maxWidth * .42),
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 8, right: 12),
+                  child: trailing!,
+                ),
+              ),
+          ],
+        ),
+        Divider(height: .5, thickness: .5, color: context.brockmann.line),
+      ],
     ),
   );
 }
@@ -501,42 +346,23 @@ class CampusTextField extends StatelessWidget {
   final TextAlign textAlign;
   final String? suffixText;
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      if (label != null)
-        Text(label!, style: Theme.of(context).textTheme.labelMedium),
-      if (label != null) const SizedBox(height: 6),
-      TextField(
-        controller: controller,
-        autofocus: autofocus,
-        obscureText: obscureText,
-        enabled: enabled,
-        maxLength: maxLength,
-        keyboardType: keyboardType,
-        inputFormatters: inputFormatters,
-        onChanged: onChanged,
-        onSubmitted: onSubmitted,
-        textCapitalization: textCapitalization,
-        textAlign: textAlign,
-        style: Theme.of(context).textTheme.bodyLarge,
-        decoration: InputDecoration(
-          hintText: placeholder,
-          border: UnderlineInputBorder(
-            borderSide: BorderSide(color: context.palette.line, width: .5),
-          ),
-          enabledBorder: UnderlineInputBorder(
-            borderSide: BorderSide(color: context.palette.line, width: .5),
-          ),
-          focusedBorder: UnderlineInputBorder(
-            borderSide: BorderSide(color: context.palette.ink),
-          ),
-          prefixIcon: leading,
-          suffixIcon: trailing,
-          suffixText: suffixText,
-        ),
-      ),
-    ],
+  Widget build(BuildContext context) => BrockmannTextField(
+    label: label ?? '',
+    controller: controller,
+    placeholder: placeholder,
+    leading: leading,
+    trailing: trailing,
+    autofocus: autofocus,
+    obscureText: obscureText,
+    enabled: enabled,
+    maxLength: maxLength,
+    keyboardType: keyboardType,
+    inputFormatters: inputFormatters,
+    onChanged: onChanged,
+    onSubmitted: onSubmitted,
+    textCapitalization: textCapitalization,
+    textAlign: textAlign,
+    suffixText: suffixText,
   );
 }
 

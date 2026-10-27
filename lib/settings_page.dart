@@ -6,7 +6,7 @@ import 'campus_design.dart';
 import 'dart:async';
 import 'dart:io';
 
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 
 import 'about_page.dart';
 import 'app_settings.dart';
@@ -448,11 +448,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
               const SizedBox(height: 28),
-              Text(
+              CampusSectionTitle(
                 tr(context, 'Язык приложения', 'App language'),
-                style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 6),
               Text(
@@ -474,10 +472,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ),
               const SizedBox(height: 28),
-              Text(
-                tr(context, 'Тестирование', 'Testing'),
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              CampusSectionTitle(tr(context, 'Тестирование', 'Testing')),
               const SizedBox(height: 12),
               CampusPanel(
                 padding: EdgeInsets.zero,
@@ -517,10 +512,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ),
               const SizedBox(height: 28),
-              Text(
-                tr(context, 'Приложение', 'App'),
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              CampusSectionTitle(tr(context, 'Приложение', 'App')),
               const SizedBox(height: 12),
               CampusPanel(
                 padding: EdgeInsets.zero,

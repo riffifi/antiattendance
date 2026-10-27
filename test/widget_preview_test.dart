@@ -1,7 +1,7 @@
 import 'package:antiattendance/campus_design.dart';
 import 'package:antiattendance/app_theme.dart';
 import 'package:antiattendance/widget_preview.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

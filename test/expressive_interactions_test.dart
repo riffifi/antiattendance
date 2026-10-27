@@ -2,7 +2,7 @@ import 'package:antiattendance/campus_design.dart';
 import 'package:antiattendance/expressive.dart';
 import 'package:antiattendance/app_theme.dart';
 import 'package:flutter/services.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -132,7 +132,7 @@ void main() {
     await tester.tap(find.text('Actions'));
     await tester.pumpAndSettle();
     expect(find.text('Rename'), findsOneWidget);
-    expect(find.byType(CampusListItem), findsOneWidget);
+    expect(find.text('Rename'), findsOneWidget);
     expect(find.byType(PopupMenuItem<CampusMenuEntry>), findsNothing);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();

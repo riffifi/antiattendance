@@ -1,3 +1,5 @@
+import 'package:brockmann/brockmann.dart';
+
 import 'campus_maps_page.dart';
 import 'campus_design.dart';
 import 'expressive.dart';
@@ -5,7 +7,7 @@ import 'expressive.dart';
 import 'dart:async';
 import 'dart:io';
 
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 
 import 'accounts.dart';
 import 'app_theme.dart';
@@ -266,10 +268,9 @@ class _SchedulePageState extends State<SchedulePage> {
                       runSpacing: 8,
                       children: [
                         for (final mark in confirmed)
-                          Chip(
-                            label: Text(mark.accountLabel),
-                            backgroundColor: context.palette.mint,
-                            side: BorderSide.none,
+                          BrockmannChip(
+                            label: mark.accountLabel,
+                            selected: true,
                           ),
                       ],
                     ),
@@ -473,8 +474,8 @@ class _SchedulePageState extends State<SchedulePage> {
                     Expanded(
                       child: CampusTextAction(
                         onPressed: () async {
-                          final date = await showDatePicker(
-                            context: context,
+                          final date = await showBrockmannDatePicker(
+                            context,
                             initialDate: DateTime(
                               _day.year,
                               _day.month,
@@ -867,14 +868,8 @@ class _LessonRow extends StatelessWidget {
                                 ),
                               ),
                             if (lesson.location.isNotEmpty)
-                              TextButton(
+                              CampusButton.text(
                                 onPressed: onRoom,
-                                style: TextButton.styleFrom(
-                                  minimumSize: const Size(48, 48),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                  ),
-                                ),
                                 child: Text(
                                   lesson.location,
                                   style: const TextStyle(fontSize: 12),

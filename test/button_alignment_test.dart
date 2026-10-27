@@ -2,7 +2,7 @@ import 'package:antiattendance/app_theme.dart';
 import 'package:antiattendance/campus_design.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 
 void main() {
   for (final scale in [1.0, 1.5, 2.0]) {

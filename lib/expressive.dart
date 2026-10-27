@@ -1,19 +1,27 @@
 import 'campus_design.dart';
 import 'app_haptics.dart';
 import 'l10n.dart';
-import 'icons/campus_icon.dart';
 
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
+import 'package:brockmann/brockmann.dart';
 import 'package:flutter/services.dart';
 
 Future<T?> showExpressiveDialog<T>({
   required BuildContext context,
   required WidgetBuilder builder,
   bool barrierDismissible = true,
-}) => showDialog<T>(
+}) => showGeneralDialog<T>(
   context: context,
   barrierDismissible: barrierDismissible,
-  builder: (context) => PredictiveBackSurface(child: builder(context)),
+  barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+  barrierColor: Colors.black.withValues(
+    alpha: context.brockmann.light ? .4 : .6,
+  ),
+  transitionDuration: context.brockmann.duration(context, 160),
+  pageBuilder: (context, _, _) =>
+      PredictiveBackSurface(child: builder(context)),
+  transitionBuilder: (context, animation, _, child) =>
+      FadeTransition(opacity: animation, child: child),
 );
 
 Future<T?> showExpressiveSheet<T>({
@@ -26,7 +34,14 @@ Future<T?> showExpressiveSheet<T>({
   isScrollControlled: true,
   useSafeArea: true,
   showDragHandle: false,
-  constraints: const BoxConstraints(maxWidth: 640),
+  constraints: const BoxConstraints(maxWidth: double.infinity),
+  backgroundColor: context.brockmann.surface,
+  elevation: 0,
+  shape: Border(top: BorderSide(color: context.brockmann.line)),
+  sheetAnimationStyle: AnimationStyle(
+    duration: context.brockmann.duration(context, 220),
+    reverseDuration: context.brockmann.duration(context, 200),
+  ),
   builder: (context) => PredictiveBackSurface(
     child: AnimatedPadding(
       duration: MediaQuery.disableAnimationsOf(context)
@@ -61,9 +76,15 @@ Future<T?> showExpressiveSheet<T>({
               ],
             ),
             Flexible(
-              child: compact
-                  ? SingleChildScrollView(child: builder(context))
-                  : builder(context),
+              child: Center(
+                heightFactor: 1,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 640),
+                  child: compact
+                      ? SingleChildScrollView(child: builder(context))
+                      : builder(context),
+                ),
+              ),
             ),
           ],
         ),
@@ -86,49 +107,47 @@ class AppPassPicker extends StatelessWidget {
   final String hint;
   final ValueChanged<List<PassPickerItem<String>>> onChanged;
 
-  Future<void> _open(BuildContext context) async {
-    AppHaptics.selection();
-    final item = await showExpressiveSheet<PassPickerItem<String>>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => ListView(
-        shrinkWrap: true,
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(hint, style: Theme.of(context).textTheme.titleLarge),
-          ),
-          for (final item in items)
-            CampusListItem(
-              headline: item.label,
-              selected: item.selected,
-              trailing: item.selected
-                  ? const CampusIcon(Icons.check_rounded, size: 18)
-                  : null,
-              onTap: item.disabled ? null : () => Navigator.pop(context, item),
-            ),
-        ],
-      ),
-    );
-    if (item != null && context.mounted) onChanged([item]);
-  }
-
   @override
-  Widget build(BuildContext context) => OutlinedButton(
-    onPressed: enabled ? () => _open(context) : null,
-    child: Row(
-      children: [
-        Expanded(
-          child: Text(
-            items.where((item) => item.selected).firstOrNull?.label ?? hint,
-          ),
-        ),
-        const SizedBox(width: 8),
-        const CampusIcon(Icons.keyboard_arrow_down_rounded, size: 18),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    final selected = items.indexWhere((item) => item.selected);
+    if (items.any((item) => item.disabled)) {
+      return BrockmannButton(
+        label: selected < 0 ? hint : items[selected].label,
+        onPressed: !enabled
+            ? null
+            : () async {
+                final item =
+                    await showBrockmannActionSheet<PassPickerItem<String>>(
+                      context,
+                      title: hint,
+                      entries: [
+                        for (final item in items)
+                          BrockmannMenuEntry(
+                            value: item,
+                            label: item.label,
+                            enabled: !item.disabled,
+                          ),
+                      ],
+                    );
+                if (context.mounted && item != null) {
+                  AppHaptics.selection();
+                  onChanged([item]);
+                }
+              },
+      );
+    }
+    return BrockmannPicker(
+      label: hint,
+      options: [for (final item in items) item.label],
+      selected: selected < 0 ? 0 : selected,
+      onChanged: !enabled
+          ? null
+          : (index) {
+              AppHaptics.selection();
+              onChanged([items[index]]);
+            },
+    );
+  }
 }
 
 /// Makes popup-route animations follow Android's back gesture, including cancel.
@@ -195,7 +214,7 @@ class _PredictiveBackSurfaceState extends State<PredictiveBackSurface>
   Widget build(BuildContext context) => widget.child;
 }
 
-/// Shared Expressive action menu with anchored motion and back dismissal.
+/// Brockmann command band with typed app actions and Android Back dismissal.
 class AppActionMenu extends StatelessWidget {
   const AppActionMenu({
     super.key,
@@ -209,27 +228,21 @@ class AppActionMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => anchorBuilder(context, () async {
-    final selected = await showExpressiveSheet<CampusMenuEntry>(
-      context: context,
-      compact: true,
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final entry in entries)
-              CampusListItem(
-                headline: entry.label,
-                supportingText: entry.supportingText,
-                leading: entry.leading,
-                trailing: entry.trailing,
-                onTap: entry.enabled
-                    ? () => Navigator.pop(context, entry)
-                    : null,
-              ),
-          ],
-        ),
-      ),
+    final selected = await showBrockmannActionSheet<CampusMenuEntry>(
+      context,
+      title: tr(context, 'Управление', 'Manage'),
+      entries: [
+        for (final entry in entries)
+          BrockmannMenuEntry(
+            value: entry,
+            label: entry.label,
+            enabled: entry.enabled,
+            leading: entry.leading,
+            trailing: entry.trailing,
+            secondary: entry.supportingText,
+            destructive: entry.value == 'remove' || entry.value == 'delete',
+          ),
+      ],
     );
     if (selected != null && context.mounted) {
       selected.onPressed?.call();

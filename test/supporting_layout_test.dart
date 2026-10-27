@@ -6,7 +6,7 @@ import 'package:antiattendance/campus_design.dart';
 import 'package:antiattendance/session_share_page.dart';
 import 'package:antiattendance/study_summary.dart';
 import 'package:antiattendance/study_summary_page.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qr_flutter/qr_flutter.dart';

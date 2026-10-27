@@ -4,7 +4,7 @@ import 'package:antiattendance/app_theme.dart';
 import 'package:antiattendance/main.dart';
 import 'package:antiattendance/nfc_pass.dart';
 import 'package:flutter/foundation.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -42,16 +42,25 @@ void main() {
     );
     await tester.pumpAndSettle();
     final bar = find.byType(CampusNavigation);
+    await tester.ensureVisible(
+      find.descendant(of: bar, matching: find.text('Passes')),
+    );
     await tester.tap(find.descendant(of: bar, matching: find.text('Passes')));
     await tester.pumpAndSettle();
     expect(find.text('NFC passes'), findsOneWidget);
     expect(find.text('Enroll passes'), findsOneWidget);
     expect(tester.takeException(), isNull);
+    await tester.ensureVisible(
+      find.descendant(of: bar, matching: find.text('Attendance')),
+    );
     await tester.tap(
       find.descendant(of: bar, matching: find.text('Attendance')),
     );
     await tester.pump(const Duration(milliseconds: 20));
     expect(calls, contains('stop'));
+    await tester.ensureVisible(
+      find.descendant(of: bar, matching: find.text('Passes')),
+    );
     await tester.tap(find.descendant(of: bar, matching: find.text('Passes')));
     await tester.pumpAndSettle();
     expect(find.text('NFC passes'), findsOneWidget);

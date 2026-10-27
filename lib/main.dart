@@ -1,3 +1,6 @@
+import 'package:brockmann/brockmann.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+
 import 'debug_menu_page.dart';
 import 'server_sessions.dart';
 import 'session_server_sync.dart';
@@ -13,7 +16,7 @@ import 'expressive.dart';
 import 'dart:async';
 import 'dart:io';
 
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'accounts.dart';
@@ -224,6 +227,7 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
   @override
   Widget build(BuildContext context) => MaterialApp(
     title: 'AntiAttendance',
+    scrollBehavior: const BrockmannScrollBehavior(),
     navigatorKey: _navigatorKey,
     debugShowCheckedModeBanner: false,
     themeAnimationDuration: Duration.zero,
@@ -879,7 +883,7 @@ class _HomePageState extends State<HomePage> {
     final chosen = await showExpressiveDialog<int>(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, update) => AlertDialog(
+        builder: (context, update) => BrockmannDialog(
           scrollable: true,
           title: Text(tr(context, 'Сколько пользователей?', 'How many users?')),
           content: Row(
@@ -1089,7 +1093,7 @@ class _HomePageState extends State<HomePage> {
     }
     final confirmed = await showExpressiveDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => BrockmannDialog(
         scrollable: true,
         title: Text(
           trf(context, 'Удалить {name}?', 'Delete {name}?', {
@@ -1699,7 +1703,7 @@ class _HomePageState extends State<HomePage> {
   Widget _settingsButton(BuildContext context) {
     final updates = widget.updates;
     Widget button(bool available) => widget.startAtSelector
-        ? TextButton(
+        ? CampusButton.text(
             onPressed: _openSettings,
             child: Badge(
               isLabelVisible: available,
@@ -1739,7 +1743,7 @@ class _HomePageState extends State<HomePage> {
           : CampusAppBar(
               leadingWidth: widget.startAtSelector ? 96 : null,
               leading: widget.startAtSelector
-                  ? TextButton(
+                  ? CampusButton.text(
                       onPressed: _returnToSelector,
                       child: Text(tr(context, 'МЕНЮ', 'INDEX')),
                     )
@@ -2657,7 +2661,7 @@ class _TextInputDialogState extends State<_TextInputDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
+  Widget build(BuildContext context) => BrockmannDialog(
     scrollable: true,
     title: Text(widget.title),
     content: CampusTextField(

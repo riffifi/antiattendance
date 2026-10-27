@@ -15,6 +15,16 @@ with a language override in Settings.
 2. Select accounts and scan a lecture QR or paste its link to submit attendance.
 3. Use Settings → Legacy for the local-account workflows described below.
 
+AA’s UI uses the vendored [Brockmann Flutter library](third_party/brockmann/README.md)
+from `riffifi/brockmann-flutter`, including its theme tokens, Geist typography,
+press foundation, switches, checkboxes, buttons, fields, progress, full-page
+pickers, command bands and calendar. The package is included under
+`third_party/brockmann`; builds do not depend on a neighboring checkout.
+AA-specific adapters retain input formatting, rich content, localized labels,
+accessibility actions and callback behavior. Android launcher widgets use matching
+flat monochrome surfaces and Geist on Android 8+. Their provider IDs and actions
+remain compatible with existing widgets.
+
 The four-column selector morphs into the left navigation rail. Swipe the rail
 vertically to change screens, or use INDEX to return. Light, Dark and Black
 appearances use Geist typography, thin rules, rectangular controls and small

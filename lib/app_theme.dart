@@ -1,12 +1,12 @@
 import 'package:flutter/foundation.dart' show defaultTargetPlatform;
-import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
-import 'package:material_ui/material_ui.dart';
+import 'package:brockmann/brockmann.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 enum AppThemeMode { light, dark, amoled }
 
 abstract final class AppColors {
-  static const paper = Color(0xFFEEEEEE);
+  static const paper = Colors.white;
   static const ink = Color(0xFF111111);
   static const muted = Color(0xFF6C6C6C);
   static const blue = Color(0xFF202020);
@@ -80,261 +80,112 @@ abstract final class AppTheme {
       _cache.putIfAbsent((mode, defaultTargetPlatform), () => _build(mode));
 
   static ThemeData _build(AppThemeMode mode) {
-    final isDark = mode != AppThemeMode.light;
-    final paper = mode == AppThemeMode.amoled
-        ? Colors.black
-        : isDark
-        ? const Color(0xFF0A0A0A)
-        : AppColors.paper;
-    final surface = paper;
-    final ink = isDark ? const Color(0xFFEEEEEE) : AppColors.ink;
-    final muted = isDark ? const Color(0xFF999999) : AppColors.muted;
-    final line = isDark ? const Color(0xFF333333) : AppColors.line;
-    final container = isDark
-        ? const Color(0xFF252525)
-        : const Color(0xFFDDDDDD);
-    final scheme = ColorScheme(
-      brightness: isDark ? Brightness.dark : Brightness.light,
-      primary: ink,
-      onPrimary: paper,
-      primaryContainer: container,
-      onPrimaryContainer: ink,
-      secondary: ink,
-      onSecondary: paper,
-      secondaryContainer: container,
-      onSecondaryContainer: ink,
-      error: isDark ? const Color(0xFFFFB4AB) : const Color(0xFF9C2929),
-      onError: paper,
-      surface: surface,
-      onSurface: ink,
-      onSurfaceVariant: muted,
-      outline: line,
-      outlineVariant: line,
+    final brockmann = _AATheme(mode);
+    final base = brockmann.material;
+    final scheme = base.colorScheme.copyWith(
+      onSurfaceVariant: brockmann.secondary,
+      outline: brockmann.lineStrong,
+      outlineVariant: brockmann.line,
+      primaryContainer: brockmann.surface,
+      onPrimaryContainer: brockmann.foreground,
+      secondary: brockmann.accent,
+      onSecondary: brockmann.onAccent,
+      secondaryContainer: brockmann.surface,
+      onSecondaryContainer: brockmann.foreground,
+      error: mode == AppThemeMode.light
+          ? const Color(0xffa52a22)
+          : const Color(0xffffb4ab),
       surfaceTint: Colors.transparent,
     );
-    final base = ThemeData(
-      useMaterial3: true,
-      colorScheme: scheme,
-      fontFamily: 'Geist',
-    );
-    final feedback = WidgetStateProperty.resolveWith<Color?>(
-      (states) =>
-          states.contains(WidgetState.focused) ||
-              states.contains(WidgetState.hovered)
-          ? scheme.primary.withValues(alpha: .08)
-          : Colors.transparent,
-    );
     return base.copyWith(
-      splashFactory: NoSplash.splashFactory,
-      splashColor: Colors.transparent,
-      highlightColor: Colors.transparent,
-      hoverColor: scheme.primary.withValues(alpha: .05),
-      focusColor: scheme.primary.withValues(alpha: .08),
-      pageTransitionsTheme: const PageTransitionsTheme(
-        builders: {
-          TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
-          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
-        },
-      ),
-      iconButtonTheme: IconButtonThemeData(
-        style: IconButton.styleFrom(
-          minimumSize: const Size(48, 48),
-          foregroundColor: muted,
-        ).copyWith(overlayColor: feedback),
-      ),
-      scaffoldBackgroundColor: paper,
-      canvasColor: paper,
-      cardColor: surface,
-      textTheme: base.textTheme
-          .copyWith(
-            headlineLarge: TextStyle(
-              fontSize: 48,
-              height: 1.05,
-              letterSpacing: -2,
-              fontWeight: FontWeight.w300,
-              color: ink,
-            ),
-            titleLarge: TextStyle(
-              fontSize: 22,
-              height: 1.25,
-              letterSpacing: -.6,
-              fontWeight: FontWeight.w400,
-              color: ink,
-            ),
-            titleMedium: TextStyle(
-              fontSize: 16,
-              height: 1.35,
-              fontWeight: FontWeight.w400,
-              letterSpacing: -.2,
-              color: ink,
-            ),
-            bodyLarge: TextStyle(fontSize: 16, height: 1.5, color: ink),
-            bodyMedium: TextStyle(fontSize: 14, height: 1.5, color: ink),
-            bodySmall: TextStyle(fontSize: 12, height: 1.4, color: muted),
-            labelLarge: TextStyle(
-              fontSize: 14,
-              height: 1.2,
-              fontWeight: FontWeight.w400,
-              color: ink,
-            ),
-          )
-          .apply(fontFamily: 'Geist', bodyColor: ink, displayColor: ink)
-          .copyWith(
-            bodySmall: TextStyle(
-              fontFamily: 'GeistMono',
-              fontSize: 11,
-              height: 1.5,
-              color: muted,
-            ),
-            labelLarge: TextStyle(
-              fontFamily: 'GeistMono',
-              fontSize: 12,
-              height: 1.2,
-              letterSpacing: .4,
-              color: ink,
-            ),
-            labelMedium: TextStyle(
-              fontFamily: 'GeistMono',
-              fontSize: 11,
-              height: 1.3,
-              color: muted,
-            ),
-          ),
-      dividerTheme: DividerThemeData(color: line, thickness: 1, space: 1),
-      listTileTheme: ListTileThemeData(
-        iconColor: muted,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-      ),
-      bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: surface,
-        surfaceTintColor: Colors.transparent,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-        showDragHandle: false,
+      colorScheme: scheme,
+      textTheme: base.textTheme.copyWith(
+        headlineLarge: BrockmannType.title.style(color: brockmann.foreground),
+        headlineMedium: BrockmannType.heading.style(
+          color: brockmann.foreground,
+        ),
+        headlineSmall: BrockmannType.heading.style(color: brockmann.foreground),
+        titleLarge: BrockmannType.heading.style(color: brockmann.foreground),
+        titleMedium: BrockmannType.value.style(color: brockmann.foreground),
+        titleSmall: BrockmannType.body.style(color: brockmann.foreground),
+        bodyLarge: BrockmannType.body
+            .style(color: brockmann.foreground)
+            .copyWith(fontSize: 16),
+        bodyMedium: BrockmannType.body.style(color: brockmann.foreground),
+        bodySmall: BrockmannType.caption.style(color: brockmann.secondary),
+        labelLarge: BrockmannType.label.style(color: brockmann.foreground),
+        labelMedium: BrockmannType.label.style(color: brockmann.secondary),
+        labelSmall: BrockmannType.caption.style(color: brockmann.secondary),
       ),
       appBarTheme: AppBarTheme(
         toolbarHeight: 64,
-        titleSpacing: 20,
-        backgroundColor: paper,
-        foregroundColor: ink,
+        titleSpacing: 24,
+        backgroundColor: brockmann.background,
+        foregroundColor: brockmann.foreground,
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
         centerTitle: false,
-        titleTextStyle: TextStyle(
-          fontFamily: 'Geist',
-          fontSize: 18,
-          letterSpacing: -.3,
-          fontWeight: FontWeight.w400,
-          color: ink,
-        ),
+        titleTextStyle: BrockmannType.value.style(color: brockmann.foreground),
         systemOverlayStyle: SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
-          statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-          statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+          statusBarIconBrightness: mode == AppThemeMode.light
+              ? Brightness.dark
+              : Brightness.light,
+          statusBarBrightness: mode == AppThemeMode.light
+              ? Brightness.light
+              : Brightness.dark,
         ),
       ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: surface,
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          minimumSize: const Size(48, 48),
+          foregroundColor: brockmann.secondary,
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: brockmann.surface,
         surfaceTintColor: Colors.transparent,
-        indicatorColor: scheme.primaryContainer,
         elevation: 0,
-        height: 76,
-        iconTheme: WidgetStateProperty.resolveWith(
-          (states) => IconThemeData(
-            color: states.contains(WidgetState.selected)
-                ? scheme.onPrimaryContainer
-                : muted,
-            size: 23,
-          ),
-        ),
-        labelTextStyle: WidgetStateProperty.resolveWith(
-          (states) => TextStyle(
-            fontFamily: 'Geist',
-            fontSize: 12,
-            fontWeight: states.contains(WidgetState.selected)
-                ? FontWeight.w700
-                : FontWeight.w500,
-            color: states.contains(WidgetState.selected)
-                ? scheme.primary
-                : muted,
-          ),
-        ),
+        showDragHandle: false,
+        shape: Border(top: BorderSide(color: brockmann.line)),
       ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: scheme.primary,
-          foregroundColor: scheme.onPrimary,
-          disabledBackgroundColor: line,
-          disabledForegroundColor: muted,
-          minimumSize: const Size(0, 52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-          textStyle: const TextStyle(
-            fontFamily: 'GeistMono',
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-          ),
-        ).copyWith(overlayColor: feedback),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: scheme.primary,
-          side: BorderSide(color: line),
-          minimumSize: const Size(0, 48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-        ).copyWith(overlayColor: feedback),
-      ),
-      textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: scheme.primary,
-          minimumSize: const Size(0, 44),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-          textStyle: const TextStyle(
-            fontFamily: 'GeistMono',
-            fontSize: 12,
-            fontWeight: FontWeight.w400,
-          ),
-        ).copyWith(overlayColor: feedback),
-      ),
-      cardTheme: CardThemeData(
-        color: surface,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.zero,
-          side: BorderSide(color: line),
-        ),
-      ),
-      chipTheme: ChipThemeData(
-        backgroundColor: surface,
-        side: BorderSide(color: line),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: surface,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.zero,
-          borderSide: BorderSide(color: line),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
+      dividerTheme: DividerThemeData(
+        color: brockmann.line,
+        thickness: .5,
+        space: .5,
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+        backgroundColor: brockmann.surface,
+        elevation: 0,
+        shape: Border.symmetric(horizontal: BorderSide(color: brockmann.line)),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: isDark ? const Color(0xFF2E3B49) : AppColors.ink,
-        contentTextStyle: const TextStyle(
-          fontFamily: 'Geist',
-          color: Colors.white,
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-        behavior: SnackBarBehavior.floating,
+        backgroundColor: brockmann.surface,
+        contentTextStyle: BrockmannType.body.style(color: brockmann.foreground),
+        elevation: 0,
+        behavior: SnackBarBehavior.fixed,
+        shape: Border(top: BorderSide(color: brockmann.line)),
       ),
     );
   }
+}
+
+/// Preserve distinct dark/AMOLED choices while using Brockmann's token system.
+class _AATheme extends BrockmannThemeData {
+  const _AATheme(this.mode)
+    : super(
+        brightness: mode == AppThemeMode.light
+            ? Brightness.light
+            : Brightness.dark,
+        accent: mode == AppThemeMode.light ? Colors.black : Colors.white,
+        tilt: false,
+      );
+  final AppThemeMode mode;
+  @override
+  Color get background =>
+      mode == AppThemeMode.dark ? const Color(0xff0a0a0a) : super.background;
+  @override
+  Color get surface =>
+      mode == AppThemeMode.amoled ? Colors.black : super.surface;
 }

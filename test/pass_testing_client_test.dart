@@ -8,7 +8,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 
 const id = '12345678-1234-1234-1234-123456789abc';
 Map<String, dynamic> deniedSnapshot() => {

@@ -1,10 +1,12 @@
+import 'package:brockmann/brockmann.dart';
+
 import 'campus_design.dart';
 import 'expressive.dart';
 
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nfc_pass_client/nfc_pass_client.dart';
 
@@ -1749,7 +1751,7 @@ class _VerificationDialogState extends State<_VerificationDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
+  Widget build(BuildContext context) => BrockmannDialog(
     scrollable: true,
     title: Text(widget.label),
     content: Column(

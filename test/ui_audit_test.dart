@@ -6,7 +6,7 @@ import 'package:antiattendance/expressive.dart';
 import 'package:antiattendance/group_picker_page.dart';
 import 'package:antiattendance/schedule_api.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 
 class _PendingGroups extends ScheduleApi {
   final pending = Completer<List<ScheduleGroup>>();

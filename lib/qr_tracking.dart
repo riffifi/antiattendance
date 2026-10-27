@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 
 /// Maps camera coordinates through the same centered BoxFit.cover as the preview.
 List<Offset> projectQrCorners(

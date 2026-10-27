@@ -1,3 +1,4 @@
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:antiattendance/campus_design.dart';
 import 'package:antiattendance/accounts.dart';
 import 'package:antiattendance/app_theme.dart';
@@ -5,7 +6,7 @@ import 'package:antiattendance/main.dart';
 import 'package:antiattendance/nfc_pass.dart';
 import 'package:antiattendance/nfc_pass_page.dart';
 import 'package:flutter/foundation.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 

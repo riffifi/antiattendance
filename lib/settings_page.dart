@@ -41,11 +41,9 @@ class SettingsPage extends StatefulWidget {
     this.installApk,
     this.scheduleApi,
     this.accounts = const [],
-    this.legacyBuilder,
   });
 
   final bool embedded;
-  final WidgetBuilder? legacyBuilder;
   final ScheduleApi? scheduleApi;
   final List<SavedAccount> accounts;
   final AppSettingsStore store;
@@ -631,21 +629,6 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-              if (widget.legacyBuilder != null) ...[
-                const SizedBox(height: 24),
-                CampusListItem(
-                  headline: tr(context, 'Старый режим', 'Legacy'),
-                  supportingText: tr(
-                    context,
-                    'Локальные аккаунты, вход, восстановление и передача сессий.',
-                    'Local accounts, sign-in, recovery and session transfer.',
-                  ),
-                  onTap: () => Navigator.of(context).push<void>(
-                    MaterialPageRoute(builder: widget.legacyBuilder!),
                   ),
                 ),
                 const SizedBox(height: 12),

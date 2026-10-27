@@ -325,7 +325,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Attendance'), findsNWidgets(2));
     expect(find.text('Add'), findsOneWidget);
-    expect(find.text('Receive'), findsOneWidget);
+    // Sessions are never received from other phones any more.
+    expect(find.text('Receive'), findsNothing);
+    expect(
+      find.text(
+        'Connect a server in Settings and add an account on the server.',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('session actions fit on a narrow phone', (tester) async {

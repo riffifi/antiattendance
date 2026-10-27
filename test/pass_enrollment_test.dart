@@ -5,9 +5,11 @@ import 'package:antiattendance/app_theme.dart';
 import 'package:antiattendance/campus_design.dart';
 import 'package:antiattendance/nfc_pass.dart';
 import 'package:antiattendance/nfc_pass_page.dart';
+import 'package:antiattendance/server_sessions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:nfc_pass_client/nfc_pass_client.dart';
@@ -79,19 +81,78 @@ class EnrollmentClient extends NfcPassClient {
   }
 }
 
+const aliceId = '00000000-0000-0000-0000-00000000000a';
+const bobId = '00000000-0000-0000-0000-00000000000b';
+
+/// The session server keeps passes; enrollment publishes them there.
+SessionServerClient enrollmentServer() {
+  final numbers = <String, String?>{aliceId: null, bobId: null};
+  final versions = <String, int>{aliceId: 0, bobId: 0};
+  Map<String, dynamic> snapshot() => {
+    'protocol': 2,
+    'sync': 'automatic',
+    'cursor': 1,
+    'accounts': [
+      for (final id in numbers.keys)
+        {
+          'id': id,
+          'label': id == aliceId ? 'Alice' : 'Bob',
+          'version': 1,
+          'session_version': 1,
+          'pass_version': versions[id],
+          'state': 'valid',
+          'pass_allowed': true,
+        },
+    ],
+    'passes': [
+      for (final id in numbers.keys)
+        {'account_id': id, 'number': numbers[id], 'version': versions[id]},
+    ],
+  };
+  final client = SessionServerClient(
+    'http://localhost',
+    client: MockClient((request) async {
+      final match = RegExp(r'^/api/accounts/([^/]+)/pass$')
+          .firstMatch(request.url.path);
+      if (request.method == 'PUT' && match != null) {
+        final id = match.group(1)!;
+        numbers[id] = (jsonDecode(request.body) as Map)['number'] as String;
+        versions[id] = versions[id]! + 1;
+        return http.Response('{}', 200);
+      }
+      return http.Response(jsonEncode(snapshot()), 200);
+    }),
+  )..snapshot = snapshot();
+  client.fetchedAt = DateTime.now();
+  return client;
+}
+
+/// Lets the server upload started inside the widget finish in real time.
+Future<void> settleServer(WidgetTester tester) async {
+  for (var i = 0; i < 5; i++) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 20)),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+}
+
 void main() {
-  const account = SavedAccount(
-    id: 'a',
+  final account = SavedAccount(
+    id: 'server_$aliceId',
     label: 'Alice',
-    cookie: '.AspNetCore.Cookies=test',
+    cookie: serverSessionReference(aliceId),
   );
   setUp(() {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     FlutterSecureStorage.setMockInitialValues({});
+    ServerSessions.active = enrollmentServer();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(nfcPassChannel, (_) async => null);
   });
   tearDown(() {
+    ServerSessions.active?.close();
+    ServerSessions.active = null;
     debugDefaultTargetPlatformOverride = null;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(nfcPassChannel, null);
@@ -111,7 +172,7 @@ void main() {
         theme: AppTheme.light,
         home: Scaffold(
           body: NfcPassPage(
-            accounts: const [account],
+            accounts: [account],
             clientFactory: (_) => client,
             onSessionExpired: onExpired,
             onReauth: onReauth,
@@ -129,10 +190,10 @@ void main() {
   testWidgets(
     'bulk pass enrollment saves successes and pauses on cancellation',
     (tester) async {
-      const bob = SavedAccount(
-        id: 'b',
+      final bob = SavedAccount(
+        id: 'server_$bobId',
         label: 'Bob',
-        cookie: '.AspNetCore.Cookies=bob',
+        cookie: serverSessionReference(bobId),
       );
       final aliceClient = EnrollmentClient();
       final bobClient = EnrollmentClient();
@@ -145,7 +206,7 @@ void main() {
           theme: AppTheme.light,
           home: Scaffold(
             body: NfcPassPage(
-              accounts: const [account, bob],
+              accounts: [account, bob],
               clientFactory: (a) =>
                   a.id == account.id ? aliceClient : bobClient,
             ),
@@ -162,6 +223,8 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Enroll').last);
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      await settleServer(tester);
       await tester.pump(const Duration(milliseconds: 600));
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
@@ -272,6 +335,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
     expect(client.tokenCalls, 2);
     expect(client.codeCalls, 1);
+    await settleServer(tester);
     expect(await NfcPassStore().number(account), '42');
     await tester.pumpWidget(const SizedBox.shrink());
     debugDefaultTargetPlatformOverride = null;
@@ -300,6 +364,7 @@ void main() {
       await enterCode();
       expect(client.passCalls, 2);
       expect(client.codeCalls, 1);
+      await settleServer(tester);
       expect(await NfcPassStore().number(account), '42');
       await tester.pumpWidget(const SizedBox.shrink());
       debugDefaultTargetPlatformOverride = null;

@@ -552,8 +552,8 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
   bool _canUse(SavedAccount account) {
     final id = serverAccountId(account.cookie);
     final server = ServerSessions.active;
-    if (id == null) return !widget.requireAgreements;
-    if (server == null) return false;
+    // Only server accounts have passes; the phone keeps none of its own.
+    if (id == null || server == null) return false;
     if (widget.requireAgreements &&
         !server.requiresPassAgreements &&
         !server.passTestingActive) {
@@ -588,6 +588,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
   }
 
   bool _refreshingAgreements = false;
+  bool _leaseRefreshing = false;
 
   Future<void> _requestAccess(SavedAccount account) async {
     final id = serverAccountId(account.cookie);
@@ -749,6 +750,38 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
       })) {
         await _stop();
         return;
+      }
+      // Without a recent answer from the server a revoked pass could not be
+      // noticed, so the queue stops after 90 seconds offline. (Pass numbers
+      // only ever come from a fetch, so a client with passes has fetchedAt.)
+      final server = ServerSessions.active;
+      final fetchedAt = server?.fetchedAt;
+      if (server != null &&
+          fetchedAt != null &&
+          DateTime.now().difference(fetchedAt) > const Duration(seconds: 90)) {
+        await _stop();
+        if (mounted) {
+          setState(
+            () => _message = tr(
+              context,
+              'Нет связи с сервером, пропуск остановлен.',
+              'No connection to the server; the pass was stopped.',
+            ),
+          );
+        }
+        return;
+      }
+      if (server != null &&
+          fetchedAt != null &&
+          !_leaseRefreshing &&
+          DateTime.now().difference(fetchedAt) > const Duration(seconds: 20)) {
+        _leaseRefreshing = true;
+        unawaited(
+          server
+              .fetch()
+              .then((_) {}, onError: (Object _) {})
+              .whenComplete(() => _leaseRefreshing = false),
+        );
       }
       final status =
           await nfcPassChannel.invokeMapMethod<String, dynamic>('status') ?? {};

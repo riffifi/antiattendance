@@ -52,6 +52,9 @@ class SessionServerClient {
   final http.Client _http;
   int? groupId;
   Map<String, dynamic> snapshot = {};
+
+  /// When the server last answered; the pass is used only while it is recent.
+  DateTime? fetchedAt;
   String? _passClientKey;
   Future<void>? _passClientLoading;
   String get _passClientStorageKey =>
@@ -139,13 +142,7 @@ class SessionServerClient {
     if (remaining <= Duration.zero || remaining > const Duration(hours: 24)) {
       throw const FormatException('Invalid pass testing expiry.');
     }
-    await _testingStorage.write(
-      key: _testingStorageKey,
-      value: jsonEncode({
-        'password': password.trim(),
-        'expires_at': until.millisecondsSinceEpoch,
-      }),
-    );
+    // The testing password lives in memory only; it is never written to the phone.
     _activatePassTesting(password, until);
   }
 
@@ -160,22 +157,10 @@ class SessionServerClient {
     });
   }
 
+  /// Older versions saved the testing password; remove it instead of restoring.
   Future<void> restorePassTesting() async {
-    final raw = await _testingStorage.read(key: _testingStorageKey);
-    if (raw == null) return;
-    try {
-      final saved = jsonDecode(raw) as Map<String, dynamic>;
-      final until = DateTime.fromMillisecondsSinceEpoch(
-        saved['expires_at'] as int,
-        isUtc: true,
-      );
-      if (!until.isAfter(DateTime.now())) {
-        await disablePassTesting();
-        return;
-      }
-      _activatePassTesting(saved['password'] as String, until);
-    } catch (_) {
-      await disablePassTesting();
+    if (await _testingStorage.read(key: _testingStorageKey) != null) {
+      await _testingStorage.delete(key: _testingStorageKey);
     }
   }
 
@@ -188,22 +173,17 @@ class SessionServerClient {
     await _testingStorage.delete(key: _testingStorageKey);
   }
 
+  /// What may be written to the phone: account metadata only. Pass numbers and
+  /// access leases stay in memory and come from the server on every start.
   Map<String, dynamic> get cacheSnapshot {
     if (snapshot.isEmpty) return {};
-    final denied = accounts
-        .where((row) => row['pass_allowed'] == false)
-        .map((row) => row['id'])
-        .toSet();
     return {
       ...snapshot,
       'pass_testing_expires_at': null,
+      'pass_access_expires_at': null,
       'passes': [
         for (final row in snapshot['passes'] as List? ?? [])
-          {
-            ...(row as Map).cast<String, dynamic>(),
-            if (requiresPassAgreements || denied.contains(row['account_id']))
-              'number': null,
-          },
+          {...(row as Map).cast<String, dynamic>(), 'number': null},
       ],
     };
   }
@@ -397,6 +377,7 @@ class SessionServerClient {
       }
     }
     snapshot = result;
+    fetchedAt = DateTime.now();
     if (identical(ServerSessions.active, this)) {
       await ServerSessions.saveSnapshot();
     }
@@ -426,14 +407,16 @@ class SessionServerClient {
     return null;
   }
 
+  /// The owner's switch on the server is absolute: without an explicit
+  /// `pass_allowed: true` the pass is never used, testing included.
   bool canUsePass(String id) {
     final row = accounts.where((row) => row['id'] == id).firstOrNull;
     return row != null &&
+        row['pass_allowed'] == true &&
         (passTestingActive ||
-            (row['pass_allowed'] != false &&
-                (!requiresPassAgreements ||
-                    (row['pass_access'] == 'approved' &&
-                        (passAccessUntil?.isAfter(DateTime.now()) ?? false)))));
+            !requiresPassAgreements ||
+            (row['pass_access'] == 'approved' &&
+                (passAccessUntil?.isAfter(DateTime.now()) ?? false)));
   }
 
   DateTime? testingExpiryFor(String id) {
@@ -648,6 +631,9 @@ abstract final class ServerSessions {
     final cached = await _storage.read(key: 'session_server_snapshot_v1');
     if (cached != null) {
       active!.snapshot = jsonDecode(cached) as Map<String, dynamic>;
+      // Older versions could have cached pass numbers; keep metadata only.
+      active!.snapshot = active!.cacheSnapshot;
+      await saveSnapshot();
     }
     await active!.restorePassIdentity();
     await active!.restorePassTesting();

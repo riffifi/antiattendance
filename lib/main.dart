@@ -2,6 +2,7 @@ import 'aa_id_page.dart';
 import 'debug_menu_page.dart';
 import 'server_sessions.dart';
 import 'session_server_sync.dart';
+import 'sensitive_data.dart';
 import 'session_server_page.dart';
 import 'updates_page.dart';
 import 'campus_design.dart';
@@ -303,7 +304,7 @@ class HomePage extends StatefulWidget {
     this.updates,
     this.sessionChecker = checkSession,
     this.startAtSelector = false,
-    this.legacyMode = true,
+    this.legacyMode = false,
   });
 
   final bool startAtSelector;
@@ -432,6 +433,7 @@ class _HomePageState extends State<HomePage> {
       unawaited(_takeInitialWidgetRequest());
     }
     SessionAutoSync.install();
+    unawaited(SensitiveData.purge().catchError((Object _) {}));
     _serverUpdates = ServerSessions.changes.listen((_) async {
       if (_busy || !mounted) return;
       await _nfcPageKey.currentState?.deactivateQueue();
@@ -701,24 +703,12 @@ class _HomePageState extends State<HomePage> {
           themeMode: widget.themeMode,
           onThemeModeChanged: widget.onThemeModeChanged ?? (_) {},
           updates: widget.updates,
-          legacyBuilder: widget.legacyMode ? null : _legacyPage,
         ),
       ),
     );
     if (mounted) await _load(preserveSelection: true);
     _scheduleSummarySync();
   }
-
-  Widget _legacyPage(BuildContext context) => HomePage(
-    legacyMode: true,
-    store: LegacyAccountStore(),
-    settingsStore: _settingsStore,
-    language: widget.language,
-    onLanguageChanged: widget.onLanguageChanged,
-    themeMode: widget.themeMode,
-    onThemeModeChanged: widget.onThemeModeChanged,
-    updates: widget.updates,
-  );
 
   Future<void> _openServerLogin([SavedAccount? account]) async {
     await _nfcPageKey.currentState?.deactivateQueue();
@@ -2301,9 +2291,6 @@ class _HomePageState extends State<HomePage> {
                                 onThemeModeChanged:
                                     widget.onThemeModeChanged ?? (_) {},
                                 updates: widget.updates,
-                                legacyBuilder: widget.legacyMode
-                                    ? null
-                                    : _legacyPage,
                               )
                             : const SizedBox.shrink(),
                       if (_debugVisible)

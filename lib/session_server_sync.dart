@@ -7,7 +7,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'accounts.dart';
 import 'app_settings.dart';
-import 'nfc_pass.dart';
 import 'server_sessions.dart';
 
 class SessionSyncStatus {
@@ -23,7 +22,8 @@ class SessionSyncStatus {
   final bool failed;
 }
 
-/// The local secure account/pass stores are the outbox. A persistent journal
+/// The local secure account store is the outbox (only for accounts left by
+/// older versions; pass numbers never enter it). A persistent journal
 /// records what was acknowledged and the revision observed before an offline
 /// edit. Refetching never silently rebases an old edit onto a newer revision.
 abstract final class SessionAutoSync {
@@ -136,35 +136,6 @@ abstract final class SessionAutoSync {
           journal[a.id] = record;
         }
       }
-      await _storage.write(key: _key(client), value: jsonEncode(journal));
-    });
-    request();
-  }
-
-  static Future<void> passChanged(SavedAccount account, String number) async {
-    final client = ServerSessions.active;
-    if (client == null) return;
-    final id =
-        serverAccountId(account.cookie) ?? client.importedIds[account.id];
-    final observedVersion = id == null ? 0 : client.passVersion(id);
-    await _journal(() async {
-      final journal = await _read(client);
-      final journalId = serverAccountId(account.cookie) == null
-          ? account.id
-          : 'remote:$id';
-      final record =
-          (journal[journalId] as Map?)?.cast<String, dynamic>() ??
-          <String, dynamic>{};
-      record['remote_id'] = id;
-      record['pending_pass'] = number;
-      record['pending_pass_version'] =
-          observedVersion == record['own_pass_base'] &&
-              id != null &&
-              client.passVersion(id) == record['own_pass_version'] &&
-              client.passNumber(id) == record['own_pass_number']
-          ? record['own_pass_version']
-          : observedVersion;
-      journal[journalId] = record;
       await _storage.write(key: _key(client), value: jsonEncode(journal));
     });
     request();
@@ -291,35 +262,7 @@ abstract final class SessionAutoSync {
                 if (error.status != 409) rethrow;
               }
             }
-            final number = await NfcPassStore().number(account);
-            if (number != null && record['pass_number'] != number) {
-              final expected =
-                  record['pending_pass_version'] as int? ??
-                  record['pass_version'] as int? ??
-                  0;
-              // Initial enrollment on an unlinked phone adopts the shared pass.
-              if (record['pass_number'] != null ||
-                  client.passNumber(id) == null) {
-                try {
-                  await client.publishPass(
-                    id,
-                    number,
-                    expectedVersion: expected,
-                  );
-                  record['own_pass_base'] = expected;
-                  record['own_pass_version'] = expected + 1;
-                  record['own_pass_number'] = number;
-                } on SessionServerException catch (error) {
-                  if (error.status != 409) rethrow;
-                }
-                await client.fetch();
-              }
-              record['pass_number'] = number;
-              record.remove('pending_pass');
-              record.remove('pending_pass_version');
-            }
             record['session_version'] = remote['session_version'];
-            record['pass_version'] = client.passVersion(id);
             journal[account.id] = record;
             await _storage.write(key: _key(client), value: jsonEncode(journal));
           });
@@ -353,33 +296,6 @@ abstract final class SessionAutoSync {
           } catch (_) {
             pending++;
           }
-        }
-        for (final entry in journal.entries.where(
-          (e) => e.key.startsWith('remote:'),
-        )) {
-          final record = (entry.value as Map).cast<String, dynamic>();
-          final number = record['pending_pass'] as String?;
-          if (number == null) continue;
-          try {
-            final id = record['remote_id'] as String;
-            await client.publishPass(
-              id,
-              number,
-              expectedVersion: record['pending_pass_version'] as int,
-            );
-            record.remove('pending_pass');
-            record.remove('pending_pass_version');
-          } on SessionServerException catch (error) {
-            if (error.status == 409 || error.status == 404) {
-              record.remove('pending_pass');
-              record.remove('pending_pass_version');
-            } else {
-              pending++;
-            }
-          } catch (_) {
-            pending++;
-          }
-          journal[entry.key] = record;
         }
         await _storage.write(key: _key(client), value: jsonEncode(journal));
       });

@@ -1,6 +1,11 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  "No connection to the server; the pass was stopped.": (
+    "Pas de connexion au serveur ; le passe a été arrêté.",
+    "Sem ligação ao servidor; o passe foi interrompido.",
+    "无法连接服务器，通行证已停止。",
+  ),
   "Could not refresh approvals. Try again.": (
     "Impossible d’actualiser les autorisations. Réessayez.",
     "Não foi possível atualizar as autorizações. Tente novamente.",

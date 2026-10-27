@@ -4,10 +4,13 @@ import 'package:antiattendance/app_theme.dart';
 import 'package:antiattendance/main.dart';
 import 'package:antiattendance/nfc_pass.dart';
 import 'package:antiattendance/nfc_pass_page.dart';
+import 'package:antiattendance/server_sessions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'pass_enrollment_test.dart' show enrollmentServer, aliceId;
 
 class _Store extends AccountStore {
   _Store(this.accounts);
@@ -30,12 +33,8 @@ void main() {
   );
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
 
-  testWidgets('renaming keeps the session, group and enrolled pass', (
-    tester,
-  ) async {
+  testWidgets('renaming keeps the session and group', (tester) async {
     final store = _Store([account]);
-    final passes = NfcPassStore();
-    await passes.save(account, 123);
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light,
@@ -65,7 +64,6 @@ void main() {
     expect(store.accounts.single.cookie, account.cookie);
     expect(store.accounts.single.id, account.id);
     expect(store.accounts.single.groupId, account.groupId);
-    expect(await passes.number(store.accounts.single), '123');
   });
 
   testWidgets(
@@ -73,9 +71,19 @@ void main() {
     (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
       addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      ServerSessions.active = enrollmentServer();
+      addTearDown(() {
+        ServerSessions.active?.close();
+        ServerSessions.active = null;
+      });
+      final alice = SavedAccount(
+        id: 'server_$aliceId',
+        label: 'Alice',
+        cookie: serverSessionReference(aliceId),
+      );
       final passes = NfcPassStore();
-      await passes.save(account, 123);
-      await passes.saveSettings(75, account.id, []);
+      await tester.runAsync(() => passes.save(alice, 123));
+      await passes.saveSettings(75, alice.id, []);
       final calls = <String>[];
       final messenger =
           TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
@@ -90,7 +98,7 @@ void main() {
         MaterialApp(
           theme: AppTheme.light,
           home: Scaffold(
-            body: NfcPassPage(accounts: [account], startOnOpen: true),
+            body: NfcPassPage(accounts: [alice], startOnOpen: true),
           ),
         ),
       );

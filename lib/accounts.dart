@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'server_sessions.dart';
 import 'session_server_sync.dart';
-import 'app_settings.dart';
 import 'session_expiry.dart';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -71,14 +70,11 @@ class AccountStore {
         .toList();
   }
 
+  /// The session server's accounts. Nothing about them but metadata is cached.
   Future<List<SavedAccount>> load() async {
-    final group = await AppSettingsStore().loadMyGroup();
-    final local = (await loadLocal())
-        .where((a) => group == null || a.groupId == group.id)
-        .toList();
     await ServerSessions.initialize();
     final server = ServerSessions.active;
-    if (server == null) return local;
+    if (server == null) return [];
     try {
       await SessionAutoSync.sync();
     } catch (_) {
@@ -102,86 +98,23 @@ class AccountStore {
           ),
         )
         .toList();
-    return [
-      ...local.where(
-        (a) =>
-            serverAccountId(a.cookie) == null &&
-            !server.importedIds.containsKey(a.id),
-      ),
-      ...remote,
-    ];
+    return remote;
   }
 
+  /// MIREA sessions are never written to the phone: accounts live on the
+  /// session server. Only server-side changes (groups) are published.
   Future<void> save(List<SavedAccount> accounts) async {
-    final previous = await loadLocal();
-    final myGroup = await AppSettingsStore().loadMyGroup();
-    accounts = accounts
-        .map(
-          (a) =>
-              myGroup != null &&
-                  a.groupId == null &&
-                  serverAccountId(a.cookie) == null &&
-                  !previous.any((old) => old.id == a.id)
-              ? SavedAccount(
-                  id: a.id,
-                  label: a.label,
-                  cookie: a.cookie,
-                  expiresAt: a.expiresAt,
-                  sessionExpired: a.sessionExpired,
-                  groupId: myGroup.id,
-                  groupName: myGroup.name,
-                  transferredPassNumber: a.transferredPassNumber,
-                )
-              : a,
-        )
-        .toList();
-    await SessionAutoSync.groupChanges(accounts);
-    // Server metadata is authoritative; local edits never replace its cookies.
-    final mapped =
-        ServerSessions.active?.importedIds.keys.toSet() ?? <String>{};
-    final retained = previous.where(
-      (a) =>
-          mapped.contains(a.id) || myGroup != null && a.groupId != myGroup.id,
+    await SessionAutoSync.groupChanges(
+      accounts.where((a) => serverAccountId(a.cookie) != null).toList(),
     );
-    final local = accounts
-        .where((a) => serverAccountId(a.cookie) == null)
-        .toList();
-    final ids = local.map((a) => a.id).toSet();
-    local.addAll(retained.where((a) => !ids.contains(a.id)));
-    await _storage.write(
-      key: _key,
-      value: jsonEncode(local.map((a) => a.toJson()).toList()),
-    );
-    await SessionAutoSync.accountChanges(previous, local);
+    SessionAutoSync.request();
   }
+
+  /// Removes MIREA sessions that older versions kept on the phone.
+  Future<void> deleteLocal() => _storage.delete(key: _key);
 }
 
-class ServerAccountStore extends AccountStore {
-  @override
-  Future<List<SavedAccount>> load() async => (await super.load())
-      .where((account) => serverAccountId(account.cookie) != null)
-      .toList();
-}
-
-class LegacyAccountStore extends AccountStore {
-  LegacyAccountStore({super.storage});
-  @override
-  Future<List<SavedAccount>> load() => loadLocal();
-
-  @override
-  Future<void> save(List<SavedAccount> accounts) async {
-    final before = await loadLocal();
-    final local = accounts
-        .where((account) => serverAccountId(account.cookie) == null)
-        .toList();
-    await SessionAutoSync.groupChanges(local);
-    await _storage.write(
-      key: AccountStore._key,
-      value: jsonEncode(local.map((account) => account.toJson()).toList()),
-    );
-    await SessionAutoSync.accountChanges(before, local);
-  }
-}
+class ServerAccountStore extends AccountStore {}
 
 int? transferredPassNumber(Object? raw) {
   if (raw == null) return null;

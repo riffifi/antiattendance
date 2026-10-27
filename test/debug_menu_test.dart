@@ -41,7 +41,6 @@ void main() {
         sessionExpired: true,
       );
       final passes = NfcPassStore();
-      await passes.save(account, 12345678);
       await passes.saveSettings(75, account.id, [account.id], true, account.id);
       final collector = DebugReportCollector(
         packageInfo: () async => _package(),
@@ -79,7 +78,7 @@ void main() {
       final sessions = report['Accounts & sessions']! as Map;
       expect(sessions['expired'], 1);
       expect(sessions['selected'], 1);
-      expect(sessions['enrolled_passes'], 1);
+      expect(sessions['enrolled_passes'], 0); // the phone keeps no passes
       final nfc = report['NFC & widgets']! as Map;
       expect((nfc['queue_preferences'] as Map)['mode'], 'single');
       expect((nfc['queue_preferences'] as Map)['delay_seconds'], 75);

@@ -1,3 +1,4 @@
+import 'aa_id_page.dart';
 import 'debug_menu_page.dart';
 import 'server_sessions.dart';
 import 'session_server_sync.dart';
@@ -260,23 +261,28 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
       Locale('zh'),
     ],
     localizationsDelegates: GlobalMaterialLocalizations.delegates,
-    home: HomePage(
-      startAtSelector: true,
-      legacyMode: false,
-      store: ServerAccountStore(),
-      settingsStore: _settingsStore,
-      language: _language,
-      onLanguageChanged: (language) {
-        setState(() => _language = language);
-        unawaited(_syncWidgetLanguage(language));
-        final service = StudySummaryService();
-        unawaited(
-          service.sync().catchError((Object _) {}).whenComplete(service.close),
-        );
-      },
-      themeMode: _themeMode,
-      onThemeModeChanged: (mode) => setState(() => _themeMode = mode),
-      updates: _updates,
+    home: AaIdGate(
+      child: HomePage(
+        startAtSelector: true,
+        legacyMode: false,
+        store: ServerAccountStore(),
+        settingsStore: _settingsStore,
+        language: _language,
+        onLanguageChanged: (language) {
+          setState(() => _language = language);
+          unawaited(_syncWidgetLanguage(language));
+          final service = StudySummaryService();
+          unawaited(
+            service
+                .sync()
+                .catchError((Object _) {})
+                .whenComplete(service.close),
+          );
+        },
+        themeMode: _themeMode,
+        onThemeModeChanged: (mode) => setState(() => _themeMode = mode),
+        updates: _updates,
+      ),
     ),
   );
 }

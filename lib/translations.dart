@@ -1882,4 +1882,71 @@ const translations = <String, (String, String, String)>{
     'Pulse 拒绝请求 (gRPC ',
   ),
   'format': ('format', 'formato', '格式'),
+  'AA ID address': ('Adresse AA ID', 'Endereço do AA ID', 'AA ID 地址'),
+  'Bound to a MIREA account': (
+    'Lié à un compte MIREA',
+    'Associado a uma conta MIREA',
+    '已绑定 MIREA 账户',
+  ),
+  'Check the AA ID address.': (
+    'Vérifiez l’adresse AA ID.',
+    'Verifique o endereço do AA ID.',
+    '请检查 AA ID 地址。',
+  ),
+  'Could not reach AA ID. Check your connection.': (
+    'Impossible de joindre AA ID. Vérifiez votre connexion.',
+    'Não foi possível contactar o AA ID. Verifique a ligação.',
+    '无法连接 AA ID。请检查网络连接。',
+  ),
+  'Devices': ('Appareils', 'Dispositivos', '设备'),
+  'Do not sign in with someone else’s MIREA account or share yours: signing in on a new phone signs out the oldest one.':
+      (
+        'N’utilisez pas le compte MIREA de quelqu’un d’autre et ne partagez pas le vôtre : une connexion sur un nouveau téléphone déconnecte le plus ancien.',
+        'Não entre com a conta MIREA de outra pessoa nem partilhe a sua: entrar num telemóvel novo termina a sessão do mais antigo.',
+        '不要使用他人的 MIREA 账户，也不要共享你的账户：在新手机上登录会退出最早的设备。',
+      ),
+  'MIREA did not confirm the sign-in. Sign in again.': (
+    'MIREA n’a pas confirmé la connexion. Reconnectez-vous.',
+    'A MIREA não confirmou a entrada. Entre novamente.',
+    'MIREA 未确认登录。请重新登录。',
+  ),
+  'One account per person': (
+    'Un compte par personne',
+    'Uma conta por pessoa',
+    '每人一个账户',
+  ),
+  'Other server': ('Autre serveur', 'Outro servidor', '其他服务器'),
+  'Sign in with MIREA to confirm it is you. AA ID is permanently bound to your MIREA account, and the app does not work without it. Your MIREA password and session are not saved.':
+      (
+        'Connectez-vous avec MIREA pour confirmer votre identité. AA ID est lié définitivement à votre compte MIREA, et l’application ne fonctionne pas sans lui. Votre mot de passe et votre session MIREA ne sont pas enregistrés.',
+        'Entre com a MIREA para confirmar que é você. O AA ID fica associado permanentemente à sua conta MIREA, e a aplicação não funciona sem ele. A palavra-passe e a sessão MIREA não são guardadas.',
+        '使用 MIREA 登录以确认你的身份。AA ID 将永久绑定到你的 MIREA 账户，没有它应用无法使用。MIREA 密码和会话不会被保存。',
+      ),
+  'Sign in with MIREA': (
+    'Se connecter avec MIREA',
+    'Entrar com a MIREA',
+    '使用 MIREA 登录',
+  ),
+  'Sign out of AA ID': (
+    'Se déconnecter d’AA ID',
+    'Terminar sessão no AA ID',
+    '退出 AA ID',
+  ),
+  'Sign out': ('Déconnecter', 'Terminar sessão', '退出'),
+  'This AA ID is blocked.': (
+    'Cet AA ID est bloqué.',
+    'Este AA ID está bloqueado.',
+    '此 AA ID 已被封禁。',
+  ),
+  'Too many attempts. Wait a minute.': (
+    'Trop de tentatives. Patientez une minute.',
+    'Demasiadas tentativas. Aguarde um minuto.',
+    '尝试次数过多。请等待一分钟。',
+  ),
+  'this phone': ('ce téléphone', 'este telemóvel', '本机'),
+  'Your account, devices and sign-out': (
+    'Votre compte, vos appareils et la déconnexion',
+    'A sua conta, dispositivos e saída',
+    '你的账户、设备和退出',
+  ),
 };

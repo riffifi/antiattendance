@@ -52,3 +52,4 @@ app.*.map.json
 
 # Kotlin compiler session files
 /android/.kotlin/
+*.patch

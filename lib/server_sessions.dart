@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:math';
 
+import 'aa_id.dart';
 import 'app_settings.dart';
 import 'schedule_api.dart';
 
@@ -268,6 +269,37 @@ class SessionServerClient {
   }
 
   Uri _url(String path) => base.resolve(path);
+
+  /// The AA ID bearer token every app API call carries. The server rejects
+  /// calls without it once AA ID is enforced.
+  Future<Map<String, String>> _aaIdHeaders() async {
+    if (!AaId.signedIn) return const {};
+    try {
+      return {'authorization': 'Bearer ${await AaId.accessToken()}'};
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  Future<void> _checkAaId(
+    http.StreamedResponse response, {
+    bool rpc = false,
+  }) async {
+    if (response.statusCode != 401 ||
+        response.headers['x-aaid-required'] != '1') {
+      return;
+    }
+    await response.stream.listen((_) {}).cancel();
+    await AaId.rejected();
+    if (rpc) {
+      throw http.ClientException('Sign in to AA ID to use the session server.');
+    }
+    throw const SessionServerException(
+      'Sign in to AA ID to use the session server.',
+      status: 401,
+    );
+  }
+
   Future<Map<String, dynamic>> _json(
     String path, {
     String method = 'GET',
@@ -276,9 +308,14 @@ class SessionServerClient {
   }) async {
     final request = http.Request(method, _url(path))
       ..followRedirects = false
-      ..headers.addAll({'content-type': 'application/json', ..._testHeaders});
+      ..headers.addAll({
+        'content-type': 'application/json',
+        ..._testHeaders,
+        ...await _aaIdHeaders(),
+      });
     if (body != null) request.body = jsonEncode(body);
     final response = await _http.send(request).timeout(timeout);
+    await _checkAaId(response);
     final bytes = BytesBuilder(copy: false);
     await for (final part in response.stream.timeout(timeout)) {
       if (part.length + bytes.length > 1024 * 1024) {
@@ -480,11 +517,13 @@ class SessionServerClient {
         'content-type': 'application/grpc-web+proto',
         'x-pulse-token': ?pulseToken,
         ..._testHeaders,
+        ...await _aaIdHeaders(),
       })
       ..bodyBytes = body;
     final response = await (transport ?? _http)
         .send(request)
         .timeout(const Duration(seconds: 20));
+    await _checkAaId(response, rpc: true);
     if (response.headers['x-pass-test-invalid'] == '1') {
       await disablePassTesting();
       ServerSessions.notify();

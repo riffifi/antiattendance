@@ -1,5 +1,6 @@
 import 'updates_page.dart';
 import 'session_server_page.dart';
+import 'aa_id_page.dart';
 import 'expressive.dart';
 import 'campus_design.dart';
 
@@ -589,6 +590,21 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
               ],
+              const SizedBox(height: 24),
+              CampusPanel(
+                padding: EdgeInsets.zero,
+                child: CampusListItem(
+                  headline: 'AA ID',
+                  supportingText: tr(
+                    context,
+                    'Ваш аккаунт, устройства и выход',
+                    'Your account, devices and sign-out',
+                  ),
+                  onTap: () => Navigator.of(context).push<void>(
+                    MaterialPageRoute(builder: (_) => const AaIdAccountPage()),
+                  ),
+                ),
+              ),
               if (widget.updates != null) ...[
                 const SizedBox(height: 24),
                 AnimatedBuilder(

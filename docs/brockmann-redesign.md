@@ -24,7 +24,11 @@ Validation on 28 October 2026 with Flutter 3.47.4 / Dart 3.13.3:
 - Showcase suite: 11 passing tests, including 320/412 dp, double text,
   both themes, navigation/edit retention and reorder layouts.
 
-A release build and data-preserving Pixel installation are required by AGENTS.md.
+- `flutter build apk --release`: passed (81.4 MB universal APK).
+- Pixel 7 (`2A101FDH20054Y`): `adb install -r` succeeded on 28 October;
+  application ID `com.example.antiattendance`, version `3.5.1+39`.
+  Installed app storage was preserved. Launch rendered the MIREA QR sign-in
+  screen; completing university sign-in was left to the user.
 Live university sign-in, attendance submission, NFC reader transactions and
 server authorization require their real services and credentials; widget tests
 verify their UI and logic without performing real attendance submissions.

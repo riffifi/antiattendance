@@ -1,9 +1,9 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'app_theme.dart';
-import 'l10n.dart';
+import 'screens.dart';
 
-/// The entry point is four full-height typographic destinations.
+/// The entry point is a row of full-height typographic destinations.
 class ScreenSelector extends StatelessWidget {
   const ScreenSelector({super.key, required this.onSelected, this.hiddenIndex});
 
@@ -12,12 +12,7 @@ class ScreenSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final labels = [
-      tr(context, 'Посещаемость', 'Attendance'),
-      tr(context, 'Расписание', 'Schedule'),
-      tr(context, 'Пропуска', 'Passes'),
-      tr(context, 'Настройки', 'Settings'),
-    ];
+    final labels = Screens.labels(context).take(Screens.count).toList();
     return ColoredBox(
       color: context.palette.paper,
       child: LayoutBuilder(
@@ -32,7 +27,10 @@ class ScreenSelector extends StatelessWidget {
                     key: ValueKey('screen-selector-$index'),
                     index: index,
                     label: labels[index],
-                    fontSize: (bounds.maxWidth / 4 * .74).clamp(28.0, 132.0),
+                    fontSize: (bounds.maxWidth / labels.length * .74).clamp(
+                      24.0,
+                      132.0,
+                    ),
                     onPressed: () => onSelected(index),
                   ),
                 ),

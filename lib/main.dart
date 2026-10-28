@@ -36,6 +36,9 @@ import 'batch_login_page.dart';
 import 'queue_scan_page.dart';
 import 'schedule_api.dart';
 import 'schedule_page.dart';
+import 'screens.dart';
+import 'today_page.dart';
+import 'aa_id_tab.dart';
 import 'session_import_page.dart';
 import 'session_share_page.dart';
 import 'settings_page.dart';
@@ -347,7 +350,7 @@ class _HomePageState extends State<HomePage> {
   late bool _showSelector = widget.startAtSelector;
 
   void _returnToSelector() {
-    if (_tab == 2) {
+    if (_tab == Screens.passes) {
       unawaited(
         _nfcPageKey.currentState?.deactivateQueue() ?? Future<void>.value(),
       );
@@ -361,6 +364,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   bool _scheduleVisited = false;
+  bool _todayVisited = false;
+  bool _aaIdVisited = false;
   bool _settingsVisited = false;
   var _nfcPageKey = GlobalKey<NfcPassPageState>();
   StreamSubscription<void>? _serverUpdates;
@@ -368,21 +373,32 @@ class _HomePageState extends State<HomePage> {
   void _changeTab(int index) {
     if (_showSelector) setState(() => _showSelector = false);
     if (index == _tab) return;
-    if (_tab == 3) {
+    if (_tab == Screens.settings) {
       unawaited(_load(preserveSelection: true));
       _scheduleSummarySync();
     }
-    if (index == 1) _scheduleVisited = true;
-    if (index == 3) _settingsVisited = true;
-    if (_tab == 2 && index != 2) {
+    if (index == Screens.schedule) _scheduleVisited = true;
+    if (index == Screens.today) _todayVisited = true;
+    if (index == Screens.aaId) _aaIdVisited = true;
+    if (index == Screens.settings) _settingsVisited = true;
+    if (_tab == Screens.passes && index != Screens.passes) {
       unawaited(
         _nfcPageKey.currentState?.deactivateQueue() ?? Future<void>.value(),
       );
     }
-    if (index != 2) _nfcStartOnOpen = false;
-    if (_tab != 2 && index == 2) _nfcPageKey = GlobalKey<NfcPassPageState>();
+    if (index != Screens.passes) _nfcStartOnOpen = false;
+    if (_tab != Screens.passes && index == Screens.passes) {
+      _nfcPageKey = GlobalKey<NfcPassPageState>();
+    }
     setState(() => _tab = index);
   }
+
+  /// Without the menu, a bottom bar holds these three screens.
+  static const _bottomScreens = [
+    Screens.attendance,
+    Screens.schedule,
+    Screens.passes,
+  ];
 
   DateTime? _scheduleDay;
   int? _scheduleGroupId;
@@ -493,11 +509,11 @@ class _HomePageState extends State<HomePage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       Navigator.of(context).popUntil((route) => route.isFirst);
-      if (_tab == 2 && _nfcPageKey.currentState != null) {
+      if (_tab == Screens.passes && _nfcPageKey.currentState != null) {
         unawaited(_nfcPageKey.currentState!.startFromWidget());
       } else {
         _nfcStartOnOpen = true;
-        _changeTab(2);
+        _changeTab(Screens.passes);
       }
     });
   }
@@ -619,7 +635,7 @@ class _HomePageState extends State<HomePage> {
 
   void _revealDebug() {
     setState(() => _debugVisible = true);
-    _selectScreen(4);
+    _selectScreen(Screens.developer);
   }
 
   Future<Map<String, Object?>> _loadDebugReport(BuildContext debugContext) {
@@ -634,13 +650,7 @@ class _HomePageState extends State<HomePage> {
       settings: _settingsStore,
       updates: widget.updates,
       appState: {
-        'active_tab': [
-          'attendance',
-          'schedule',
-          'passes',
-          'settings',
-          'developer',
-        ][_tab],
+        'active_tab': Screens.names[_tab],
         'accounts_loading': _loading,
         'accounts_load_failed': _loadError,
         'scanning': _scanning,
@@ -687,7 +697,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _openSettings() async {
     if (widget.startAtSelector) {
-      _selectScreen(3);
+      _selectScreen(Screens.settings);
       return;
     }
     await _nfcPageKey.currentState?.deactivateQueue();
@@ -1748,7 +1758,7 @@ class _HomePageState extends State<HomePage> {
                       ? Align(
                           alignment: Alignment.centerLeft,
                           child: Text(
-                            '0${_tab + 1} / ${[tr(context, 'Посещаемость', 'Attendance'), tr(context, 'Расписание', 'Schedule'), tr(context, 'Пропуска', 'Passes'), tr(context, 'Настройки', 'Settings')][_tab].toUpperCase()}',
+                            '0${_tab + 1} / ${Screens.labels(context)[_tab].toUpperCase()}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.labelMedium,
@@ -1810,8 +1820,9 @@ class _HomePageState extends State<HomePage> {
               ),
             if (!widget.startAtSelector)
               CampusNavigation(
-                selectedIndex: _tab,
-                onDestinationSelected: _changeTab,
+                selectedIndex: _bottomScreens.indexOf(_tab).clamp(0, 2),
+                onDestinationSelected: (index) =>
+                    _changeTab(_bottomScreens[index]),
                 labels: [
                   tr(context, 'Посещаемость', 'Attendance'),
                   tr(context, 'Расписание', 'Schedule'),
@@ -2242,11 +2253,20 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       TickerMode(
-                        enabled: _tab == 1 && !_showSelector,
+                        enabled: _tab == Screens.today && !_showSelector,
+                        child: _todayVisited
+                            ? TodayPage(
+                                active: _tab == Screens.today && !_showSelector,
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                      TickerMode(
+                        enabled: _tab == Screens.schedule && !_showSelector,
                         child: _scheduleVisited
                             ? SchedulePage(
                                 key: const ValueKey('schedule-tab'),
-                                active: _tab == 1 && !_showSelector,
+                                active:
+                                    _tab == Screens.schedule && !_showSelector,
                                 accounts: _accounts,
                                 api: _scheduleApi,
                                 log: _logStore,
@@ -2264,7 +2284,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                       // NFC is deliberately disposed on exit: its queue belongs
                       // to the visible screen and must stop when leaving it.
-                      _tab == 2 && !_showSelector
+                      _tab == Screens.passes && !_showSelector
                           ? SafeArea(
                               top: false,
                               child: NfcPassPage(
@@ -2277,25 +2297,33 @@ class _HomePageState extends State<HomePage> {
                               ),
                             )
                           : const SizedBox.shrink(),
-                      if (widget.startAtSelector)
-                        _settingsVisited
-                            ? SettingsPage(
-                                embedded: true,
-                                store: _settingsStore,
-                                accounts: _accounts,
-                                scheduleApi: _scheduleApi,
-                                language: widget.language,
-                                onLanguageChanged:
-                                    widget.onLanguageChanged ?? (_) {},
-                                themeMode: widget.themeMode,
-                                onThemeModeChanged:
-                                    widget.onThemeModeChanged ?? (_) {},
-                                updates: widget.updates,
+                      TickerMode(
+                        enabled: _tab == Screens.aaId && !_showSelector,
+                        child: _aaIdVisited
+                            ? AaIdPanel(
+                                active: _tab == Screens.aaId && !_showSelector,
                               )
                             : const SizedBox.shrink(),
+                      ),
+                      // Without the menu, Settings opens as its own page.
+                      widget.startAtSelector && _settingsVisited
+                          ? SettingsPage(
+                              embedded: true,
+                              store: _settingsStore,
+                              accounts: _accounts,
+                              scheduleApi: _scheduleApi,
+                              language: widget.language,
+                              onLanguageChanged:
+                                  widget.onLanguageChanged ?? (_) {},
+                              themeMode: widget.themeMode,
+                              onThemeModeChanged:
+                                  widget.onThemeModeChanged ?? (_) {},
+                              updates: widget.updates,
+                            )
+                          : const SizedBox.shrink(),
                       if (_debugVisible)
                         TickerMode(
-                          enabled: _tab == 4 && !_showSelector,
+                          enabled: _tab == Screens.developer && !_showSelector,
                           child: DebugMenuPage(
                             embedded: true,
                             loadReport: _loadDebugReport,

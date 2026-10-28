@@ -8,6 +8,7 @@ import 'app_haptics.dart';
 import 'app_theme.dart';
 import 'l10n.dart';
 import 'screen_selector.dart';
+import 'screens.dart';
 
 class ScreenNavigation extends StatefulWidget {
   const ScreenNavigation({
@@ -50,11 +51,13 @@ class _ScreenNavigationState extends State<ScreenNavigation>
   int? _secretPointer;
   Offset? _secretStart;
 
-  int get _pageCount => widget.debugVisible ? 5 : 4;
-  int _pageFor(int screen) =>
-      widget.debugVisible ? (screen == 4 ? 0 : screen + 1) : screen;
+  // The developer screen, once revealed, sits above the first one.
+  int get _pageCount => widget.debugVisible ? Screens.count + 1 : Screens.count;
+  int _pageFor(int screen) => widget.debugVisible
+      ? (screen == Screens.developer ? 0 : screen + 1)
+      : screen;
   int _screenFor(int page) =>
-      widget.debugVisible ? (page == 0 ? 4 : page - 1) : page;
+      widget.debugVisible ? (page == 0 ? Screens.developer : page - 1) : page;
 
   void _pointerDown(PointerDownEvent event) {
     if (!widget.debugVisible &&
@@ -327,7 +330,9 @@ class _ScreenNavigationState extends State<ScreenNavigation>
                   onPageChanged: _tick,
                   itemBuilder: (context, index) => RepaintBoundary(
                     child: SelectorLabel(
-                      index: _screenFor(index) == 4 ? -1 : _screenFor(index),
+                      index: _screenFor(index) == Screens.developer
+                          ? -1
+                          : _screenFor(index),
                       label: labels[_screenFor(index)],
                       fontSize: 26,
                       topPadding: 0,
@@ -345,13 +350,7 @@ class _ScreenNavigationState extends State<ScreenNavigation>
 
   @override
   Widget build(BuildContext context) {
-    final labels = [
-      tr(context, 'Посещаемость', 'Attendance'),
-      tr(context, 'Расписание', 'Schedule'),
-      tr(context, 'Пропуска', 'Passes'),
-      tr(context, 'Настройки', 'Settings'),
-      tr(context, 'Разработчик', 'Developer'),
-    ];
+    final labels = Screens.labels(context);
     final rail = _rail(context, labels);
     final content = RepaintBoundary(
       child: SafeArea(left: false, child: widget.child),
@@ -377,7 +376,7 @@ class _ScreenNavigationState extends State<ScreenNavigation>
                         opacity: 1 - t,
                         child: RepaintBoundary(
                           child: ScreenSelector(
-                            hiddenIndex: t == 0 || _origin == 4
+                            hiddenIndex: t == 0 || _origin == Screens.developer
                                 ? null
                                 : _origin,
                             onSelected: _open,
@@ -440,13 +439,21 @@ class _ScreenNavigationState extends State<ScreenNavigation>
                       ),
                     ),
                   ),
-                  if (t > 0 && t < 1 && _origin != 4)
+                  if (t > 0 && t < 1 && _origin != Screens.developer)
                     Positioned(
                       key: const ValueKey('navigation-morph-layer'),
-                      left: lerpDouble(_origin * bounds.maxWidth / 4, 0, t),
+                      left: lerpDouble(
+                        _origin * bounds.maxWidth / Screens.count,
+                        0,
+                        t,
+                      ),
                       top: t * (58 + MediaQuery.paddingOf(context).top),
                       bottom: 0,
-                      width: lerpDouble(bounds.maxWidth / 4, railWidth, t),
+                      width: lerpDouble(
+                        bounds.maxWidth / Screens.count,
+                        railWidth,
+                        t,
+                      ),
                       child: IgnorePointer(
                         child: ColoredBox(
                           color: context.palette.paper,
@@ -456,7 +463,10 @@ class _ScreenNavigationState extends State<ScreenNavigation>
                                 MediaQuery.paddingOf(context).top * (1 - t),
                             label: labels[_origin],
                             fontSize: lerpDouble(
-                              (bounds.maxWidth / 4 * .74).clamp(28, 132),
+                              (bounds.maxWidth / Screens.count * .74).clamp(
+                                24,
+                                132,
+                              ),
                               26,
                               t,
                             )!,

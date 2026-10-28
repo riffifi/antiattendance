@@ -1,6 +1,7 @@
 import 'package:antiattendance/app_theme.dart';
 import 'package:antiattendance/screen_navigation.dart';
 import 'package:antiattendance/screen_selector.dart';
+import 'package:antiattendance/screens.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -23,7 +24,7 @@ void main() {
               debugVisible: revealed,
               onRevealDebug: () => update(() {
                 revealed = true;
-                selected = 4;
+                selected = Screens.developer;
                 reveals++;
               }),
               onSelected: (index) => update(() {
@@ -87,12 +88,15 @@ void main() {
       await tester.drag(rail, const Offset(0, 140));
       await tester.pumpAndSettle();
       expect(reveals, 1);
-      expect(selected, 4);
+      expect(selected, Screens.developer);
       expect(find.text('00'), findsOneWidget);
       await tester.tap(find.text('INDEX'));
       await tester.pumpAndSettle();
       expect(find.byType(ScreenSelector), findsOneWidget);
-      expect(find.byKey(const ValueKey('screen-selector-4')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('screen-selector-${Screens.developer}')),
+        findsNothing,
+      );
       expect(tester.takeException(), isNull);
     },
   );
@@ -144,30 +148,31 @@ void main() {
           ),
         ),
       );
-      await tester.tap(find.byKey(const ValueKey('screen-selector-3')));
+      const last = Screens.count - 1;
+      await tester.tap(find.byKey(const ValueKey('screen-selector-$last')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 120));
       expect(find.byType(ScreenSelector), findsOneWidget);
-      expect(find.text('Page 3'), findsOneWidget);
+      expect(find.text('Page $last'), findsOneWidget);
       await tester.pumpAndSettle();
       expect(find.byType(ScreenSelector), findsNothing);
       final rail = find.byKey(const ValueKey('screen-rail'));
-      expect(tester.widget<PageView>(rail).controller!.page, 3);
+      expect(tester.widget<PageView>(rail).controller!.page, last);
       expect(tester.getRect(rail).width, 60);
       await tester.drag(rail, const Offset(0, 520));
       await tester.pumpAndSettle();
-      expect(selected, 2);
+      expect(selected, last - 1);
       expect(haptics, [
         'HapticFeedbackType.lightImpact',
         'HapticFeedbackType.selectionClick',
       ]);
       await tester.drag(rail, const Offset(0, -520));
       await tester.pumpAndSettle();
-      expect(selected, 3);
+      expect(selected, last);
       expect(haptics.length, 3);
       await tester.drag(rail, const Offset(0, -520));
       await tester.pumpAndSettle();
-      expect(selected, 3);
+      expect(selected, last);
       expect(haptics.length, 4);
       expect(haptics.last, 'HapticFeedbackType.lightImpact');
       await tester.drag(
@@ -175,7 +180,7 @@ void main() {
         const Offset(0, 520),
       );
       await tester.pumpAndSettle();
-      expect(selected, 3);
+      expect(selected, last);
       await tester.tap(find.text('INDEX'));
       await tester.pumpAndSettle();
       expect(find.byType(ScreenSelector), findsOneWidget);

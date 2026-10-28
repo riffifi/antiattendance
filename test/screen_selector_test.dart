@@ -5,6 +5,7 @@ import 'package:antiattendance/app_theme.dart';
 import 'package:antiattendance/accounts.dart';
 import 'package:antiattendance/main.dart';
 import 'package:antiattendance/screen_selector.dart';
+import 'package:antiattendance/screens.dart';
 import 'package:antiattendance/schedule_api.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -51,7 +52,7 @@ void main() {
     const Size(844, 390),
   ]) {
     testWidgets(
-      'four full-height columns fit $size with large translated text',
+      'every full-height column fits $size with large translated text',
       (tester) async {
         tester.view.physicalSize = size;
         tester.view.devicePixelRatio = 1;
@@ -82,12 +83,12 @@ void main() {
               ),
             ),
           );
-          for (var index = 0; index < 4; index++) {
+          for (var index = 0; index < Screens.count; index++) {
             final column = find.byKey(ValueKey('screen-selector-$index'));
             final rect = tester.getRect(column);
-            expect(rect.width, closeTo(size.width / 4, .01));
+            expect(rect.width, closeTo(size.width / Screens.count, .01));
             expect(rect.height, size.height);
-            expect(rect.left, closeTo(index * size.width / 4, .01));
+            expect(rect.left, closeTo(index * size.width / Screens.count, .01));
             await tester.tap(column);
             expect(chosen, index);
           }
@@ -134,7 +135,9 @@ void main() {
       expect(find.byType(ScreenSelector), findsNothing);
       await tester.tap(find.text('INDEX'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('screen-selector-3')));
+      await tester.tap(
+        find.byKey(const ValueKey('screen-selector-${Screens.settings}')),
+      );
       await tester.pumpAndSettle();
       expect(find.text('Settings'), findsWidgets);
       await tester.binding.handlePopRoute();
@@ -179,7 +182,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    for (var index = 0; index < 4; index++) {
+    for (var index = 0; index < Screens.count; index++) {
       await tester.tap(find.byKey(ValueKey('screen-selector-$index')));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull, reason: 'Destination $index');
@@ -195,7 +198,7 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('selector exposes four named, actionable semantic buttons', (
+  testWidgets('selector exposes named, actionable semantic buttons', (
     tester,
   ) async {
     final semantics = tester.ensureSemantics();
@@ -204,7 +207,14 @@ void main() {
         home: Scaffold(body: ScreenSelector(onSelected: (_) {})),
       ),
     );
-    for (final label in ['Attendance', 'Schedule', 'Passes', 'Settings']) {
+    for (final label in [
+      'Attendance',
+      'Today',
+      'Schedule',
+      'Passes',
+      'AA ID',
+      'Settings',
+    ]) {
       expect(
         tester.getSemantics(find.bySemanticsLabel(label)),
         matchesSemantics(

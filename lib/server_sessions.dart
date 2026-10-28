@@ -304,8 +304,18 @@ class SessionServerClient {
       bytes.add(part);
     }
     if (response.statusCode != 200) {
+      // The server explains refusals meant for the person in Russian.
+      String? detail;
+      try {
+        final body = jsonDecode(utf8.decode(bytes.takeBytes()));
+        if (body is Map && body['detail'] is String) {
+          detail = body['detail'] as String;
+        }
+      } catch (_) {}
       throw SessionServerException(
-        'Session server returned HTTP ${response.statusCode}.',
+        detail != null && detail.runes.any((c) => c > 127)
+            ? detail
+            : 'Session server returned HTTP ${response.statusCode}.',
         status: response.statusCode,
       );
     }
@@ -315,6 +325,63 @@ class SessionServerClient {
     }
     return result;
   }
+
+  /// Today's lessons of the person's group with everyone's marks, as on the
+  /// site's /today page.
+  Future<Map<String, dynamic>> today() => _json('/api/me/today');
+
+  /// The person's own settings: name and the pass switch.
+  Future<Map<String, dynamic>> myAccount() => _json('/api/me/account');
+
+  Future<Map<String, dynamic>> updateMyAccount({
+    String? label,
+    bool? passAllowed,
+  }) => _json(
+    '/api/me/account',
+    method: 'PUT',
+    body: {'label': ?label, 'pass_allowed': ?passAllowed},
+  );
+
+  /// Who may use the person's pass, and the requests waiting for an answer.
+  Future<Map<String, dynamic>> myPassList() => _json('/api/me/pass');
+
+  Future<List<Map<String, dynamic>>> searchPeople(String query) async {
+    final result = await _json(
+      '/api/me/people?q=${Uri.encodeQueryComponent(query)}',
+    );
+    return [
+      for (final person in result['people'] as List? ?? const [])
+        if (person is Map<String, dynamic>) person,
+    ];
+  }
+
+  Future<Map<String, dynamic>> sharePass(String accountId) => _json(
+    '/api/me/pass/people',
+    method: 'POST',
+    body: {'account_id': accountId},
+  );
+
+  Future<Map<String, dynamic>> unsharePass(String kind, String id) => _json(
+    '/api/me/pass/people/${Uri.encodeComponent(kind)}/${Uri.encodeComponent(id)}',
+    method: 'DELETE',
+  );
+
+  Future<Map<String, dynamic>> answerPassRequest(
+    String id,
+    bool allow,
+  ) => _json(
+    '/api/me/pass/requests/${Uri.encodeComponent(id)}/${allow ? 'allow' : 'deny'}',
+    method: 'POST',
+  );
+
+  /// Passes other people let this person use, and the person's open requests.
+  Future<Map<String, dynamic>> myPasses() => _json('/api/me/passes');
+
+  Future<Map<String, dynamic>> requestPass(String accountId) => _json(
+    '/api/me/pass/requests',
+    method: 'POST',
+    body: {'account_id': accountId},
+  );
 
   Future<Map<String, dynamic>> fetch() async {
     await restorePassIdentity();

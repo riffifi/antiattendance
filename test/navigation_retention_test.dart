@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:antiattendance/screens.dart';
 import 'package:antiattendance/accounts.dart';
 import 'package:antiattendance/app_theme.dart';
 import 'package:antiattendance/campus_design.dart';
@@ -126,7 +127,9 @@ void main() {
       final original = tester.state<ScrollableState>(scroll);
       await tester.tap(find.text('INDEX'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('screen-selector-3')));
+      await tester.tap(
+        find.byKey(const ValueKey('screen-selector-${Screens.settings}')),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.text('INDEX'));
       await tester.pumpAndSettle();

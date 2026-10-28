@@ -5,6 +5,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'aa_id.dart';
+import 'aa_id_tab.dart';
 import 'accounts.dart';
 import 'campus_design.dart';
 import 'l10n.dart';
@@ -211,135 +212,12 @@ class _AaIdSignInPageState extends State<AaIdSignInPage> {
   );
 }
 
-/// The signed-in AA ID: group, devices and sign-out.
-class AaIdAccountPage extends StatefulWidget {
+/// The signed-in AA ID, opened from Settings: the same as the AA ID tab.
+class AaIdAccountPage extends StatelessWidget {
   const AaIdAccountPage({super.key});
   @override
-  State<AaIdAccountPage> createState() => _AaIdAccountPageState();
-}
-
-class _AaIdAccountPageState extends State<AaIdAccountPage> {
-  List<AaIdDevice>? _devices;
-  bool _busy = false;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final devices = await AaId.devices();
-      if (mounted) setState(() => _devices = devices);
-    } catch (_) {
-      if (mounted) {
-        setState(
-          () => _error = tr(
-            context,
-            'Не удалось связаться с AA ID. Проверьте подключение.',
-            'Could not reach AA ID. Check your connection.',
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _revoke(AaIdDevice device) async {
-    setState(() => _busy = true);
-    try {
-      await AaId.revoke(device.id);
-      await _load();
-    } catch (_) {
-      if (mounted) {
-        setState(
-          () => _error = tr(
-            context,
-            'Не удалось связаться с AA ID. Проверьте подключение.',
-            'Could not reach AA ID. Check your connection.',
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _signOut() async {
-    setState(() => _busy = true);
-    await AaId.signOut();
-    if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final session = AaId.session;
-    final localizations = MaterialLocalizations.of(context);
-    return Scaffold(
-      appBar: const CampusAppBar(title: Text('AA ID')),
-      body: CampusPageBody(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-          children: [
-            CampusPanel(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    tr(
-                      context,
-                      'Привязан к аккаунту МИРЭА',
-                      'Bound to a MIREA account',
-                    ),
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  if (session?.groupName != null) ...[
-                    const SizedBox(height: 8),
-                    Text(session!.groupName!),
-                  ],
-                  const SizedBox(height: 8),
-                  Text(AaId.url, style: Theme.of(context).textTheme.bodySmall),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            CampusSectionTitle(tr(context, 'Устройства', 'Devices')),
-            if (_devices == null && _error == null)
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-            for (final device in _devices ?? const <AaIdDevice>[])
-              CampusListItem(
-                headline: device.current
-                    ? '${device.device} · ${tr(context, 'этот телефон', 'this phone')}'
-                    : device.device,
-                supportingText:
-                    '${localizations.formatShortDate(device.lastUsed)} ${localizations.formatTimeOfDay(TimeOfDay.fromDateTime(device.lastUsed))}',
-                trailing: device.current
-                    ? null
-                    : CampusButton.text(
-                        onPressed: _busy ? null : () => _revoke(device),
-                        child: Text(tr(context, 'Выйти', 'Sign out')),
-                      ),
-              ),
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: Text(
-                  _error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ),
-            const SizedBox(height: 20),
-            CampusButton.text(
-              onPressed: _busy ? null : _signOut,
-              child: Text(tr(context, 'Выйти из AA ID', 'Sign out of AA ID')),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const Scaffold(
+    appBar: CampusAppBar(title: Text('AA ID')),
+    body: CampusPageBody(child: AaIdPanel()),
+  );
 }

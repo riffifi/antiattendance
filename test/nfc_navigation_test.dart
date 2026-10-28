@@ -1,3 +1,4 @@
+import 'package:antiattendance/screens.dart';
 import 'package:antiattendance/campus_design.dart';
 import 'package:antiattendance/accounts.dart';
 import 'package:antiattendance/app_theme.dart';
@@ -88,7 +89,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('screen-selector-2')));
+    await tester.tap(
+      find.byKey(const ValueKey('screen-selector-${Screens.passes}')),
+    );
     await tester.pumpAndSettle();
     calls.clear();
     await tester.drag(
@@ -97,10 +100,12 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(calls, contains('stop'));
-    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('AA ID'), findsWidgets);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('screen-selector-2')));
+    await tester.tap(
+      find.byKey(const ValueKey('screen-selector-${Screens.passes}')),
+    );
     await tester.pumpAndSettle();
     expect(find.text('NFC passes'), findsOneWidget);
     calls.clear();

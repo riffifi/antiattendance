@@ -12,6 +12,7 @@ import 'accounts.dart';
 import 'app_theme.dart';
 import 'l10n.dart';
 import 'nfc_pass.dart';
+import 'pass_people.dart';
 import 'session_check.dart';
 import 'widget_preview.dart';
 import 'server_sessions.dart';
@@ -547,6 +548,15 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
         });
       }
     }
+  }
+
+  /// The passes on the list: usable ones (the person's own and the ones other
+  /// people allowed) and ones still waiting for the owner in Telegram.
+  bool _listed(SavedAccount account) {
+    if (_canUse(account)) return true;
+    final id = serverAccountId(account.cookie);
+    return id != null &&
+        ServerSessions.active?.passAccessStatus(id) == 'pending';
   }
 
   bool _canUse(SavedAccount account) {
@@ -1396,8 +1406,8 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
-              const SizedBox(height: 22),
+              const SizedBox(height: 38),
+              if (!_running) const PassSharingSection(),
               Row(
                 children: [
                   Expanded(
@@ -1434,15 +1444,15 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                 ],
               ),
               const SizedBox(height: 10),
-              if (widget.accounts.isEmpty)
+              if (!widget.accounts.any(_listed))
                 _card(
                   child: Column(
                     children: [
                       Text(
                         tr(
                           context,
-                          'Сначала добавьте аккаунты на вкладке посещаемости.',
-                          'Add accounts on the Attendance tab first.',
+                          'Здесь появятся ваш пропуск и пропуска людей, которые разрешили вам их использовать.',
+                          'Your pass and the passes people allowed you to use appear here.',
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -1485,7 +1495,10 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
               for (final account
                   in (_running
                           ? _queue
-                          : orderPassQueue(widget.accounts, _ownId))
+                          : orderPassQueue(
+                              widget.accounts.where(_listed).toList(),
+                              _ownId,
+                            ))
                       .where((a) => a.label.toLowerCase().contains(_query)))
                 _accountCard(account, enabled),
               if (!_single && _numbers.isNotEmpty)

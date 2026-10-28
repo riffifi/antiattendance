@@ -226,14 +226,8 @@ void main() {
         find.text('Waiting for the owner’s decision in Telegram.'),
         findsOneWidget,
       );
-      await tester.scrollUntilVisible(
-        find.text('Use server-backed passes for owner approvals.'),
-        250,
-      );
-      expect(
-        find.text('Use server-backed passes for owner approvals.'),
-        findsOneWidget,
-      );
+      // A local Legacy pass is not on the list at all.
+      expect(find.text('Legacy owner'), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
       await tester.pumpAndSettle();

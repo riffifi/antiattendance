@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:antiattendance/screens.dart';
 import 'package:antiattendance/accounts.dart';
 import 'package:antiattendance/app_settings.dart';
 import 'package:antiattendance/app_theme.dart';
@@ -192,7 +193,10 @@ void main() {
       expect(find.text('00'), findsOneWidget);
       await tester.tap(find.text('INDEX'));
       await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('screen-selector-4')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('screen-selector-${Screens.developer}')),
+        findsNothing,
+      );
       await tester.tap(find.byKey(const ValueKey('screen-selector-0')));
       await tester.pumpAndSettle();
       await tester.drag(rail, const Offset(0, 420));
@@ -217,7 +221,7 @@ void main() {
       expect(find.byType(DebugMenuPage), findsNothing);
       expect(
         tester.widget<PageView>(rail).childrenDelegate.estimatedChildCount,
-        4,
+        Screens.count,
       );
       await tester.pumpWidget(const SizedBox());
       await tester.pumpAndSettle();

@@ -13,7 +13,7 @@ import 'package:http/testing.dart';
 import 'package:flutter/material.dart';
 
 import 'pass_enrollment_test.dart' show EnrollmentClient;
-import 'pass_testing_client_test.dart' show id, deniedSnapshot;
+import 'pass_testing_client_test.dart' show id, approvalSnapshot;
 
 void main() {
   testWidgets(
@@ -29,14 +29,18 @@ void main() {
       final server = SessionServerClient(
         'https://example.com',
         client: MockClient(
-          (_) async => http.Response(
-            jsonEncode({
-              'expires_at':
-                  DateTime.now()
-                      .add(const Duration(minutes: 5))
-                      .millisecondsSinceEpoch /
-                  1000,
-            }),
+          (request) async => http.Response(
+            jsonEncode(
+              request.url.path == '/api/accounts'
+                  ? approvalSnapshot()
+                  : {
+                      'expires_at':
+                          DateTime.now()
+                              .add(const Duration(minutes: 5))
+                              .millisecondsSinceEpoch /
+                          1000,
+                    },
+            ),
             200,
           ),
         ),
@@ -47,7 +51,7 @@ void main() {
         ServerSessions.active = null;
       });
       await tester.runAsync(() => server.enablePassTesting('test-password'));
-      server.snapshot = deniedSnapshot();
+      server.snapshot = approvalSnapshot();
       final account = SavedAccount(
         id: 'server_$id',
         label: 'Owner',
@@ -88,7 +92,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await page.currentState!.startFromWidget();
+      await tester.runAsync(() => page.currentState!.startFromWidget());
       await tester.pumpAndSettle();
       expect(armed, isTrue);
       final pass = (activation!['passes'] as List).single as Map;
@@ -97,6 +101,10 @@ void main() {
         server.passTestingUntil!.millisecondsSinceEpoch,
       );
       await server.disablePassTesting();
+      // The queue's poll timer was started in real time by runAsync.
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 700)),
+      );
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pumpAndSettle();
       expect(armed, isFalse);

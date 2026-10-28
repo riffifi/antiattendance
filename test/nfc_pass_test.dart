@@ -35,20 +35,13 @@ void main() {
     expect(() => passTokenExpiry('opaque'), throwsFormatException);
   });
 
-  test('pass stays bound to enrolled session and is removable', () async {
+  test('the phone never stores a pass number', () async {
     FlutterSecureStorage.setMockInitialValues({});
     final store = NfcPassStore();
-    await store.save(alice, 9223372036854775807);
-    expect(await store.number(alice), '9223372036854775807');
-    expect(await store.number(bob), isNull);
-    expect(
-      await store.number(
-        const SavedAccount(id: 'a', label: 'Alice', cookie: 'replacement'),
-      ),
-      isNull,
-    );
-    await store.remove(alice.id);
+    expect(() => store.save(alice, 9223372036854775807), throwsStateError);
     expect(await store.number(alice), isNull);
+    expect(await const FlutterSecureStorage().readAll(), isEmpty);
+    expect(await transferPassNumbers([alice, bob]), isEmpty);
   });
 
   test('queue preferences persist', () async {

@@ -113,45 +113,49 @@ class _BrockmannPressableState extends State<BrockmannPressable> {
                     );
                   });
                 },
-          onPointerUp: (_) => setState(() => pressed = false),
-          onPointerCancel: (_) => setState(() => pressed = false),
+          onPointerUp: (_) {
+            if (pressed) setState(() => pressed = false);
+          },
+          onPointerCancel: (_) {
+            if (pressed) setState(() => pressed = false);
+          },
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: widget.onPressed == null ? null : _invoke,
-            onTapDown: widget.onPressed == null
-                ? null
-                : (_) => setState(() => pressed = true),
-            onTapUp: (_) => setState(() => pressed = false),
-            onTapCancel: () => setState(() => pressed = false),
+            onTapCancel: () {
+              if (pressed) setState(() => pressed = false);
+            },
             child: Container(
               constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
               foregroundDecoration: focused
                   ? BoxDecoration(border: Border.all(color: t.accent, width: 2))
                   : null,
-              child: BrockmannMotion(
-                value: pressed ? 1 : 0,
-                milliseconds: pressed ? 60 : 220,
-                builder: (c, progress) {
-                  final strength = t.tilt && !t.motionReduced(c)
-                      ? progress.clamp(0.0, 1.0) * widget.tiltStrength
-                      : 0.0;
-                  final matrix = Matrix4.identity()
-                    ..setEntry(3, 2, -1 / 400)
-                    ..rotateX(-_point.dy * 6 * math.pi / 180 * strength)
-                    ..rotateY(_point.dx * 6 * math.pi / 180 * strength)
-                    ..scaleByDouble(
-                      1 - .03 * strength,
-                      1 - .03 * strength,
-                      1.0,
-                      1,
-                    );
-                  return Transform(
-                    alignment: Alignment.center,
-                    transform: matrix,
-                    child: widget.builder(c, pressed),
-                  );
-                },
-              ),
+              child: widget.tiltStrength == 0
+                  ? widget.builder(context, pressed)
+                  : BrockmannMotion(
+                      value: pressed ? 1 : 0,
+                      milliseconds: pressed ? 60 : 160,
+                      builder: (c, progress) {
+                        final strength = t.tilt && !t.motionReduced(c)
+                            ? progress.clamp(0.0, 1.0) * widget.tiltStrength
+                            : 0.0;
+                        final matrix = Matrix4.identity()
+                          ..setEntry(3, 2, -1 / 400)
+                          ..rotateX(-_point.dy * 6 * math.pi / 180 * strength)
+                          ..rotateY(_point.dx * 6 * math.pi / 180 * strength)
+                          ..scaleByDouble(
+                            1 - .03 * strength,
+                            1 - .03 * strength,
+                            1.0,
+                            1,
+                          );
+                        return Transform(
+                          alignment: Alignment.center,
+                          transform: matrix,
+                          child: widget.builder(c, pressed),
+                        );
+                      },
+                    ),
             ),
           ),
         ),
@@ -283,7 +287,7 @@ class BrockmannIconButton extends StatelessWidget {
       child: Center(
         child: BrockmannMotion(
           value: expanded == null ? (pressed ? 1 : 0) : (expanded! ? 1 : 0),
-          milliseconds: expanded == null ? (pressed ? 60 : 220) : 240,
+          milliseconds: expanded == null ? (pressed ? 60 : 160) : 240,
           builder: (c, value) {
             final p = c.brockmann.motionReduced(c)
                 ? 0.0

@@ -2,6 +2,7 @@
 library;
 
 export 'src/theme.dart';
+export 'src/layout.dart';
 export 'src/foundation.dart';
 export 'src/controls.dart';
 export 'src/navigation.dart';

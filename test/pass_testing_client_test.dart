@@ -33,6 +33,13 @@ Map<String, dynamic> deniedSnapshot() => {
       1000,
 };
 
+// The owner allows the pass, but only approved people may use it.
+Map<String, dynamic> approvalSnapshot() {
+  final snapshot = deniedSnapshot();
+  (snapshot['accounts'] as List).single['pass_allowed'] = true;
+  return {...snapshot, 'pass_agreements_required': true};
+}
+
 void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
   tearDown(() {
@@ -40,56 +47,38 @@ void main() {
     ServerSessions.active = null;
   });
 
-  test('saved testing password restores only for its server and is cleared when the server rejects it', () async {
-    http.Client transport() => MockClient((request) async {
-      if (request.url.path == '/api/debug/pass-testing') {
-        return http.Response(
-          jsonEncode({
-            'expires_at':
-                DateTime.now()
-                    .add(const Duration(minutes: 5))
-                    .millisecondsSinceEpoch /
-                1000,
-          }),
-          200,
-        );
-      }
-      return http.Response(
-        jsonEncode({...deniedSnapshot(), 'pass_testing_expires_at': null}),
-        200,
+  test(
+    'the testing password is never saved and an old saved one is removed',
+    () async {
+      FlutterSecureStorage.setMockInitialValues({
+        'pass_testing_${'x' * 64}': '{"password":"old"}',
+      });
+      final client = SessionServerClient(
+        'https://example.com',
+        client: MockClient(
+          (request) async => http.Response(
+            jsonEncode({
+              'expires_at':
+                  DateTime.now()
+                      .add(const Duration(minutes: 5))
+                      .millisecondsSinceEpoch /
+                  1000,
+            }),
+            200,
+          ),
+        ),
       );
-    });
-    final first = SessionServerClient(
-      'https://example.com',
-      client: transport(),
-    );
-    await first.enablePassTesting('saved-test-password');
-    first.close();
-    final restored = SessionServerClient(
-      'https://example.com',
-      client: transport(),
-    );
-    addTearDown(restored.close);
-    await restored.restorePassTesting();
-    expect(restored.passTestingActive, isTrue);
-    final other = SessionServerClient(
-      'https://other.example.com',
-      client: transport(),
-    );
-    addTearDown(other.close);
-    await other.restorePassTesting();
-    expect(other.passTestingActive, isFalse);
-    await restored.fetch();
-    expect(restored.passTestingActive, isFalse);
-    expect(restored.passNumber(id), isNull);
-    final afterRejection = SessionServerClient(
-      'https://example.com',
-      client: transport(),
-    );
-    addTearDown(afterRejection.close);
-    await afterRejection.restorePassTesting();
-    expect(afterRejection.passTestingActive, isFalse);
-  });
+      addTearDown(client.close);
+      await client.enablePassTesting('saved-test-password');
+      expect(client.passTestingActive, isTrue);
+      final stored = jsonEncode(await const FlutterSecureStorage().readAll());
+      expect(stored, isNot(contains('saved-test-password')));
+      final restored = SessionServerClient('https://example.com');
+      addTearDown(restored.close);
+      await restored.restorePassTesting();
+      expect(restored.passTestingActive, isFalse);
+    },
+  );
 
   test('testing key is request-scoped and test-only pass numbers never enter the persisted snapshot', () async {
     final requests = <http.Request>[];
@@ -114,10 +103,12 @@ void main() {
     );
     addTearDown(client.close);
     client.snapshot = deniedSnapshot();
-    expect(client.passNumber(id), isNull);
     await client.enablePassTesting('test-daily-password');
+    // The owner's switch on the server wins over testing.
+    expect(client.passNumber(id), isNull);
+    expect(client.canUsePass(id), isFalse);
+    client.snapshot = approvalSnapshot();
     expect(client.passNumber(id), '12345');
-    expect(client.accounts.single['pass_allowed'], isFalse);
     expect((client.cacheSnapshot['passes'] as List).single['number'], isNull);
     expect(
       jsonEncode(client.cacheSnapshot),
@@ -152,7 +143,7 @@ void main() {
         ),
       );
       addTearDown(client.close);
-      client.snapshot = deniedSnapshot();
+      client.snapshot = approvalSnapshot();
       await client.enablePassTesting('test-password');
       expect(client.canUsePass(id), isTrue);
       expect(client.testingExpiryFor(id), isNotNull);

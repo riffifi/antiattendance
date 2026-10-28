@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:antiattendance/accounts.dart';
 import 'package:antiattendance/app_theme.dart';
-import 'package:antiattendance/nfc_pass.dart';
 import 'package:antiattendance/server_sessions.dart';
 import 'package:antiattendance/session_server_page.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -22,6 +21,7 @@ Map<String, dynamic> snapshot() => {
       'session_version': 1,
       'state': 'valid',
       'group_id': 769,
+      'pass_allowed': true,
     },
   ],
   'passes': [
@@ -147,28 +147,26 @@ void main() {
     },
   );
 
-  test('configured server metadata and passes load offline and disconnect preserves locals', () async {
-    final store = AccountStore();
-    const local = SavedAccount(
-      id: 'local',
-      label: 'Local',
-      cookie: 'session=local',
-    );
-    await store.save([local]);
-    final server = SessionServerClient(
-      'http://localhost',
-      client: MockClient((_) async => http.Response('', 503)),
-    )..snapshot = snapshot();
-    ServerSessions.active = server;
-    final accounts = await store.load();
-    expect(accounts.length, 2);
-    expect(serverAccountId(accounts.last.cookie), id);
-    expect(await NfcPassStore().number(accounts.last), '12345');
-    await store.save(accounts);
-    expect((await store.loadLocal()).single.cookie, local.cookie);
-    await ServerSessions.disconnect();
-    expect((await store.load()).single.label, 'Local');
-  });
+  test(
+    'configured server metadata loads offline without pass numbers',
+    () async {
+      final store = AccountStore();
+      final server = SessionServerClient(
+        'http://localhost',
+        client: MockClient((_) async => http.Response('', 503)),
+      )..snapshot = snapshot();
+      ServerSessions.active = server;
+      await ServerSessions.saveSnapshot();
+      final accounts = await store.load();
+      expect(serverAccountId(accounts.single.cookie), id);
+      final cached = await const FlutterSecureStorage().read(
+        key: 'session_server_snapshot_v1',
+      );
+      expect(cached, isNot(contains('"12345"')));
+      await ServerSessions.disconnect();
+      expect(await store.load(), isEmpty);
+    },
+  );
 
   testWidgets(
     'settings migrate legacy configuration and show only the server URL',

@@ -455,15 +455,12 @@ Future<DateTime?> showBrockmannDatePicker(
   );
   return _showTypedPicker<DateTime>(
     context,
-    title ?? MaterialLocalizations.of(context).datePickerHelpText,
+    title ?? 'choose date',
     (c, set) => Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        BrockmannText(
-          title ?? MaterialLocalizations.of(c).datePickerHelpText,
-          role: BrockmannType.heading,
-        ),
+        BrockmannText(title ?? 'choose date', role: BrockmannType.heading),
         const SizedBox(height: 16),
         BrockmannCalendar(
           value: draft,
@@ -477,13 +474,12 @@ Future<DateTime?> showBrockmannDatePicker(
           runSpacing: 8,
           children: [
             BrockmannButton(
-              label: confirmLabel ?? MaterialLocalizations.of(c).okButtonLabel,
+              label: confirmLabel ?? 'use date',
               style: BrockmannButtonStyle.secondary,
               onPressed: () => Navigator.pop(c, draft),
             ),
             BrockmannButton(
-              label:
-                  cancelLabel ?? MaterialLocalizations.of(c).cancelButtonLabel,
+              label: cancelLabel ?? 'cancel',
               style: BrockmannButtonStyle.text,
               onPressed: () => Navigator.pop(c),
             ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 
 import 'feedback.dart';
+import 'layout.dart';
 
 /// Achromatic chrome with one content-independent accent.
 @immutable
@@ -214,6 +215,8 @@ class BrockmannText extends StatelessWidget {
     this.maxLines,
     this.overflow,
     this.textAlign,
+    this.softWrap,
+    this.semanticsLabel,
   });
   final String text;
   final BrockmannType role;
@@ -222,12 +225,16 @@ class BrockmannText extends StatelessWidget {
   final int? maxLines;
   final TextOverflow? overflow;
   final TextAlign? textAlign;
+  final bool? softWrap;
+  final String? semanticsLabel;
   @override
   Widget build(BuildContext context) => Text(
     text,
-    textAlign: textAlign,
     maxLines: maxLines,
     overflow: overflow,
+    textAlign: textAlign,
+    softWrap: softWrap,
+    semanticsLabel: semanticsLabel,
     style: role.style(
       color: color ?? context.brockmann.foreground,
       weight: weight,
@@ -292,6 +299,11 @@ class BrockmannApp extends StatelessWidget {
 }
 
 /// Safe-area shell. Headers and footers remain outside the scrolling content.
+///
+/// The content inset adapts to the width (24 dp on phones, 48 dp from
+/// 600 dp), and [maxContentWidth] keeps lines readable on tablets and
+/// desktops. Supply [title] for a large typographic page header that
+/// scrolls with the content.
 class BrockmannPage extends StatelessWidget {
   const BrockmannPage({
     super.key,
@@ -300,11 +312,24 @@ class BrockmannPage extends StatelessWidget {
     this.footer,
     this.scroll = true,
     this.padding,
+    this.title,
+    this.subtitle,
+    this.onBack,
+    this.actions = const [],
+    this.maxContentWidth = 960,
+    this.controller,
   });
   final Widget child;
   final Widget? header, footer;
   final bool scroll;
   final EdgeInsetsGeometry? padding;
+  final String? title, subtitle;
+  final VoidCallback? onBack;
+  final List<Widget> actions;
+
+  /// Maximum width of the content column. Null fills the window.
+  final double? maxContentWidth;
+  final ScrollController? controller;
   @override
   Widget build(BuildContext context) => Scaffold(
     resizeToAvoidBottomInset: true,
@@ -312,7 +337,34 @@ class BrockmannPage extends StatelessWidget {
     body: SafeArea(
       child: LayoutBuilder(
         builder: (context, c) {
-          final inset = c.maxWidth < 720 ? 24.0 : 48.0;
+          final inset = c.maxWidth < 600 ? 24.0 : 48.0;
+          Widget body = child;
+          if (title != null) {
+            body = Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: scroll ? MainAxisSize.min : MainAxisSize.max,
+              children: [
+                BrockmannPageHeader(
+                  title: title!,
+                  subtitle: subtitle,
+                  onBack: onBack,
+                  actions: actions,
+                ),
+                const SizedBox(height: 32),
+                scroll ? child : Expanded(child: child),
+              ],
+            );
+          }
+          if (maxContentWidth != null) {
+            body = Align(
+              alignment: Alignment.topCenter,
+              heightFactor: scroll ? 1 : null,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxContentWidth!),
+                child: body,
+              ),
+            );
+          }
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -321,17 +373,24 @@ class BrockmannPage extends StatelessWidget {
                 child: scroll
                     ? SingleChildScrollView(
                         key: const PageStorageKey('page-scroll'),
+                        controller: controller,
                         padding:
                             padding ??
                             EdgeInsets.fromLTRB(inset, 24, inset, 32),
                         keyboardDismissBehavior:
                             ScrollViewKeyboardDismissBehavior.onDrag,
-                        child: child,
+                        child: body,
                       )
                     : Padding(
                         padding:
-                            padding ?? EdgeInsets.symmetric(horizontal: inset),
-                        child: child,
+                            padding ??
+                            EdgeInsets.fromLTRB(
+                              inset,
+                              title == null ? 0 : 24,
+                              inset,
+                              0,
+                            ),
+                        child: body,
                       ),
               ),
               ?footer,

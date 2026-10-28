@@ -1,5 +1,6 @@
 import 'updates_page.dart';
 import 'session_server_page.dart';
+import 'aa_id_page.dart';
 import 'expressive.dart';
 import 'campus_design.dart';
 
@@ -40,11 +41,9 @@ class SettingsPage extends StatefulWidget {
     this.installApk,
     this.scheduleApi,
     this.accounts = const [],
-    this.legacyBuilder,
   });
 
   final bool embedded;
-  final WidgetBuilder? legacyBuilder;
   final ScheduleApi? scheduleApi;
   final List<SavedAccount> accounts;
   final AppSettingsStore store;
@@ -581,6 +580,21 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
               ],
+              const SizedBox(height: 24),
+              CampusPanel(
+                padding: EdgeInsets.zero,
+                child: CampusListItem(
+                  headline: 'AA ID',
+                  supportingText: tr(
+                    context,
+                    'Ваш аккаунт, устройства и выход',
+                    'Your account, devices and sign-out',
+                  ),
+                  onTap: () => Navigator.of(context).push<void>(
+                    MaterialPageRoute(builder: (_) => const AaIdAccountPage()),
+                  ),
+                ),
+              ),
               if (widget.updates != null) ...[
                 const SizedBox(height: 24),
                 AnimatedBuilder(
@@ -607,21 +621,6 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-              if (widget.legacyBuilder != null) ...[
-                const SizedBox(height: 24),
-                CampusListItem(
-                  headline: tr(context, 'Старый режим', 'Legacy'),
-                  supportingText: tr(
-                    context,
-                    'Локальные аккаунты, вход, восстановление и передача сессий.',
-                    'Local accounts, sign-in, recovery and session transfer.',
-                  ),
-                  onTap: () => Navigator.of(context).push<void>(
-                    MaterialPageRoute(builder: widget.legacyBuilder!),
                   ),
                 ),
                 const SizedBox(height: 12),

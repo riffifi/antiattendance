@@ -52,8 +52,8 @@ void main() {
             .day,
         29,
       );
-      await tester.ensureVisible(find.text('Cancel'));
-      await tester.tap(find.text('Cancel'));
+      await tester.ensureVisible(find.text('cancel'));
+      await tester.tap(find.text('cancel'));
       await tester.pumpAndSettle();
       expect(result, isNull);
       await tester.tap(find.text('date'));
@@ -61,8 +61,8 @@ void main() {
       await tester.ensureVisible(leap);
       await tester.tap(leap);
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('OK'));
-      await tester.tap(find.text('OK'));
+      await tester.ensureVisible(find.text('use date'));
+      await tester.tap(find.text('use date'));
       await tester.pumpAndSettle();
       expect(result, DateTime(2028, 2, 29));
     },

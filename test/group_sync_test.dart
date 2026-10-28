@@ -5,7 +5,6 @@ import 'package:antiattendance/app_settings.dart';
 import 'package:antiattendance/app_theme.dart';
 import 'package:antiattendance/expressive.dart';
 import 'package:antiattendance/main.dart';
-import 'package:antiattendance/schedule_api.dart';
 import 'package:antiattendance/server_sessions.dart';
 import 'package:antiattendance/session_server_sync.dart';
 import 'package:antiattendance/settings_page.dart';
@@ -146,27 +145,6 @@ void main() {
       expect(row['pass_version'], 0);
       await SessionAutoSync.sync();
       expect(writes, 1);
-    },
-  );
-
-  test(
-    'preferred group limits local view and saving preserves hidden groups',
-    () async {
-      final store = AccountStore();
-      await store.save(await MemoryAccounts().load());
-      final settings = AppSettingsStore();
-      await settings.saveMyGroup(const ScheduleGroup(id: 42, name: 'Group A'));
-      expect((await settings.loadMyGroup())?.id, 42);
-      expect((await store.load()).map((a) => a.id), ['a']);
-      await store.save(await store.load());
-      expect(await store.loadLocal(), hasLength(2));
-      await store.save([
-        ...await store.load(),
-        const SavedAccount(id: 'new', label: 'New', cookie: 'new'),
-      ]);
-      expect((await store.load()).last.groupId, 42);
-      await settings.saveMyGroup(null);
-      expect(await store.load(), hasLength(3));
     },
   );
 

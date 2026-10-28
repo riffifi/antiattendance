@@ -1,14 +1,7 @@
-Vendored from https://github.com/riffifi/brockmann-flutter (local checkout 39f9d4fd5a3117921a9a0a3e7639919154d8bb7f).
+Vendored from Brockmann Flutter, including adaptive layout commit 80c4908 and the shared app-integration extensions developed with Antiattendance.
 
-AA extends text fields and compact selection controls to preserve its existing input and accessibility requirements. The app retains its application ID, secure-storage keys, method channels and server protocols. Optional library sound remains disabled.
+The framework includes rich button content, compact selection controls, native text input options, arbitrary dialog content, localized calendar actions, and descendant semantics. These APIs now live in the source framework as well as this vendored copy.
 
-Integration extensions: optional rich button content/alignment; compact switches
-and checkboxes; native text-field options (formatters, submission, obscuring,
-capitalization, length and adornments); rich command entries; arbitrary dialog
-forms; and localized calendar actions. Rich app rows can keep descendant semantics
-rather than replacing their child controls with one semantic node.
+The app preserves its application ID, secure storage keys, Android method channels, NFC lifecycle, QR protocols, server APIs, account and schedule state, localization, and light/dark/AMOLED preferences. Optional library sound remains disabled. The selector and rail retain their app-specific navigation and hidden developer entry.
 
-AA retains its existing selector/rail navigation, now using Brockmann input and
-motion, to preserve screen state, nested scroll/gesture ownership, the hidden
-developer entry and immediate NFC shutdown on navigation. The library pivot is
-used for legacy tab navigation. Optional sound is not enabled automatically.
+To update, copy lib/, test/, docs/, assets/, android/, pubspec.yaml and LICENSE from the validated framework checkout; run app and framework checks before committing.

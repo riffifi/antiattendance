@@ -1,13 +1,11 @@
 import 'dart:convert';
 
-import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:nfc_pass_client/nfc_pass_client.dart';
 
 import 'accounts.dart';
 import 'server_sessions.dart';
-import 'session_server_sync.dart';
 
 const nfcPassChannel = MethodChannel('antiattendance/nfc_pass');
 
@@ -62,46 +60,34 @@ List<SavedAccount> orderPassQueue(
   ...accounts.where((account) => account.id == ownAccountId),
 ];
 
+/// Pass numbers are never stored on the phone. They live on the session server,
+/// which hands them out only while the owner allows it, and are kept in memory.
 class NfcPassStore {
   NfcPassStore({FlutterSecureStorage? storage})
     : _storage = storage ?? const FlutterSecureStorage();
   final FlutterSecureStorage _storage;
 
-  String _fingerprint(SavedAccount account) =>
-      sha256.convert(utf8.encode(account.cookie)).toString();
-
   Future<String?> number(SavedAccount account) async {
     final remoteId = serverAccountId(account.cookie);
-    if (remoteId != null) {
-      await ServerSessions.initialize();
-      final server = ServerSessions.active;
-      return server?.passNumber(remoteId);
-    }
-    final raw = await _storage.read(key: 'nfc_pass_${account.id}');
-    if (raw == null) return null;
-    final record = jsonDecode(raw) as Map<String, dynamic>;
-    if (record['session'] != _fingerprint(account)) return null;
-    final number = record['number'] as String;
-    final value = int.tryParse(number);
-    return value != null && value > 0 ? number : null;
+    if (remoteId == null) return null;
+    await ServerSessions.initialize();
+    return ServerSessions.active?.passNumber(remoteId);
   }
 
   Future<void> save(SavedAccount account, int number) async {
     if (number <= 0) throw ArgumentError.value(number);
     final remoteId = serverAccountId(account.cookie);
-    if (remoteId != null) {
-      await SessionAutoSync.passChanged(account, number.toString());
-      await SessionAutoSync.sync();
-      return;
+    if (remoteId == null) {
+      throw StateError('Passes are kept only on the session server.');
     }
-    await _storage.write(
-      key: 'nfc_pass_${account.id}',
-      value: jsonEncode({
-        'number': number.toString(),
-        'session': _fingerprint(account),
-      }),
+    final client = ServerSessions.requireClient();
+    await client.publishPass(
+      remoteId,
+      number.toString(),
+      expectedVersion: client.passVersion(remoteId),
     );
-    await SessionAutoSync.passChanged(account, number.toString());
+    await client.fetch();
+    ServerSessions.notify();
   }
 
   Future<void> remove(String accountId) =>
@@ -131,14 +117,7 @@ class NfcPassStore {
   );
 }
 
+/// Passes are never sent from phone to phone.
 Future<Map<String, String>> transferPassNumbers(
   List<SavedAccount> accounts,
-) async {
-  final store = NfcPassStore();
-  final result = <String, String>{};
-  for (final account in accounts) {
-    final number = await store.number(account);
-    if (number != null) result[account.id] = number;
-  }
-  return result;
-}
+) async => const {};

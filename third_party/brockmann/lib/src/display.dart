@@ -17,11 +17,23 @@ class BrockmannListItem extends StatelessWidget {
     this.secondary,
     this.selected = false,
     this.onPressed,
+    this.leading,
+    this.trailing,
+    this.chevron = false,
   });
   final String label;
   final String? secondary;
   final bool selected;
   final VoidCallback? onPressed;
+
+  /// An optional glyph before the text, for rows where it aids recognition.
+  final BrockmannIcon? leading;
+
+  /// A widget after the text: a value, a badge or a switch-like control.
+  final Widget? trailing;
+
+  /// Shows a caret that signals navigation to another page.
+  final bool chevron;
   @override
   Widget build(BuildContext context) {
     final t = context.brockmann;
@@ -48,25 +60,43 @@ class BrockmannListItem extends StatelessWidget {
               duration: t.duration(c, 180),
               padding: const EdgeInsets.fromLTRB(12, 16, 12, 16),
               color: p ? t.surface : null,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  BrockmannText(
-                    label,
-                    role: BrockmannType.value,
-                    color: Color.lerp(
-                      t.foreground,
-                      t.accentText,
-                      value.clamp(0, 1),
+                  if (leading != null) ...[
+                    BrockmannGlyph(leading!),
+                    const SizedBox(width: 16),
+                  ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        BrockmannText(
+                          label,
+                          role: BrockmannType.value,
+                          color: Color.lerp(
+                            t.foreground,
+                            t.accentText,
+                            value.clamp(0, 1),
+                          ),
+                        ),
+                        if (secondary != null) ...[
+                          const SizedBox(height: 4),
+                          BrockmannText(
+                            secondary!,
+                            role: BrockmannType.caption,
+                            color: t.secondary,
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                  if (secondary != null) ...[
-                    const SizedBox(height: 4),
-                    BrockmannText(
-                      secondary!,
-                      role: BrockmannType.caption,
-                      color: t.secondary,
-                    ),
+                  if (trailing != null) ...[
+                    const SizedBox(width: 16),
+                    trailing!,
+                  ],
+                  if (chevron) ...[
+                    const SizedBox(width: 8),
+                    BrockmannGlyph(BrockmannIcon.caretRight, size: 20),
                   ],
                 ],
               ),

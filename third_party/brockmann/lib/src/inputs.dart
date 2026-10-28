@@ -207,12 +207,16 @@ class BrockmannRangeSlider extends StatelessWidget {
     this.min = 0,
     this.max = 1,
     this.divisions,
+    this.formatValue,
   });
   final String label;
   final RangeValues values;
   final ValueChanged<RangeValues>? onChanged;
   final double min, max;
   final int? divisions;
+
+  /// Formats each end of the range for display, e.g. `(v) => '${v.round()} Hz'`.
+  final String Function(double)? formatValue;
   @override
   Widget build(BuildContext context) {
     final t = context.brockmann;
@@ -223,7 +227,7 @@ class BrockmannRangeSlider extends StatelessWidget {
         BrockmannText(label, role: BrockmannType.label, color: t.secondary),
         const SizedBox(height: 4),
         BrockmannText(
-          '${values.start.toStringAsFixed(2)} – ${values.end.toStringAsFixed(2)}',
+          '${(formatValue ?? _fixed)(values.start)} – ${(formatValue ?? _fixed)(values.end)}',
           role: BrockmannType.monoValue,
         ),
         SliderTheme(
@@ -303,39 +307,75 @@ class BrockmannStepper extends StatelessWidget {
     this.min = 0,
     this.max = 100,
     this.step = 1,
+    this.formatValue,
   });
   final String label;
   final double value, min, max, step;
   final ValueChanged<double>? onChanged;
+
+  /// Formats the value. By default whole numbers show without decimals.
+  final String Function(double)? formatValue;
   @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            BrockmannText(label, role: BrockmannType.label),
-            BrockmannText('$value', role: BrockmannType.monoValue),
-          ],
-        ),
+  Widget build(BuildContext context) {
+    final t = context.brockmann;
+    final text = (formatValue ?? _compact)(value);
+    return Semantics(
+      label: label,
+      value: text,
+      increasedValue: (formatValue ?? _compact)((value + step).clamp(min, max)),
+      decreasedValue: (formatValue ?? _compact)((value - step).clamp(min, max)),
+      onIncrease: onChanged == null || value >= max
+          ? null
+          : () => onChanged!((value + step).clamp(min, max)),
+      onDecrease: onChanged == null || value <= min
+          ? null
+          : () => onChanged!((value - step).clamp(min, max)),
+      child: Row(
+        children: [
+          Expanded(
+            child: ExcludeSemantics(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  BrockmannText(
+                    label,
+                    role: BrockmannType.label,
+                    color: onChanged == null ? t.disabled : t.secondary,
+                  ),
+                  const SizedBox(height: 4),
+                  BrockmannText(
+                    text,
+                    role: BrockmannType.monoLarge,
+                    color: onChanged == null ? t.disabled : t.foreground,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          BrockmannIconButton(
+            icon: BrockmannIcon.minus,
+            label: 'Decrease $label',
+            onPressed: onChanged == null || value <= min
+                ? null
+                : () => onChanged!((value - step).clamp(min, max)),
+          ),
+          BrockmannIconButton(
+            icon: BrockmannIcon.plus,
+            label: 'Increase $label',
+            onPressed: onChanged == null || value >= max
+                ? null
+                : () => onChanged!((value + step).clamp(min, max)),
+          ),
+        ],
       ),
-      BrockmannIconButton(
-        icon: BrockmannIcon.minus,
-        label: 'Decrease $label',
-        onPressed: onChanged == null || value <= min
-            ? null
-            : () => onChanged!((value - step).clamp(min, max)),
-      ),
-      BrockmannIconButton(
-        icon: BrockmannIcon.plus,
-        label: 'Increase $label',
-        onPressed: onChanged == null || value >= max
-            ? null
-            : () => onChanged!((value + step).clamp(min, max)),
-      ),
-    ],
-  );
+    );
+  }
 }
+
+String _fixed(double v) => v.toStringAsFixed(2);
+String _compact(double v) => v == v.roundToDouble()
+    ? v.toStringAsFixed(0)
+    : '${double.parse(v.toStringAsFixed(4))}';
 
 class BrockmannChip extends StatelessWidget {
   const BrockmannChip({
@@ -442,16 +482,41 @@ class BrockmannAccordion extends StatelessWidget {
   }
 }
 
+enum BrockmannTone { neutral, accent, danger }
+
+/// Noninteractive status text. The text colour is chosen for contrast with
+/// the fill, including custom [color]s.
 class BrockmannBadge extends StatelessWidget {
-  const BrockmannBadge({super.key, required this.label, this.color});
+  const BrockmannBadge({
+    super.key,
+    required this.label,
+    this.color,
+    this.tone = BrockmannTone.neutral,
+  });
   final String label;
   final Color? color;
+  final BrockmannTone tone;
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-    color: color ?? context.brockmann.surface,
-    child: BrockmannText(label, role: BrockmannType.caption),
-  );
+  Widget build(BuildContext context) {
+    final t = context.brockmann;
+    final fill =
+        color ??
+        switch (tone) {
+          BrockmannTone.neutral => t.surface,
+          BrockmannTone.accent => t.accent,
+          BrockmannTone.danger => t.danger,
+        };
+    final ink = color == null && tone == BrockmannTone.neutral
+        ? t.foreground
+        : BrockmannThemeData.contrast(Colors.white, fill) >= 4.5
+        ? Colors.white
+        : Colors.black;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      color: fill,
+      child: BrockmannText(label, role: BrockmannType.caption, color: ink),
+    );
+  }
 }
 
 class BrockmannEmptyState extends StatelessWidget {
@@ -541,37 +606,66 @@ class BrockmannBanner extends StatelessWidget {
     required this.message,
     this.icon,
     this.onClose,
+    this.tone = BrockmannTone.neutral,
+    this.action,
   });
   final String title, message;
   final BrockmannIcon? icon;
   final VoidCallback? onClose;
+
+  /// Accent and danger tones add an inset marker; the surface stays flat.
+  final BrockmannTone tone;
+
+  /// An optional written follow-up action, such as a text button.
+  final Widget? action;
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(16),
-    color: context.brockmann.surface,
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (icon != null) ...[BrockmannGlyph(icon!), const SizedBox(width: 16)],
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              BrockmannText(title, role: BrockmannType.value),
-              const SizedBox(height: 4),
-              BrockmannText(message),
-            ],
-          ),
+  Widget build(BuildContext context) {
+    final t = context.brockmann;
+    final marker = switch (tone) {
+      BrockmannTone.neutral => null,
+      BrockmannTone.accent => t.accent,
+      BrockmannTone.danger => t.danger,
+    };
+    return Semantics(
+      liveRegion: tone == BrockmannTone.danger,
+      container: true,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: t.surface,
+          border: marker == null
+              ? null
+              : BorderDirectional(start: BorderSide(color: marker, width: 4)),
         ),
-        if (onClose != null)
-          BrockmannIconButton(
-            icon: BrockmannIcon.x,
-            label: 'Dismiss $title',
-            onPressed: onClose,
-          ),
-      ],
-    ),
-  );
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (icon != null) ...[
+              BrockmannGlyph(icon!, color: marker ?? t.secondary),
+              const SizedBox(width: 16),
+            ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  BrockmannText(title, role: BrockmannType.value),
+                  const SizedBox(height: 4),
+                  BrockmannText(message),
+                  if (action != null) ...[const SizedBox(height: 8), action!],
+                ],
+              ),
+            ),
+            if (onClose != null)
+              BrockmannIconButton(
+                icon: BrockmannIcon.x,
+                label: 'Dismiss $title',
+                onPressed: onClose,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 @immutable

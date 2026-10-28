@@ -10,6 +10,11 @@ with a language override in Settings.
 
 ## Use
 
+0. On first launch, sign in to **AA ID** with MIREA. AA ID is one account per person,
+   permanently bound to your MIREA account; nothing in the app opens without it, and
+   every session server request carries its token. Your MIREA session only proves who
+   you are and is not saved. Settings → AA ID lists your signed-in phones (at most two;
+   a new sign-in signs out the oldest) and signs out.
 1. Open Settings → Session server and connect to your server. **Add** opens the
    server's sign-in page; account owners approve MIREA login there.
 2. Select accounts and scan a lecture QR or paste its link to submit attendance.

@@ -12,6 +12,10 @@ import 'interaction.dart';
 
 enum BrockmannButtonStyle { primary, secondary, text }
 
+/// A written action. Use one primary button per decision group. Set
+/// [destructive] to present an irreversible action in the danger colour,
+/// [icon] for a trailing glyph (e.g. an arrow for "continue"), and [expand]
+/// to fill the available width on phones.
 class BrockmannButton extends StatelessWidget {
   const BrockmannButton({
     super.key,
@@ -21,13 +25,40 @@ class BrockmannButton extends StatelessWidget {
     this.onPressed,
     this.style = BrockmannButtonStyle.secondary,
     this.sound,
+    this.icon,
+    this.destructive = false,
+    this.expand = false,
   });
+  const BrockmannButton.primary({
+    super.key,
+    required this.label,
+    this.child,
+    this.alignment = Alignment.centerLeft,
+    this.onPressed,
+    this.sound,
+    this.icon,
+    this.destructive = false,
+    this.expand = false,
+  }) : style = BrockmannButtonStyle.primary;
+  const BrockmannButton.text({
+    super.key,
+    required this.label,
+    this.child,
+    this.alignment = Alignment.centerLeft,
+    this.onPressed,
+    this.sound,
+    this.icon,
+    this.destructive = false,
+  }) : style = BrockmannButtonStyle.text,
+       expand = false;
   final String label;
   final Widget? child;
   final AlignmentGeometry alignment;
   final VoidCallback? onPressed;
   final BrockmannButtonStyle style;
   final BrockmannSound? sound;
+  final BrockmannIcon? icon;
+  final bool destructive, expand;
   @override
   Widget build(BuildContext context) => BrockmannPressable(
     label: label,
@@ -42,7 +73,24 @@ class BrockmannButton extends StatelessWidget {
     builder: (c, p) {
       final t = c.brockmann;
       final enabled = onPressed != null;
+      final fill = destructive ? t.danger : t.accent;
+      final onFill = destructive ? Colors.white : t.onAccent;
+      final ink = !enabled
+          ? t.disabled
+          : style == BrockmannButtonStyle.primary
+          ? onFill
+          : destructive
+          ? t.danger
+          : t.foreground;
+      final text = BrockmannText(
+        label,
+        role: style == BrockmannButtonStyle.text
+            ? BrockmannType.body
+            : BrockmannType.value,
+        color: ink,
+      );
       return AnimatedContainer(
+        width: expand ? double.infinity : null,
         duration: t.duration(c, p ? 60 : 160),
         padding: EdgeInsets.symmetric(
           horizontal: style == BrockmannButtonStyle.text ? 0 : 16,
@@ -50,45 +98,46 @@ class BrockmannButton extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: style == BrockmannButtonStyle.primary
-              ? (enabled
-                    ? Color.lerp(t.accent, t.onAccent, p ? .12 : 0)
-                    : t.line)
+              ? (enabled ? Color.lerp(fill, onFill, p ? .12 : 0) : t.line)
               : p
               ? t.surface
               : null,
           border: style == BrockmannButtonStyle.secondary
-              ? Border.all(color: enabled ? t.lineStrong : t.line, width: 2)
+              ? Border.all(
+                  color: !enabled
+                      ? t.line
+                      : destructive
+                      ? t.danger
+                      : t.lineStrong,
+                  width: 2,
+                )
               : null,
         ),
         child: Align(
           alignment: alignment,
-          widthFactor: 1,
+          widthFactor: expand ? null : 1,
           heightFactor: 1,
           child: child != null
-              ? DefaultTextStyle(
-                  style:
-                      (style == BrockmannButtonStyle.text
-                              ? BrockmannType.body
-                              : BrockmannType.value)
-                          .style(
-                            color: !enabled
-                                ? t.disabled
-                                : style == BrockmannButtonStyle.primary
-                                ? t.onAccent
-                                : t.foreground,
-                          ),
-                  child: child!,
+              ? IconTheme(
+                  data: IconThemeData(color: ink, size: 20),
+                  child: DefaultTextStyle(
+                    style:
+                        (style == BrockmannButtonStyle.text
+                                ? BrockmannType.body
+                                : BrockmannType.value)
+                            .style(color: ink),
+                    child: child!,
+                  ),
                 )
-              : BrockmannText(
-                  label,
-                  role: style == BrockmannButtonStyle.text
-                      ? BrockmannType.body
-                      : BrockmannType.value,
-                  color: !enabled
-                      ? t.disabled
-                      : style == BrockmannButtonStyle.primary
-                      ? t.onAccent
-                      : t.foreground,
+              : icon == null
+              ? text
+              : Row(
+                  mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+                  children: [
+                    Flexible(child: text),
+                    if (expand) const Spacer() else const SizedBox(width: 12),
+                    BrockmannGlyph(icon!, size: 20, color: ink),
+                  ],
                 ),
         ),
       );
@@ -833,30 +882,51 @@ class BrockmannTextField extends StatelessWidget {
     this.multiline = false,
     this.keyboardType,
     this.obscureText = false,
-    this.autofocus = false,
-    this.maxLength,
     this.inputFormatters,
-    this.onSubmitted,
     this.textCapitalization = TextCapitalization.none,
     this.textAlign = TextAlign.start,
     this.placeholder,
     this.leading,
     this.trailing,
     this.suffixText,
+    this.hint,
+    this.helper,
+    this.focusNode,
+    this.onSubmitted,
+    this.textInputAction,
+    this.maxLength,
+    this.autofocus = false,
+    this.autofillHints,
+    this.mono,
+    this.suffix,
   }) : assert(controller == null || initialValue == null);
   final String label;
   final TextEditingController? controller;
   final String? initialValue, error;
-  final ValueChanged<String>? onChanged;
+
+  /// Example text shown while the field is empty.
+  final String? hint;
+
+  /// Persistent guidance under the field; replaced by [error] when present.
+  final String? helper;
+  final ValueChanged<String>? onChanged, onSubmitted;
   final bool enabled, multiline, obscureText, autofocus;
-  final int? maxLength;
   final List<TextInputFormatter>? inputFormatters;
-  final ValueChanged<String>? onSubmitted;
   final TextCapitalization textCapitalization;
   final TextAlign textAlign;
   final String? placeholder, suffixText;
   final Widget? leading, trailing;
   final TextInputType? keyboardType;
+  final FocusNode? focusNode;
+  final TextInputAction? textInputAction;
+  final int? maxLength;
+  final Iterable<String>? autofillHints;
+
+  /// Use tabular mono figures. Defaults to true for multiline text.
+  final bool? mono;
+
+  /// A trailing widget inside the field, such as a unit or an icon button.
+  final Widget? suffix;
   @override
   Widget build(BuildContext context) {
     final t = context.brockmann;
@@ -872,33 +942,52 @@ class BrockmannTextField extends StatelessWidget {
         if (label.isNotEmpty) const SizedBox(height: 8),
         TextFormField(
           controller: controller,
-          autofocus: autofocus,
-          maxLength: maxLength,
           inputFormatters: inputFormatters,
-          onFieldSubmitted: onSubmitted,
           textCapitalization: textCapitalization,
           textAlign: textAlign,
           initialValue: initialValue,
           onChanged: onChanged,
           enabled: enabled,
           obscureText: obscureText,
+          focusNode: focusNode,
+          onFieldSubmitted: onSubmitted,
+          textInputAction: textInputAction,
+          maxLength: maxLength,
+          autofocus: autofocus,
+          autofillHints: autofillHints,
           minLines: multiline ? 3 : 1,
           maxLines: multiline ? 8 : 1,
           keyboardType:
               keyboardType ??
               (multiline ? TextInputType.multiline : TextInputType.text),
-          style: (multiline ? BrockmannType.monoValue : BrockmannType.body)
-              .style(color: t.foreground),
+          style:
+              ((mono ?? multiline)
+                      ? BrockmannType.monoValue
+                      : BrockmannType.body)
+                  .style(color: t.foreground),
           cursorColor: t.accent,
           decoration: InputDecoration(
-            hintText: placeholder,
             prefixIcon: leading,
-            suffixIcon: trailing,
             suffixText: suffixText,
             isDense: true,
             contentPadding: const EdgeInsets.all(12),
             errorText: error,
             errorMaxLines: 3,
+            hintText: hint ?? placeholder,
+            hintStyle: BrockmannType.body.style(color: t.disabled),
+            helperText: helper,
+            helperMaxLines: 3,
+            helperStyle: BrockmannType.caption.style(color: t.secondary),
+            counterStyle: BrockmannType.caption.style(color: t.secondary),
+            suffixIcon: suffix ?? trailing,
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.zero,
+              borderSide: BorderSide(color: t.danger),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.zero,
+              borderSide: BorderSide(color: t.danger, width: 2),
+            ),
             errorStyle: BrockmannType.caption.style(color: t.danger),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.zero,

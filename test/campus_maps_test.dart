@@ -69,6 +69,8 @@ void main() {
   Future<void> selectRoom(WidgetTester tester, String name) async {
     await tester.enterText(find.byType(CampusTextField).first, name);
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text(name).last);
+    await tester.pumpAndSettle();
     await tester.tap(find.text(name).last);
     await tester.pumpAndSettle();
   }
@@ -119,6 +121,8 @@ void main() {
     );
     final list = find.textContaining('Place list');
     expect(list, findsOneWidget);
+    await tester.ensureVisible(list);
+    await tester.pumpAndSettle();
     await tester.tap(list);
     await tester.pumpAndSettle();
     expect(find.textContaining('В-78 · Floor 0 · Toilets'), findsWidgets);

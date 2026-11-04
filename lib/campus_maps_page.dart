@@ -515,9 +515,10 @@ class _CampusMapsPageState extends State<CampusMapsPage>
   @override
   Widget build(BuildContext context) {
     if (_campuses.isEmpty) {
-      return Scaffold(
+      return CampusScaffold(
         appBar: CampusAppBar(
           title: Text(tr(context, 'Карты кампусов', 'Campus maps')),
+          compact: true,
         ),
         body: SafeArea(
           top: false,
@@ -573,11 +574,13 @@ class _CampusMapsPageState extends State<CampusMapsPage>
     final accuracy = _position == null
         ? null
         : math.sqrt(_position!.accuracy * _position!.accuracy + 25 * 25);
-    return Scaffold(
+    return CampusScaffold(
       appBar: CampusAppBar(
         title: Text(tr(context, 'Карты кампусов', 'Campus maps')),
+        compact: true,
         actions: [
           CampusTextAction(
+            icon: Icons.my_location_rounded,
             onPressed: _locating ? null : _locate,
             tooltip: tr(context, 'Моё местоположение', 'My location'),
             label: tr(context, 'Моё местоположение', 'My location'),
@@ -605,6 +608,7 @@ class _CampusMapsPageState extends State<CampusMapsPage>
               }
             },
             anchorBuilder: (_, open) => CampusTextAction(
+              icon: Icons.more_horiz_rounded,
               onPressed: open,
               tooltip: tr(context, 'Действия', 'Actions'),
               label: tr(context, 'Действия', 'Actions'),
@@ -614,221 +618,270 @@ class _CampusMapsPageState extends State<CampusMapsPage>
       ),
       body: SafeArea(
         top: false,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-              child: CampusTextField(
-                controller: _search,
-                label: tr(context, 'Аудитория или место', 'Room or place'),
-                trailing: CampusTextAction(
-                  icon: Icons.close_rounded,
-                  onPressed: () => setState(() {
-                    _search.clear();
-                    _kind = null;
-                    _favoritesOnly = false;
-                    _resultsVisible = false;
-                  }),
-                  tooltip: tr(context, 'Очистить', 'Clear'),
-                  label: tr(context, 'Очистить', 'Clear'),
-                ),
-                onChanged: (_) => setState(() {}),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: AppActionMenu(
-                      entries: [
-                        for (var c = 0; c < _campuses.length; c++)
-                          CampusMenuEntry(value: c, label: _campuses[c].title),
-                      ],
-                      onSelected: (value) => setState(() {
-                        _campus = value as int;
-                        _floorId = _map.floors.first.id;
-                        _selected = null;
-                        _start = null;
-                        _invalidateRoute();
-                      }),
-                      anchorBuilder: (_, open) => CampusButton.action(
-                        style: CampusButtonStyle.tonal,
-                        onPressed: open,
-                        label: Text(_map.shortTitle),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: AppActionMenu(
-                      entries: [
-                        for (final floor in _map.floors)
-                          CampusMenuEntry(
-                            value: floor.id,
-                            label: campusFloorLabel(context, floor),
+        child: LayoutBuilder(
+          builder: (context, bounds) => Column(
+            children: [
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: bounds.maxHeight * .38),
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                        child: CampusTextField(
+                          controller: _search,
+                          label: tr(
+                            context,
+                            'Аудитория или место',
+                            'Room or place',
                           ),
-                      ],
-                      onSelected: (value) =>
-                          setState(() => _floorId = value as String),
-                      anchorBuilder: (_, open) => CampusButton.action(
-                        style: CampusButtonStyle.tonal,
-                        onPressed: open,
-                        label: Text(campusFloorLabel(context, _floor)),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 6),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                children: [
-                  _tag(null, tr(context, 'Все места', 'All places')),
-                  _tag('toilet', tr(context, 'Туалеты', 'Toilets')),
-                  _tag('cafeteria', tr(context, 'Еда', 'Food')),
-                  _tag('entrance', tr(context, 'Входы', 'Entrances')),
-                  _tag('cloakroom', tr(context, 'Гардероб', 'Cloakroom')),
-                  _tag('medical', tr(context, 'Медпункт', 'Medical')),
-                  CampusButton.action(
-                    onPressed: () => setState(() {
-                      _favoritesOnly = !_favoritesOnly;
-                      _kind = null;
-                    }),
-                    label: Text(tr(context, 'Избранное', 'Saved places')),
-                  ),
-                ],
-              ),
-            ),
-            if (_gpsError != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _locationError(),
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ),
-                    if (_gpsError == 'disabled' || _gpsError == 'permanent')
-                      CampusButton.text(
-                        onPressed: () => _locator.openSettings(
-                          app: _gpsError == 'permanent',
+                          trailing: CampusTextAction(
+                            icon: Icons.close_rounded,
+                            onPressed: () => setState(() {
+                              _search.clear();
+                              _kind = null;
+                              _favoritesOnly = false;
+                              _resultsVisible = false;
+                            }),
+                            tooltip: tr(context, 'Очистить', 'Clear'),
+                            label: tr(context, 'Очистить', 'Clear'),
+                          ),
+                          onChanged: (_) => setState(() {}),
                         ),
-                        child: Text(tr(context, 'Настройки', 'Settings')),
                       ),
-                    CampusTextAction(
-                      icon: Icons.close_rounded,
-                      onPressed: () => setState(() => _gpsError = null),
-                      tooltip: tr(context, 'Закрыть', 'Dismiss'),
-                      label: tr(context, 'Закрыть', 'Dismiss'),
+                      if (!searching) ...[
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: AppActionMenu(
+                                  entries: [
+                                    for (var c = 0; c < _campuses.length; c++)
+                                      CampusMenuEntry(
+                                        value: c,
+                                        label: _campuses[c].title,
+                                      ),
+                                  ],
+                                  onSelected: (value) => setState(() {
+                                    _campus = value as int;
+                                    _floorId = _map.floors.first.id;
+                                    _selected = null;
+                                    _start = null;
+                                    _invalidateRoute();
+                                  }),
+                                  anchorBuilder: (_, open) =>
+                                      CampusButton.action(
+                                        style: CampusButtonStyle.tonal,
+                                        onPressed: open,
+                                        label: Text(_map.shortTitle),
+                                      ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: AppActionMenu(
+                                  entries: [
+                                    for (final floor in _map.floors)
+                                      CampusMenuEntry(
+                                        value: floor.id,
+                                        label: campusFloorLabel(context, floor),
+                                      ),
+                                  ],
+                                  onSelected: (value) => setState(
+                                    () => _floorId = value as String,
+                                  ),
+                                  anchorBuilder: (_, open) =>
+                                      CampusButton.action(
+                                        style: CampusButtonStyle.tonal,
+                                        onPressed: open,
+                                        label: Text(
+                                          campusFloorLabel(context, _floor),
+                                        ),
+                                      ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Row(
+                            children: [
+                              _tag(
+                                null,
+                                tr(context, 'Все места', 'All places'),
+                              ),
+                              _tag('toilet', tr(context, 'Туалеты', 'Toilets')),
+                              _tag('cafeteria', tr(context, 'Еда', 'Food')),
+                              _tag(
+                                'entrance',
+                                tr(context, 'Входы', 'Entrances'),
+                              ),
+                              _tag(
+                                'cloakroom',
+                                tr(context, 'Гардероб', 'Cloakroom'),
+                              ),
+                              _tag(
+                                'medical',
+                                tr(context, 'Медпункт', 'Medical'),
+                              ),
+                              CampusButton.action(
+                                onPressed: () => setState(() {
+                                  _favoritesOnly = !_favoritesOnly;
+                                  _kind = null;
+                                }),
+                                label: Text(
+                                  tr(context, 'Избранное', 'Saved places'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      if (_gpsError != null)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _locationError(),
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ),
+                              if (_gpsError == 'disabled' ||
+                                  _gpsError == 'permanent')
+                                CampusButton.text(
+                                  onPressed: () => _locator.openSettings(
+                                    app: _gpsError == 'permanent',
+                                  ),
+                                  child: Text(
+                                    tr(context, 'Настройки', 'Settings'),
+                                  ),
+                                ),
+                              CampusTextAction(
+                                icon: Icons.close_rounded,
+                                onPressed: () =>
+                                    setState(() => _gpsError = null),
+                                tooltip: tr(context, 'Закрыть', 'Dismiss'),
+                                label: tr(context, 'Закрыть', 'Dismiss'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (_position != null && _positionCampus == _map.id)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+                          child: Text(
+                            trf(
+                              context,
+                              'Примерно ±{meters} м · этаж выбран вручную',
+                              'Approx. ±{meters} m · floor selected manually',
+                              {'meters': accuracy!.round()},
+                            ),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                      if (_kind != null && !searching)
+                        CampusButton.text(
+                          onPressed: () =>
+                              setState(() => _resultsVisible = true),
+                          child: Text(
+                            '${tr(context, 'Список мест', 'Place list')} · ${results.length}',
+                          ),
+                        ),
+                      if (widget.lessons.isNotEmpty && !searching)
+                        CampusButton.action(
+                          onPressed: _lessonPlaces,
+                          label: Text(
+                            tr(
+                              context,
+                              'Аудитории из расписания',
+                              'Rooms from schedule',
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 6),
+                    ],
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: CampusMapCanvas(
+                        floor: _floor,
+                        places: _map.places
+                            .where((p) => p.floorId == _floor.id)
+                            .toList(),
+                        selected: _selected,
+                        start: _start,
+                        route: _route,
+                        position: position,
+                        locationFocus: _positionFocus,
+                        accuracyMeters: accuracy,
+                        kind: _kind,
+                        favorites: _favorites,
+                        onPlace: (place) => _select(place, _campus),
+                      ),
                     ),
+                    if (searching)
+                      Positioned.fill(
+                        child: Material(
+                          color: Theme.of(context).colorScheme.surface,
+                          child: results.isEmpty
+                              ? Center(
+                                  child: Text(
+                                    tr(
+                                      context,
+                                      'Места не найдены.',
+                                      'No places found.',
+                                    ),
+                                  ),
+                                )
+                              : ListView.builder(
+                                  itemCount: results.length,
+                                  itemBuilder: (context, index) {
+                                    final result = results[index],
+                                        place = result.place,
+                                        campus = _campuses[result.campus];
+                                    return CampusListItem(
+                                      headline: place.label,
+                                      supportingText:
+                                          '${campus.shortTitle} · ${campusFloorLabel(context, campus.floor(place.floorId))} · ${placeKindLabel(context, place.kind)}',
+                                      onTap: () =>
+                                          _select(place, result.campus),
+                                    );
+                                  },
+                                ),
+                        ),
+                      ),
                   ],
                 ),
               ),
-            if (_position != null && _positionCampus == _map.id)
+              if (!searching && (_selected != null || _start != null))
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: bounds.maxHeight * .38,
+                  ),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                    child: _details(),
+                  ),
+                ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+                padding: const EdgeInsets.only(bottom: 4),
                 child: Text(
-                  trf(
-                    context,
-                    'Примерно ±{meters} м · этаж выбран вручную',
-                    'Approx. ±{meters} m · floor selected manually',
-                    {'meters': accuracy!.round()},
-                  ),
-                  style: Theme.of(context).textTheme.bodySmall,
+                  'Пульс РТУ МИРЭА · 12.09.2026',
+                  style: Theme.of(context).textTheme.labelSmall,
                 ),
               ),
-            if (_kind != null && !searching)
-              CampusButton.text(
-                onPressed: () => setState(() => _resultsVisible = true),
-                child: Text(
-                  '${tr(context, 'Список мест', 'Place list')} · ${results.length}',
-                ),
-              ),
-            if (widget.lessons.isNotEmpty && !searching)
-              CampusButton.action(
-                onPressed: _lessonPlaces,
-                label: Text(
-                  tr(context, 'Аудитории из расписания', 'Rooms from schedule'),
-                ),
-              ),
-            const SizedBox(height: 6),
-            Expanded(
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: CampusMapCanvas(
-                      floor: _floor,
-                      places: _map.places
-                          .where((p) => p.floorId == _floor.id)
-                          .toList(),
-                      selected: _selected,
-                      start: _start,
-                      route: _route,
-                      position: position,
-                      locationFocus: _positionFocus,
-                      accuracyMeters: accuracy,
-                      kind: _kind,
-                      favorites: _favorites,
-                      onPlace: (place) => _select(place, _campus),
-                    ),
-                  ),
-                  if (searching)
-                    Positioned.fill(
-                      child: Material(
-                        color: Theme.of(context).colorScheme.surface,
-                        child: results.isEmpty
-                            ? Center(
-                                child: Text(
-                                  tr(
-                                    context,
-                                    'Места не найдены.',
-                                    'No places found.',
-                                  ),
-                                ),
-                              )
-                            : ListView.builder(
-                                itemCount: results.length,
-                                itemBuilder: (context, index) {
-                                  final result = results[index],
-                                      place = result.place,
-                                      campus = _campuses[result.campus];
-                                  return CampusListItem(
-                                    headline: place.label,
-                                    supportingText:
-                                        '${campus.shortTitle} · ${campusFloorLabel(context, campus.floor(place.floorId))} · ${placeKindLabel(context, place.kind)}',
-                                    onTap: () => _select(place, result.campus),
-                                  );
-                                },
-                              ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            if (!searching && (_selected != null || _start != null))
-              ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.sizeOf(context).height * .32,
-                ),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-                  child: _details(),
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                'Пульс РТУ МИРЭА · 12.09.2026',
-                style: Theme.of(context).textTheme.labelSmall,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

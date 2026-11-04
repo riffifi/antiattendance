@@ -1,3 +1,5 @@
+import 'frontend_test_helpers.dart';
+
 import 'dart:convert';
 
 import 'package:antiattendance/app_theme.dart';
@@ -184,7 +186,11 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(find.byType(CampusSwitch), 150);
+      await tester.scrollUntilVisible(
+        find.byType(CampusSwitch),
+        150,
+        scrollable: bodyScroll(),
+      );
       await tester.runAsync(() => tester.tap(find.byType(CampusSwitch)));
       await tester.pumpAndSettle();
       expect(

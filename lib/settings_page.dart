@@ -1,4 +1,7 @@
+import 'package:brockmann/brockmann.dart';
+
 import 'updates_page.dart';
+import 'frontend/settings_view.dart';
 import 'session_server_page.dart';
 import 'aa_id_page.dart';
 import 'expressive.dart';
@@ -385,263 +388,168 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  void _openPage(Widget page) =>
+      Navigator.of(context).push<void>(MaterialPageRoute(builder: (_) => page));
+
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => CampusScaffold(
     appBar: widget.embedded
         ? null
         : CampusAppBar(
             title: Text(tr(context, 'Настройки', 'Settings')),
             automaticallyImplyLeading: true,
           ),
-    body: SafeArea(
-      top: false,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
-            children: [
-              if (widget.embedded)
-                CampusHeader(title: tr(context, 'Настройки', 'Settings')),
-              CampusSectionTitle(tr(context, 'Моя группа', 'My group')),
-              CampusPanel(
-                padding: EdgeInsets.zero,
-                child: CampusListItem(
-                  headline:
-                      _myGroup?.name ?? tr(context, 'Все группы', 'All groups'),
-                  supportingText: tr(
-                    context,
-                    'С сервера загружаются только аккаунты и пропуска выбранной группы.',
-                    'Only the selected group’s accounts and passes are fetched from the server.',
-                  ),
-                  onTap: _saving ? null : _chooseMyGroup,
-                ),
+    body: SettingsView(
+      embedded: widget.embedded,
+      sections: [
+        SettingsSection(
+          tr(context, 'Аккаунт и синхронизация', 'Account & sync'),
+          [
+            CampusListItem(
+              headline: 'AA ID',
+              supportingText: tr(
+                context,
+                'Ваш аккаунт, устройства и выход',
+                'Your account, devices and sign-out',
               ),
-              const SizedBox(height: 28),
-              CampusSectionTitle(tr(context, 'Оформление', 'Appearance')),
-              IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (final (mode, title) in [
-                      (AppThemeMode.light, tr(context, 'Светлая', 'Light')),
-                      (AppThemeMode.dark, tr(context, 'Тёмная', 'Dark')),
-                      (
-                        AppThemeMode.amoled,
-                        tr(context, 'Чёрная (AMOLED)', 'Black (AMOLED)'),
-                      ),
-                    ])
-                      Expanded(
-                        child: Padding(
-                          padding: EdgeInsets.only(
-                            right: mode == AppThemeMode.amoled ? 0 : 8,
-                          ),
-                          child: _ThemePreview(
-                            mode: mode,
-                            title: title,
-                            selected: mode == _themeMode,
-                            onTap: _saving ? null : () => _chooseTheme(mode),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
+              onTap: () => _openPage(const AaIdAccountPage()),
+            ),
+            CampusListItem(
+              headline: tr(context, 'Сервер сессий', 'Session server'),
+              supportingText: tr(
+                context,
+                'Адрес сервера и автоматическая синхронизация',
+                'Server address and automatic synchronization',
               ),
-              const SizedBox(height: 28),
-              CampusSectionTitle(
-                tr(context, 'Язык приложения', 'App language'),
-              ),
-              const SizedBox(height: 6),
-              Text(
+              onTap: () => _openPage(const SessionServerPage()),
+            ),
+            CampusListItem(
+              headline: tr(context, 'Моя группа', 'My group'),
+              supportingText:
+                  _myGroup?.name ?? tr(context, 'Все группы', 'All groups'),
+              onTap: _saving ? null : _chooseMyGroup,
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
                 tr(
                   context,
-                  'По умолчанию — язык телефона.',
-                  'Your phone language is used by default.',
+                  'С сервера загружаются только аккаунты и пропуска выбранной группы.',
+                  'Only the selected group’s accounts and passes are fetched from the server.',
                 ),
                 style: TextStyle(color: context.palette.muted, fontSize: 13),
               ),
-              const SizedBox(height: 16),
-              CampusPanel(
-                padding: EdgeInsets.zero,
-                child: CampusListItem(
-                  headline:
-                      _languages[_language] ??
-                      tr(context, 'Как на телефоне', 'Use phone language'),
-                  onTap: _saving ? null : _openLanguages,
+            ),
+          ],
+        ),
+        SettingsSection(tr(context, 'Оформление', 'Appearance'), [
+          BrockmannGrid(
+            minItemWidth: 96,
+            maxColumns: 3,
+            children: [
+              for (final (mode, title) in [
+                (AppThemeMode.light, tr(context, 'Светлая', 'Light')),
+                (AppThemeMode.dark, tr(context, 'Тёмная', 'Dark')),
+                (
+                  AppThemeMode.amoled,
+                  tr(context, 'Чёрная (AMOLED)', 'Black (AMOLED)'),
                 ),
-              ),
-              const SizedBox(height: 28),
-              CampusSectionTitle(tr(context, 'Тестирование', 'Testing')),
-              const SizedBox(height: 12),
-              CampusPanel(
-                padding: EdgeInsets.zero,
-                child: CampusListItem(
-                  headline: (tr(context, 'Проверка NFC', 'NFC diagnostics')),
-                  supportingText: (tr(
-                    context,
-                    'Посмотреть сведения о найденном NFC-устройстве',
-                    'View detected NFC connection details',
-                  )),
-                  onTap: () => Navigator.of(context).push<void>(
-                    MaterialPageRoute(
-                      builder: (_) => const NfcDiagnosticsPage(),
-                    ),
-                  ),
+              ])
+                _ThemePreview(
+                  mode: mode,
+                  title: title,
+                  selected: mode == _themeMode,
+                  onTap: _saving ? null : () => _chooseTheme(mode),
                 ),
-              ),
-              const SizedBox(height: 12),
-              CampusPanel(
-                padding: EdgeInsets.zero,
-                child: CampusListItem(
-                  headline: (tr(
-                    context,
-                    'Сигнал турникета',
-                    'Turnstile signal',
-                  )),
-                  supportingText: (tr(
-                    context,
-                    'Посмотреть опрос NFC-считывателя',
-                    'Observe NFC reader polling',
-                  )),
-                  onTap: () => Navigator.of(context).push<void>(
-                    MaterialPageRoute(
-                      builder: (_) => const TurnstileProbePage(),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 28),
-              CampusSectionTitle(tr(context, 'Приложение', 'App')),
-              const SizedBox(height: 12),
-              CampusPanel(
-                padding: EdgeInsets.zero,
-                child: CampusListItem(
-                  headline: tr(context, 'Сервер сессий', 'Session server'),
-                  supportingText: tr(
-                    context,
-                    'Адрес сервера и автоматическая синхронизация',
-                    'Server address and automatic synchronization',
-                  ),
-                  onTap: () => Navigator.of(context).push<void>(
-                    MaterialPageRoute(
-                      builder: (_) => const SessionServerPage(),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              if (Theme.of(context).platform == TargetPlatform.android) ...[
-                CampusPanel(
-                  padding: EdgeInsets.zero,
-                  child: CampusListItem(
-                    headline: tr(
-                      context,
-                      'Итоги учебного дня',
-                      'Study day summary',
-                    ),
-                    supportingText: tr(
-                      context,
-                      'После последнего занятия: подтверждения каждого человека и истёкшие сессии.',
-                      'After the last class: each person’s confirmations and expired sessions.',
-                    ),
-                    trailing: CampusSwitch(
-                      value: _daySummary,
-                      onChanged: _summarySaving ? null : _chooseSummary,
-                    ),
-                    onTap: _summarySaving
-                        ? null
-                        : () => _chooseSummary(!_daySummary),
-                  ),
-                ),
-                CampusButton.text(
-                  onPressed: _saving
-                      ? null
-                      : () => Navigator.of(context).push<void>(
-                          MaterialPageRoute(
-                            builder: (_) => const StudySummaryPage(),
-                          ),
-                        ),
-                  child: Text(tr(context, 'Последние итоги', 'Last summary')),
-                ),
-                CampusPanel(
-                  padding: EdgeInsets.zero,
-                  child: CampusListItem(
-                    headline: tr(
-                      context,
-                      'Виджет отметки всех',
-                      'Mark-all widget',
-                    ),
-                    supportingText: tr(
-                      context,
-                      'Предпросмотр виджета',
-                      'Widget preview',
-                    ),
-                    onTap: _pinScanWidget,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 24),
-              CampusPanel(
-                padding: EdgeInsets.zero,
-                child: CampusListItem(
-                  headline: 'AA ID',
-                  supportingText: tr(
-                    context,
-                    'Ваш аккаунт, устройства и выход',
-                    'Your account, devices and sign-out',
-                  ),
-                  onTap: () => Navigator.of(context).push<void>(
-                    MaterialPageRoute(builder: (_) => const AaIdAccountPage()),
-                  ),
-                ),
-              ),
-              if (widget.updates != null) ...[
-                const SizedBox(height: 24),
-                AnimatedBuilder(
-                  animation: widget.updates!,
-                  builder: (context, _) => CampusPanel(
-                    padding: EdgeInsets.zero,
-                    child: CampusListItem(
-                      headline: tr(context, 'Обновления', 'Updates'),
-                      supportingText: widget.updates!.updateAvailable
-                          ? trf(
-                              context,
-                              'Доступна версия {version}',
-                              'Version {version} is available',
-                              {'version': widget.updates!.release!.tag},
-                            )
-                          : tr(context, 'Проверить', 'Check now'),
-                      onTap: () => Navigator.of(context).push<void>(
-                        MaterialPageRoute(
-                          builder: (_) => UpdatesPage(
-                            updates: widget.updates!,
-                            downloadApk: widget.downloadApk,
-                            installApk: widget.installApk,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-              CampusPanel(
-                padding: EdgeInsets.zero,
-                child: CampusListItem(
-                  headline: (tr(
-                    context,
-                    'О AntiAttendance',
-                    'About AntiAttendance',
-                  )),
-                  onTap: () => Navigator.of(context).push<void>(
-                    MaterialPageRoute(builder: (_) => const AboutPage()),
-                  ),
-                ),
-              ),
             ],
           ),
-        ),
-      ),
+          const SizedBox(height: 16),
+          CampusListItem(
+            headline: tr(context, 'Язык приложения', 'App language'),
+            supportingText:
+                _languages[_language] ??
+                tr(context, 'Как на телефоне', 'Use phone language'),
+            onTap: _saving ? null : _openLanguages,
+          ),
+        ]),
+        if (Theme.of(context).platform == TargetPlatform.android)
+          SettingsSection(tr(context, 'Каждый день', 'Daily tools'), [
+            CampusListItem(
+              headline: tr(context, 'Итоги учебного дня', 'Study day summary'),
+              supportingText: tr(
+                context,
+                'После последнего занятия: подтверждения каждого человека и истёкшие сессии.',
+                'After the last class: each person’s confirmations and expired sessions.',
+              ),
+              trailing: CampusSwitch(
+                value: _daySummary,
+                onChanged: _summarySaving ? null : _chooseSummary,
+              ),
+              onTap: _summarySaving ? null : () => _chooseSummary(!_daySummary),
+            ),
+            CampusListItem(
+              headline: tr(context, 'Последние итоги', 'Last summary'),
+              onTap: _saving ? null : () => _openPage(const StudySummaryPage()),
+            ),
+            CampusListItem(
+              headline: tr(context, 'Виджет отметки всех', 'Mark-all widget'),
+              supportingText: tr(
+                context,
+                'Предпросмотр виджета',
+                'Widget preview',
+              ),
+              onTap: _pinScanWidget,
+            ),
+          ]),
+        SettingsSection(tr(context, 'Приложение', 'App'), [
+          if (widget.updates != null)
+            AnimatedBuilder(
+              animation: widget.updates!,
+              builder: (context, _) => CampusListItem(
+                headline: tr(context, 'Обновления', 'Updates'),
+                supportingText: widget.updates!.updateAvailable
+                    ? trf(
+                        context,
+                        'Доступна версия {version}',
+                        'Version {version} is available',
+                        {'version': widget.updates!.release!.tag},
+                      )
+                    : tr(context, 'Проверить', 'Check now'),
+                onTap: () => _openPage(
+                  UpdatesPage(
+                    updates: widget.updates!,
+                    downloadApk: widget.downloadApk,
+                    installApk: widget.installApk,
+                  ),
+                ),
+              ),
+            ),
+          CampusListItem(
+            headline: tr(context, 'О AntiAttendance', 'About AntiAttendance'),
+            onTap: () => _openPage(const AboutPage()),
+          ),
+        ]),
+        SettingsSection(tr(context, 'Тестирование', 'Testing'), [
+          CampusListItem(
+            headline: tr(context, 'Проверка NFC', 'NFC diagnostics'),
+            supportingText: tr(
+              context,
+              'Посмотреть сведения о найденном NFC-устройстве',
+              'View detected NFC connection details',
+            ),
+            onTap: () => _openPage(const NfcDiagnosticsPage()),
+          ),
+          CampusListItem(
+            headline: tr(context, 'Сигнал турникета', 'Turnstile signal'),
+            supportingText: tr(
+              context,
+              'Посмотреть опрос NFC-считывателя',
+              'Observe NFC reader polling',
+            ),
+            onTap: () => _openPage(const TurnstileProbePage()),
+          ),
+        ]),
+      ],
     ),
   );
 }
@@ -719,7 +627,7 @@ class _ThemePreview extends StatelessWidget {
                   color: preview.scaffoldBackgroundColor,
                   border: Border.all(
                     color: selected
-                        ? context.palette.ink
+                        ? context.brockmann.accent
                         : context.palette.line,
                     width: selected ? 1.5 : .5,
                   ),
@@ -727,7 +635,7 @@ class _ThemePreview extends StatelessWidget {
                 child: Row(
                   children: [
                     Container(
-                      width: 10,
+                      width: 24,
                       decoration: BoxDecoration(
                         border: Border(
                           right: BorderSide(

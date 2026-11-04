@@ -287,7 +287,7 @@ class _SessionRecoveryPageState extends State<SessionRecoveryPage> {
     final valid = _accounts
         .where((a) => _states[a.id] == SessionCheckState.valid)
         .length;
-    return Scaffold(
+    return CampusScaffold(
       appBar: CampusAppBar(
         title: Text(tr(context, 'Восстановить вход', 'Restore sessions')),
       ),
@@ -299,7 +299,7 @@ class _SessionRecoveryPageState extends State<SessionRecoveryPage> {
                 slivers: [
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -395,7 +395,7 @@ class _SessionRecoveryPageState extends State<SessionRecoveryPage> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
                   SizedBox(

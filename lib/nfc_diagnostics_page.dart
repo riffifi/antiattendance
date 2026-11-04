@@ -118,7 +118,7 @@ class _NfcDiagnosticsPageState extends State<NfcDiagnosticsPage> {
   Widget build(BuildContext context) {
     final tag = _tag;
     final technologies = (tag?['technologies'] as List?)?.join(', ') ?? '—';
-    return Scaffold(
+    return CampusScaffold(
       appBar: CampusAppBar(
         title: Text(tr(context, 'Проверка NFC', 'NFC diagnostics')),
         automaticallyImplyLeading: true,
@@ -127,14 +127,14 @@ class _NfcDiagnosticsPageState extends State<NfcDiagnosticsPage> {
         top: false,
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
+            constraints: const BoxConstraints(maxWidth: 960),
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+              padding: const EdgeInsets.fromLTRB(24, 32, 24, 48),
               children: [
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: context.palette.surface,
+                    color: Colors.transparent,
                     borderRadius: BorderRadius.zero,
                   ),
                   child: Column(
@@ -143,8 +143,8 @@ class _NfcDiagnosticsPageState extends State<NfcDiagnosticsPage> {
                       Text(
                         _status(context),
                         style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w400,
                         ),
                       ),
                       if (_scanning && tag == null) ...[
@@ -168,7 +168,7 @@ class _NfcDiagnosticsPageState extends State<NfcDiagnosticsPage> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: context.palette.surface,
+                      color: Colors.transparent,
                       borderRadius: BorderRadius.zero,
                     ),
                     child: Column(

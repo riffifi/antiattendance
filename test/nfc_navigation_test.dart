@@ -1,3 +1,5 @@
+import 'package:antiattendance/nfc_pass_page.dart';
+import 'package:antiattendance/screen_navigation.dart';
 import 'package:antiattendance/campus_design.dart';
 import 'package:antiattendance/accounts.dart';
 import 'package:antiattendance/app_theme.dart';
@@ -43,27 +45,27 @@ void main() {
     await tester.pumpAndSettle();
     final bar = find.byType(CampusNavigation);
     await tester.ensureVisible(
-      find.descendant(of: bar, matching: find.text('Passes')),
+      find.descendant(of: bar, matching: find.text('passes')),
     );
-    await tester.tap(find.descendant(of: bar, matching: find.text('Passes')));
+    await tester.tap(find.descendant(of: bar, matching: find.text('passes')));
     await tester.pumpAndSettle();
-    expect(find.text('NFC passes'), findsOneWidget);
+    expect(find.byType(NfcPassPage), findsOneWidget);
     expect(find.text('Enroll passes'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.ensureVisible(
-      find.descendant(of: bar, matching: find.text('Attendance')),
+      find.descendant(of: bar, matching: find.text('attendance')),
     );
     await tester.tap(
-      find.descendant(of: bar, matching: find.text('Attendance')),
+      find.descendant(of: bar, matching: find.text('attendance')),
     );
     await tester.pump(const Duration(milliseconds: 20));
     expect(calls, contains('stop'));
     await tester.ensureVisible(
-      find.descendant(of: bar, matching: find.text('Passes')),
+      find.descendant(of: bar, matching: find.text('passes')),
     );
-    await tester.tap(find.descendant(of: bar, matching: find.text('Passes')));
+    await tester.tap(find.descendant(of: bar, matching: find.text('passes')));
     await tester.pumpAndSettle();
-    expect(find.text('NFC passes'), findsOneWidget);
+    expect(find.byType(NfcPassPage), findsOneWidget);
     expect(tester.takeException(), isNull);
     calls.clear();
     await tester.tap(
@@ -77,7 +79,7 @@ void main() {
     await tester.pumpAndSettle();
     debugDefaultTargetPlatformOverride = null;
   });
-  testWidgets('rail swipes and returning to index stop the NFC session', (
+  testWidgets('pivot navigation and system Back stop the NFC session', (
     tester,
   ) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
@@ -93,27 +95,29 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light,
-        home: HomePage(startAtSelector: true, store: _Accounts()),
+        home: HomePage(useAdaptiveNavigation: true, store: _Accounts()),
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('screen-selector-2')));
+    tester
+        .widget<ScreenNavigation>(find.byType(ScreenNavigation))
+        .onSelected(2);
     await tester.pumpAndSettle();
     calls.clear();
-    await tester.drag(
-      find.byKey(const ValueKey('screen-rail')),
-      const Offset(0, -450),
-    );
+    await tester.drag(find.byType(ListView).first, const Offset(-220, 0));
+    await tester.pumpAndSettle();
     await tester.pumpAndSettle();
     expect(calls, contains('stop'));
-    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('settings'), findsWidgets);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('screen-selector-2')));
+    tester
+        .widget<ScreenNavigation>(find.byType(ScreenNavigation))
+        .onSelected(2);
     await tester.pumpAndSettle();
-    expect(find.text('NFC passes'), findsOneWidget);
+    expect(find.byType(NfcPassPage), findsOneWidget);
     calls.clear();
-    await tester.tap(find.text('INDEX'));
+    await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(calls, contains('stop'));
     await tester.pumpWidget(const SizedBox.shrink());

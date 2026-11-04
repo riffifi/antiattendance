@@ -361,6 +361,25 @@ class BrockmannSection extends StatelessWidget {
   }
 }
 
+/// Identifies the heading already supplied by the application's navigation.
+/// Secondary routes live outside this scope and retain their own page titles.
+class BrockmannNavigationScope extends InheritedWidget {
+  const BrockmannNavigationScope({
+    super.key,
+    required this.heading,
+    required this.headingVisible,
+    required super.child,
+  });
+  final String heading;
+  final bool headingVisible;
+  static BrockmannNavigationScope? of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<BrockmannNavigationScope>();
+  @override
+  bool updateShouldNotify(BrockmannNavigationScope oldWidget) =>
+      heading != oldWidget.heading ||
+      headingVisible != oldWidget.headingVisible;
+}
+
 /// A large typographic page title. The size steps down on narrow screens so
 /// it never competes with the content for space.
 class BrockmannPageHeader extends StatelessWidget {
@@ -368,66 +387,63 @@ class BrockmannPageHeader extends StatelessWidget {
     super.key,
     required this.title,
     this.overline,
+    this.reuseNavigationHeading = false,
     this.subtitle,
     this.onBack,
     this.actions = const [],
   });
   final String title;
+  final bool reuseNavigationHeading;
   final String? overline, subtitle;
   final VoidCallback? onBack;
   final List<Widget> actions;
   @override
   Widget build(BuildContext context) {
     final t = context.brockmann;
-    return BrockmannResponsive(
-      builder: (context, layout) => Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (onBack != null) ...[
-            Transform.translate(
-              offset: const Offset(-12, 0),
-              child: BrockmannIconButton(
-                icon: BrockmannIcon.arrowLeft,
-                label: 'Back',
-                onPressed: onBack,
-              ),
-            ),
-          ],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (overline != null) ...[
-                  BrockmannText(
-                    overline!.toUpperCase(),
-                    role: BrockmannType.label,
-                    color: t.secondary,
-                  ),
-                  const SizedBox(height: BrockmannSpace.xs),
-                ],
-                Semantics(
-                  header: true,
-                  child: Text(
-                    title,
-                    style: BrockmannType.title
-                        .style(color: t.foreground)
-                        .copyWith(
-                          fontSize: layout.value(compact: 32, medium: 40),
-                          height: layout.value(compact: 36 / 32, medium: 1.1),
-                        ),
-                  ),
-                ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: BrockmannSpace.xs),
-                  BrockmannText(subtitle!, color: t.secondary),
-                ],
-              ],
+    final navigationHeading =
+        reuseNavigationHeading &&
+        (BrockmannNavigationScope.of(context)?.headingVisible ?? false);
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (overline != null) ...[
+          BrockmannText(
+            overline!.toUpperCase(),
+            role: BrockmannType.label,
+            color: t.secondary,
+          ),
+          const SizedBox(height: 8),
+        ],
+        if (!navigationHeading)
+          Semantics(
+            header: true,
+            child: BrockmannText(title, role: BrockmannType.title),
+          ),
+        if (subtitle != null) ...[
+          if (!navigationHeading) const SizedBox(height: 12),
+          BrockmannText(subtitle!, color: t.secondary),
+        ],
+      ],
+    );
+    if (onBack == null && actions.isEmpty) return content;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (onBack != null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: BrockmannIconButton(
+              icon: BrockmannIcon.arrowLeft,
+              label: 'Back',
+              onPressed: onBack,
             ),
           ),
-          if (actions.isNotEmpty)
-            Row(mainAxisSize: MainAxisSize.min, children: actions),
+        content,
+        if (actions.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          BrockmannButtonBar(children: actions),
         ],
-      ),
+      ],
     );
   }
 }
@@ -653,7 +669,7 @@ class BrockmannNavigationList extends StatelessWidget {
                       SizedBox(width: 12 * s),
                       Expanded(
                         child: BrockmannText(
-                          options[i],
+                          options[i].toLowerCase(),
                           role: BrockmannType.heading,
                           weight: 300 + 100 * s,
                           color: Color.lerp(t.secondary, t.foreground, s),
@@ -682,6 +698,7 @@ class BrockmannAdaptiveScaffold extends StatefulWidget {
     required this.onChanged,
     required this.body,
     this.title,
+    this.titleWidget,
     this.actions = const [],
     this.breakpoint = 840,
     this.navigationWidth = 280,
@@ -691,6 +708,7 @@ class BrockmannAdaptiveScaffold extends StatefulWidget {
   final ValueChanged<int> onChanged;
   final Widget body;
   final String? title;
+  final Widget? titleWidget;
   final List<Widget> actions;
   final double breakpoint, navigationWidth;
   @override
@@ -705,23 +723,40 @@ class _BrockmannAdaptiveScaffoldState extends State<BrockmannAdaptiveScaffold> {
   Widget build(BuildContext context) {
     final t = context.brockmann;
     final wide = MediaQuery.sizeOf(context).width >= widget.breakpoint;
-    final titleRow = widget.title == null && widget.actions.isEmpty
+    final titleRow =
+        widget.title == null &&
+            widget.titleWidget == null &&
+            widget.actions.isEmpty
         ? null
         : Row(
             children: [
               Expanded(
-                child: widget.title == null
-                    ? const SizedBox()
-                    : BrockmannText(
-                        widget.title!.toUpperCase(),
-                        role: BrockmannType.label,
-                        color: t.secondary,
-                      ),
+                child:
+                    widget.titleWidget ??
+                    (widget.title == null
+                        ? const SizedBox()
+                        : BrockmannText(
+                            widget.title!.toUpperCase(),
+                            role: BrockmannType.label,
+                            color: t.secondary,
+                          )),
               ),
               ...widget.actions,
             ],
           );
-    final keyedBody = KeyedSubtree(key: _bodyKey, child: widget.body);
+    final keyedBody = BrockmannNavigationScope(
+      heading: widget.destinations.isEmpty
+          ? ''
+          : widget.destinations[widget.selected],
+      headingVisible: !wide,
+      child: BrockmannPivotViewport(
+        selected: widget.selected,
+        pageCount: widget.destinations.length,
+        onChanged: widget.onChanged,
+        enabled: !wide,
+        child: KeyedSubtree(key: _bodyKey, child: widget.body),
+      ),
+    );
     return Scaffold(
       backgroundColor: t.background,
       resizeToAvoidBottomInset: true,

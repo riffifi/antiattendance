@@ -1,6 +1,36 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  'Account & sync': (
+    'Compte et synchronisation',
+    'Conta e sincronização',
+    '账号与同步',
+  ),
+  'Daily tools': ('Au quotidien', 'Ferramentas diárias', '日常工具'),
+  'Sign-in needed: {count}': (
+    'Connexion requise : {count}',
+    'Início de sessão necessário: {count}',
+    '需要重新登录：{count}',
+  ),
+  'No accounts yet': (
+    'Aucun compte pour le moment',
+    'Ainda não há contas',
+    '尚无账号',
+  ),
+  'Change your search or choose another group.': (
+    'Modifiez la recherche ou choisissez un autre groupe.',
+    'Altere a pesquisa ou escolha outro grupo.',
+    '修改搜索条件或选择其他班级。',
+  ),
+  'Your university. Your day.': (
+    'Votre université. Votre journée.',
+    'A sua universidade. O seu dia.',
+    '你的大学，你的一天。',
+  ),
+  'Preferences': ('Préférences', 'Preferências', '偏好设置'),
+  'Your accounts': ('Vos comptes', 'As suas contas', '你的账号'),
+  'Selected': ('Sélectionnés', 'Selecionados', '已选择'),
+  'Expired': ('Expirés', 'Expirados', '已过期'),
   "No connection to the server; the pass was stopped.": (
     "Pas de connexion au serveur ; le passe a été arrêté.",
     "Sem ligação ao servidor; o passe foi interrompido.",

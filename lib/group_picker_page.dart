@@ -67,7 +67,7 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => CampusScaffold(
     appBar: CampusAppBar(
       title: Text(tr(context, 'Выбрать группу', 'Choose group')),
       automaticallyImplyLeading: true,
@@ -76,11 +76,11 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
       top: false,
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
+          constraints: const BoxConstraints(maxWidth: 960),
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(24),
                 child: CampusTextField(
                   controller: _controller,
                   autofocus: true,
@@ -107,7 +107,7 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
               Expanded(
                 child: _groups.isEmpty && !_loading && _error == null
                     ? SingleChildScrollView(
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(24),
                         child: Text(
                           _searched
                               ? tr(

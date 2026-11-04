@@ -1,3 +1,5 @@
+import 'frontend_test_helpers.dart';
+
 import 'dart:convert';
 
 import 'package:antiattendance/accounts.dart';
@@ -60,7 +62,11 @@ void main() {
       expect(qrRect.width, lessThanOrEqualTo(size.width - 64));
       expect(qrRect.left, greaterThanOrEqualTo(32));
       expect(tester.takeException(), isNull);
-      await tester.scrollUntilVisible(find.text('Show code'), 100);
+      await tester.scrollUntilVisible(
+        find.text('Show code'),
+        100,
+        scrollable: bodyScroll(),
+      );
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Show code'));
       await tester.tap(find.text('Show code'));
@@ -105,11 +111,17 @@ void main() {
         await tester.pumpAndSettle();
         expect(
           tester.getSize(find.byType(ListView)).width,
-          lessThanOrEqualTo(640),
+          lessThanOrEqualTo(960),
         );
-        final scrollable = find.byType(Scrollable).first;
+        final scrollable = bodyScroll();
         double offset() =>
             tester.state<ScrollableState>(scrollable).position.pixels;
+        await tester.scrollUntilVisible(
+          find.text('Alex Morgan with a longer surname'),
+          100,
+          scrollable: scrollable,
+        );
+        await tester.pumpAndSettle();
         final firstBottom =
             tester.getBottomLeft(find.byType(CampusPanel).first).dy + offset();
         await tester.scrollUntilVisible(

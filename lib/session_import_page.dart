@@ -64,7 +64,7 @@ class _SessionImportPageState extends State<SessionImportPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => CampusScaffold(
     appBar: CampusAppBar(
       title: Text(tr(context, 'Получить аккаунты', 'Import sessions')),
       automaticallyImplyLeading: true,
@@ -114,7 +114,7 @@ class _SessionImportPageState extends State<SessionImportPage> {
           alignment: Alignment.bottomCenter,
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(24),
             color: context.palette.surface.withValues(alpha: .95),
             child: Text(
               _collector.total == 0
@@ -143,10 +143,10 @@ class _SessionImportPageState extends State<SessionImportPage> {
 
   Widget _codeEntry(BuildContext context) => Center(
     child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 440),
+      constraints: const BoxConstraints(maxWidth: 560),
       child: ListView(
         shrinkWrap: true,
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         children: [
           CampusHeader(
             title: tr(context, 'QR-коды считаны', 'QR received'),
@@ -186,9 +186,9 @@ class _SessionImportPageState extends State<SessionImportPage> {
 
   Widget _preview(BuildContext context) => Center(
     child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 440),
+      constraints: const BoxConstraints(maxWidth: 560),
       child: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         children: [
           Text(
             tr(context, 'Импортировать аккаунты?', 'Import these accounts?'),

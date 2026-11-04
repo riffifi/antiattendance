@@ -10,6 +10,8 @@ Brockmann combines typographic hierarchy, open space, and direct manipulation. A
 - Give a selected item both a visual marker and selected semantics. Use inset markers and internal padding so a border never touches glyphs. Derive readable accent text separately from the raw accent fill.
 - Use curated square colour tiles for discrete choices, with an expanding selection outline and contrast-safe check. Use the saturation/brightness field for arbitrary colours and keep its labelled slider alternatives. Companion colours describe content; chrome retains one accent. Historical Windows ribbon geometry is no longer part of the mobile design.
 
+Page titles, section headings and tab-switcher headers use lowercase; reserve uppercase for tiny category tags. Preserve the case of user data such as names, room codes and identifiers.
+
 The title switcher uses the full available width with 12 dp of space at the beginning and end of the strip. Keep the page content at its normal inset. Swiping titles selects one adjacent screen on release; let selection reveal the title rather than allowing free panning. Compact tabs remain scrollable.
 
 ## Motion

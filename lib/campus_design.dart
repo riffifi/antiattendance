@@ -37,7 +37,7 @@ class CampusBrand extends StatelessWidget {
 
 /// Keeps supporting screens on the same reading column, including safe insets.
 class CampusPageBody extends StatelessWidget {
-  const CampusPageBody({super.key, required this.child, this.maxWidth = 640});
+  const CampusPageBody({super.key, required this.child, this.maxWidth = 960});
   final Widget child;
   final double maxWidth;
 
@@ -68,45 +68,23 @@ class CampusHeader extends StatelessWidget {
   final bool fitTitle;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 16),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: fitTitle
-                  ? FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        style: Theme.of(context).textTheme.headlineLarge,
-                      ),
-                    )
-                  : Text(
-                      title,
-                      style: Theme.of(context).textTheme.headlineLarge,
-                    ),
-            ),
-            if (trailing != null) const SizedBox(width: 12),
-            ?trailing,
-          ],
-        ),
-        if (subtitle.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: Theme.of(context).textTheme.bodyMedium
-                ?.copyWith(color: context.palette.muted),
-          ),
-        ],
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    final sharedHeading =
+        BrockmannNavigationScope.of(context)?.headingVisible ?? false;
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: sharedHeading
+            ? (subtitle.isEmpty && trailing == null ? 0 : 20)
+            : 32,
+      ),
+      child: BrockmannPageHeader(
+        title: title.toLowerCase(),
+        reuseNavigationHeading: true,
+        subtitle: subtitle.isEmpty ? null : subtitle,
+        actions: trailing == null ? const [] : [trailing!],
+      ),
+    );
+  }
 }
 
 /// Press feedback for content whose inner controls own the action callbacks.
@@ -155,23 +133,15 @@ class CampusPanel extends StatelessWidget {
     super.key,
     required this.child,
     this.color,
-    this.padding = const EdgeInsets.all(20),
+    this.padding = const EdgeInsets.all(24),
   });
   final Widget child;
   final Color? color;
   final EdgeInsets padding;
   @override
-  Widget build(BuildContext context) => Container(
-    foregroundDecoration: BoxDecoration(
-      border: Border(
-        top: BorderSide(color: context.palette.line, width: .5),
-        bottom: BorderSide(color: context.palette.line, width: .5),
-      ),
-    ),
-    child: Material(
-      color: color ?? context.palette.paper,
-      child: Padding(padding: padding, child: child),
-    ),
+  Widget build(BuildContext context) => Padding(
+    padding: padding,
+    child: color == null ? child : ColoredBox(color: color!, child: child),
   );
 }
 
@@ -180,11 +150,10 @@ class CampusSectionTitle extends StatelessWidget {
   final String title;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: Text(
-      title.toUpperCase(),
-      style: Theme.of(context).textTheme.labelMedium
-          ?.copyWith(letterSpacing: 1.2),
+    padding: const EdgeInsets.only(top: 8, bottom: 16),
+    child: Semantics(
+      header: true,
+      child: BrockmannText(title.toLowerCase(), role: BrockmannType.heading),
     ),
   );
 }
@@ -246,7 +215,7 @@ class CampusNavigation extends StatelessWidget {
     child: Center(
       heightFactor: 1,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 640),
+        constraints: const BoxConstraints(maxWidth: 960),
         child: BrockmannPivot(
           options: labels,
           selected: selectedIndex,
@@ -424,6 +393,144 @@ class _ScanCorners extends CustomPainter {
   bool shouldRepaint(_ScanCorners oldDelegate) => oldDelegate.color != color;
 }
 
+/// A route is a typographic page, with a quiet command row above its title.
+/// Feature pages own their scrolling and domain state; this frame owns insets.
+class CampusScaffold extends StatelessWidget {
+  const CampusScaffold({
+    super.key,
+    this.appBar,
+    required this.body,
+    this.bottomNavigationBar,
+    this.backgroundColor,
+    this.resizeToAvoidBottomInset = true,
+  });
+  final CampusAppBar? appBar;
+  final Widget body;
+  final Widget? bottomNavigationBar;
+  final Color? backgroundColor;
+  final bool resizeToAvoidBottomInset;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: backgroundColor ?? context.brockmann.background,
+    resizeToAvoidBottomInset: resizeToAvoidBottomInset,
+    bottomNavigationBar: bottomNavigationBar,
+    body: SafeArea(
+      top: appBar != null,
+      bottom: false,
+      child: LayoutBuilder(
+        builder: (context, bounds) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (appBar case final bar?)
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: bounds.maxHeight * .45),
+                child: SingleChildScrollView(
+                  child: _CampusRouteHeader(bar: bar),
+                ),
+              ),
+            Expanded(child: body),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _CampusRouteHeader extends StatelessWidget {
+  const _CampusRouteHeader({required this.bar});
+  final CampusAppBar bar;
+  @override
+  Widget build(BuildContext context) {
+    final t = context.brockmann;
+    final title = bar.title;
+    if (bar.compact) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        child: Row(
+          children: [
+            if (bar.leading != null)
+              bar.leading!
+            else if (bar.automaticallyImplyLeading &&
+                Navigator.of(context).canPop())
+              CampusTextAction(
+                icon: Icons.arrow_back_rounded,
+                label: tr(context, 'Назад', 'Back'),
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: title is Text && title.data != null
+                  ? Semantics(
+                      header: true,
+                      child: BrockmannText(
+                        bar.preserveTitleCase
+                            ? title.data!
+                            : title.data!.toLowerCase(),
+                        role: BrockmannType.heading,
+                      ),
+                    )
+                  : title ?? const SizedBox(),
+            ),
+            ...?bar.actions,
+          ],
+        ),
+      );
+    }
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: context.brockmannLayout.inset),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              if (bar.leading != null)
+                bar.leading!
+              else if (bar.automaticallyImplyLeading &&
+                  Navigator.of(context).canPop())
+                Transform.translate(
+                  offset: const Offset(-12, 0),
+                  child: CampusTextAction(
+                    icon: Icons.arrow_back_rounded,
+                    label: tr(context, 'Назад', 'Back'),
+                    onPressed: () => Navigator.of(context).maybePop(),
+                  ),
+                ),
+              Expanded(
+                child: BrockmannText(
+                  'ANTIATTENDANCE',
+                  role: BrockmannType.label,
+                  color: t.secondary,
+                ),
+              ),
+              if (bar.actions != null)
+                Flexible(
+                  child: BrockmannButtonBar(
+                    alignment: WrapAlignment.end,
+                    spacing: 8,
+                    children: bar.actions!,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (title is Text && title.data != null)
+            Semantics(
+              header: true,
+              child: BrockmannText(
+                bar.preserveTitleCase ? title.data! : title.data!.toLowerCase(),
+                role: BrockmannType.title,
+              ),
+            )
+          else
+            ?title,
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
+
 class CampusAppBar extends StatelessWidget implements PreferredSizeWidget {
   const CampusAppBar({
     super.key,
@@ -432,12 +539,16 @@ class CampusAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.actions,
     this.automaticallyImplyLeading = true,
     this.leadingWidth,
+    this.preserveTitleCase = false,
+    this.compact = false,
   });
   final Widget? title;
   final Widget? leading;
   final List<Widget>? actions;
   final bool automaticallyImplyLeading;
   final double? leadingWidth;
+  final bool preserveTitleCase;
+  final bool compact;
   @override
   Size get preferredSize => const Size.fromHeight(64);
   @override

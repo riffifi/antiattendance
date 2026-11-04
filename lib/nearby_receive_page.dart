@@ -60,7 +60,7 @@ class _NearbyReceivePageState extends State<NearbyReceivePage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => CampusScaffold(
     appBar: CampusAppBar(
       title: Text(tr(context, 'Получить рядом', 'Receive nearby')),
       automaticallyImplyLeading: true,
@@ -69,7 +69,7 @@ class _NearbyReceivePageState extends State<NearbyReceivePage> {
       top: false,
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 440),
+          constraints: const BoxConstraints(maxWidth: 560),
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: _failed
@@ -150,7 +150,7 @@ class _NearbyReceivePageState extends State<NearbyReceivePage> {
                             fontSize: 23,
                             fontWeight: FontWeight.w400,
                           ),
-                          textAlign: TextAlign.center,
+                          textAlign: TextAlign.left,
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -159,7 +159,7 @@ class _NearbyReceivePageState extends State<NearbyReceivePage> {
                             'Оба телефона должны быть в одной Wi‑Fi сети. На телефоне отправителя выберите это устройство и проверьте код.',
                             'Both phones must be on the same Wi‑Fi network. Select this device on the sender and check the code.',
                           ),
-                          textAlign: TextAlign.center,
+                          textAlign: TextAlign.left,
                         ),
                         const SizedBox(height: 20),
                         if (_ready)

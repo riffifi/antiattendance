@@ -50,3 +50,31 @@ This bottom-sheet presentation and the hold-and-drag choice shortcut are explici
 Brockmann adaptations requested for mobile, not literal requirements of the 2010
 guide. Prefer a few clear actions. Use simple icons when they help recognition;
 words remain the main way to understand menu options.
+
+## Application-frame revision
+
+Revisited Microsoft's [Metro design-team explanation](https://blogs.windows.com/windowsdeveloper/2011/02/17/from-transportation-to-pixels/)
+and [navigation/application-bar guidance](https://learn.microsoft.com/en-us/archive/msdn-magazine/2011/december/windows-phone-how-to-translate-common-design-principles-to-the-windows-phone).
+The revision applies their typographic navigation, content emphasis and meaningful
+motion to the Android/Flutter implementation; its dp and type sizes are modern
+Brockmann adaptations, not measurements claimed from Windows Phone.
+
+- A compact pivot provides the active page heading. A feature can opt into
+  `reuseNavigationHeading` instead of adding a second display heading. Wider
+  navigation lists leave the feature's own heading visible.
+- `BrockmannPivotViewport` transforms one live child tree. It never duplicates a
+  keyed form or platform view to produce an outgoing animation. Swipes select
+  one adjacent destination, cancellation restores the current content, and
+  reduced motion retains the gesture without spatial movement.
+- Direct manipulation regions retain their pointer gestures. Text input uses
+  the shared region automatically. App command docks and horizontal calendars
+  also declare their gesture ownership.
+- Reading text uses 16/24 dp and supporting text 12/16 dp. Page headings, content
+  names and metadata keep distinct roles. List text aligns to the page's reading
+  axis; field outlines retain internal input padding.
+- Primary actions stay in the page's bottom command area. Changing destinations
+  dismisses the keyboard; the application continues to own cancellation and NFC
+  shutdown rather than waiting for an animation to finish.
+
+Regression checks cover keyed-state retention, interrupted navigation, cancellation,
+text selection, reduced motion, resize, and the app's NFC exit path.

@@ -1,3 +1,7 @@
+import 'package:antiattendance/screen_navigation.dart';
+
+import 'frontend_test_helpers.dart';
+
 import 'package:brockmann/brockmann.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:antiattendance/l10n.dart';
@@ -146,7 +150,9 @@ void main() {
       expect(tester.takeException(), isNull);
       final bar = find.byType(CampusNavigation);
       for (final label in ['Schedule', 'Passes', 'Attendance']) {
-        await tester.tap(find.descendant(of: bar, matching: find.text(label)));
+        await tester.tap(
+          find.descendant(of: bar, matching: find.text(label.toLowerCase())),
+        );
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
       }
@@ -186,16 +192,16 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.byType(BrockmannPivot), findsOneWidget);
-      await tester.ensureVisible(find.text('Schedule'));
-      await tester.tap(find.text('Schedule'));
+      await tester.ensureVisible(find.text('schedule'));
+      await tester.tap(find.text('schedule'));
       await tester.pumpAndSettle();
       expect(selected, 1);
       expect(
         tester.widget<BrockmannPivot>(find.byType(BrockmannPivot)).selected,
         1,
       );
-      await tester.ensureVisible(find.text('Passes'));
-      await tester.tap(find.text('Passes'));
+      await tester.ensureVisible(find.text('passes'));
+      await tester.tap(find.text('passes'));
       await tester.pumpAndSettle();
       expect(selected, 2);
       expect(tester.takeException(), isNull);
@@ -246,7 +252,11 @@ void main() {
             'Use phone language',
           ),
         );
-        await tester.scrollUntilVisible(languageItem, 150);
+        await tester.scrollUntilVisible(
+          languageItem,
+          150,
+          scrollable: bodyScroll(),
+        );
         await tester.pumpAndSettle();
         await tester.ensureVisible(languageItem);
         await tester.pumpAndSettle();
@@ -335,6 +345,7 @@ void main() {
               debugShowCheckedModeBanner: false,
               theme: AppTheme.build(mode),
               home: HomePage(
+                useAdaptiveNavigation: true,
                 store: _Accounts(),
                 logStore: _Log(),
                 scheduleApi: _Schedule(),
@@ -370,12 +381,9 @@ void main() {
                 );
             await tester.pumpAndSettle();
           } else if (index != 0) {
-            await tester.tap(
-              find.descendant(
-                of: find.byType(CampusNavigation),
-                matching: find.text(label),
-              ),
-            );
+            tester
+                .widget<ScreenNavigation>(find.byType(ScreenNavigation))
+                .onSelected(index);
             await tester.pumpAndSettle();
           }
           final render =

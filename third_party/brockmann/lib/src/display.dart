@@ -40,6 +40,7 @@ class BrockmannListItem extends StatelessWidget {
     return BrockmannPressable(
       label: secondary == null ? label : '$label, $secondary',
       tiltStrength: .25,
+      excludeSemantics: trailing == null,
       selected: selected,
       onPressed: onPressed,
       builder: (c, p) => BrockmannMotion(
@@ -58,7 +59,7 @@ class BrockmannListItem extends StatelessWidget {
             ),
             AnimatedContainer(
               duration: t.duration(c, 180),
-              padding: const EdgeInsets.fromLTRB(12, 16, 12, 16),
+              padding: const EdgeInsets.symmetric(vertical: 16),
               color: p ? t.surface : null,
               child: Row(
                 children: [

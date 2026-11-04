@@ -162,9 +162,19 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Group A').last);
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Alice'),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(CustomScrollView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     expect(find.text('Alice'), findsOneWidget);
     expect(find.text('Bob'), findsNothing);
-    expect(find.text('Selected: 1'), findsOneWidget);
+    expect(find.text('Scan QR · 1'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     await tester.pumpAndSettle();
   });

@@ -1,3 +1,5 @@
+import 'frontend_test_helpers.dart';
+
 import 'package:antiattendance/campus_design.dart';
 
 import 'dart:async';
@@ -278,25 +280,18 @@ void main() {
     await tester.tap(
       find.descendant(
         of: find.byType(CampusNavigation),
-        matching: find.text('Schedule'),
+        matching: find.text('schedule'),
       ),
     );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.text('Mathematics').last,
+      find.text('Mathematics'),
       150,
-      scrollable: find
-          .byWidgetPredicate(
-            (w) =>
-                w is Scrollable &&
-                (w.axisDirection == AxisDirection.down ||
-                    w.axisDirection == AxisDirection.up),
-          )
-          .first,
+      scrollable: bodyScroll(),
     );
-    await tester.ensureVisible(find.text('Mathematics').last);
+    await tester.ensureVisible(find.text('Mathematics'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Mathematics').last);
+    await tester.tap(find.text('Mathematics'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Paste link'));
     await tester.pumpAndSettle();
@@ -360,14 +355,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('A very long class title for a narrow screen'),
       120,
-      scrollable: find
-          .byWidgetPredicate(
-            (w) =>
-                w is Scrollable &&
-                (w.axisDirection == AxisDirection.down ||
-                    w.axisDirection == AxisDirection.up),
-          )
-          .first,
+      scrollable: bodyScroll(),
     );
     expect(
       find.text('A very long class title for a narrow screen'),

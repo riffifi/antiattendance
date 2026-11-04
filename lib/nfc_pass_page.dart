@@ -1,3 +1,6 @@
+import 'frontend/page_layout.dart';
+import 'frontend/pass_status_panel.dart';
+
 import 'package:brockmann/brockmann.dart';
 
 import 'campus_design.dart';
@@ -1157,69 +1160,32 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
         .firstOrNull;
     final presented = (_status['presented'] as num? ?? 0).toInt();
     final remaining = ((_status['remainingMillis'] as num? ?? 0) / 1000).ceil();
-    final scheme = Theme.of(context).colorScheme;
     return Column(
       children: [
         Expanded(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+            padding: AaPageLayout.insets(context),
             children: [
-              CampusHeader(
-                title: tr(context, 'NFC-пропуска', 'NFC passes'),
-                subtitle: _single
-                    ? tr(
-                        context,
-                        'Выберите один пропуск ниже и активируйте его.',
-                        'Choose one pass below and activate it.',
-                      )
-                    : tr(
-                        context,
-                        'Все пропуска. Одна очередь. Ваш — последним.',
-                        'One queue for your passes. Yours goes last.',
-                      ),
-              ),
-              if (_numbers.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: CampusButton.action(
-                          style: _single
-                              ? CampusButtonStyle.outlined
-                              : CampusButtonStyle.tonal,
-                          onPressed: enabled
-                              ? () {
-                                  setState(() => _single = false);
-                                  unawaited(_savePreferences());
-                                }
-                              : null,
-                          label: Text(tr(context, 'Очередь', 'Queue')),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: CampusButton.action(
-                          style: _single
-                              ? CampusButtonStyle.tonal
-                              : CampusButtonStyle.outlined,
-                          onPressed: enabled
-                              ? () {
-                                  setState(() {
-                                    _single = true;
-                                    _singleId ??= _numbers.keys.firstOrNull;
-                                  });
-                                  unawaited(_savePreferences());
-                                }
-                              : null,
-                          label: Text(
-                            tr(context, 'Один пропуск', 'Single pass'),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+              CampusHeader(title: tr(context, 'NFC-пропуска', 'NFC passes')),
+              if (_numbers.isNotEmpty) ...[
+                BrockmannSegmentedControl<bool>(
+                  options: const [false, true],
+                  labelFor: (single) => single
+                      ? tr(context, 'Один пропуск', 'Single pass')
+                      : tr(context, 'Очередь', 'Queue'),
+                  value: _single,
+                  onChanged: !enabled
+                      ? null
+                      : (value) {
+                          setState(() {
+                            _single = value;
+                            if (value) _singleId ??= _numbers.keys.firstOrNull;
+                          });
+                          unawaited(_savePreferences());
+                        },
                 ),
+                const SizedBox(height: 32),
+              ],
               if (_bulkEnrolling)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
@@ -1232,6 +1198,23 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                     ),
                   ),
                 ),
+              PassStatusPanel(
+                running: _running,
+                single: _single,
+                hasPasses: _numbers.isNotEmpty,
+                accountLabel: _running
+                    ? current?.label
+                    : widget.accounts
+                          .where((a) => a.id == _singleId)
+                          .firstOrNull
+                          ?.label,
+                selectedCount: _selected.length,
+                responded: _status['responded'] == true,
+                remainingSeconds: remaining,
+                presented: presented,
+                total: _queue.length,
+              ),
+              const SizedBox(height: 24),
               if (_numbers.isNotEmpty)
                 Align(
                   alignment: Alignment.centerLeft,
@@ -1250,156 +1233,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                   ),
                 ),
               const SizedBox(height: 12),
-              _card(
-                color: _running
-                    ? context.palette.selected
-                    : context.palette.surface,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _running
-                                ? (_single
-                                      ? tr(
-                                          context,
-                                          'Пропуск активен',
-                                          'Pass is active',
-                                        )
-                                      : tr(
-                                          context,
-                                          'Очередь работает',
-                                          'Queue is running',
-                                        ))
-                                : _numbers.isEmpty
-                                ? tr(
-                                    context,
-                                    'Подключите первый пропуск',
-                                    'Enroll your first pass',
-                                  )
-                                : tr(
-                                    context,
-                                    'Готовы к проходу',
-                                    'Ready for the gate',
-                                  ),
-                            style: TextStyle(
-                              color: (_running
-                                  ? scheme.onPrimaryContainer
-                                  : context.palette.ink),
-                              fontSize: 18,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (_numbers.isNotEmpty || _running) ...[
-                      const SizedBox(height: 16),
-                      Text(
-                        _running
-                            ? current?.label ?? '—'
-                            : _single
-                            ? widget.accounts
-                                      .where((a) => a.id == _singleId)
-                                      .firstOrNull
-                                      ?.label ??
-                                  tr(
-                                    context,
-                                    'Выберите пропуск',
-                                    'Choose a pass',
-                                  )
-                            : _selected.length == 1
-                            ? tr(context, 'Выбран 1 пропуск', '1 pass selected')
-                            : trf(
-                                context,
-                                'Выбрано пропусков: {count}',
-                                '{count} passes selected',
-                                {'count': _selected.length},
-                              ),
-                        style: TextStyle(
-                          color: (_running
-                              ? scheme.onPrimaryContainer
-                              : context.palette.ink),
-                          fontSize: 24,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 8),
-                    Text(
-                      _running
-                          ? _single
-                                ? tr(
-                                    context,
-                                    'Один пропуск активен до остановки или истечения токена.',
-                                    'This pass stays active until stopped or its token expires.',
-                                  )
-                                : _status['responded'] == true
-                                ? trf(
-                                    context,
-                                    'Следующий через {seconds} с',
-                                    'Next pass in {seconds}s',
-                                    {'seconds': remaining},
-                                  )
-                                : tr(
-                                    context,
-                                    'Поднесите телефон к турникету',
-                                    'Hold your phone against the gate',
-                                  )
-                          : _numbers.isEmpty
-                          ? tr(
-                              context,
-                              'Подключите пропуска выбранных аккаунтов.',
-                              'Enroll passes for your selected accounts.',
-                            )
-                          : _single
-                          ? tr(
-                              context,
-                              'Выберите один пропуск ниже и активируйте его.',
-                              'Choose one pass below and activate it.',
-                            )
-                          : tr(
-                              context,
-                              'Выберите людей ниже и запустите очередь.',
-                              'Choose people below, then start the queue.',
-                            ),
-                      style: TextStyle(
-                        color:
-                            (_running
-                                    ? scheme.onPrimaryContainer
-                                    : context.palette.ink)
-                                .withValues(alpha: .8),
-                        fontSize: 13,
-                      ),
-                    ),
-                    if (_running && !_single) ...[
-                      const SizedBox(height: 16),
-                      CampusProgress.linear(
-                        value: _queue.isEmpty ? 0 : presented / _queue.length,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        trf(
-                          context,
-                          'Предъявлено: {count} из {total}',
-                          'Presented: {count} of {total}',
-                          {'count': presented, 'total': _queue.length},
-                        ),
-                        style: TextStyle(
-                          color: (_running
-                              ? scheme.onPrimaryContainer
-                              : context.palette.ink),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              const SizedBox(height: 22),
+
               Row(
                 children: [
                   Expanded(
@@ -1660,106 +1494,117 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
             ],
           ),
         ),
-        Container(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
-
-          child: Column(
-            children: [
-              if (_message != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Semantics(
-                    liveRegion: true,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _message!,
-                            style: TextStyle(
-                              color: context.palette.muted,
-                              fontSize: 12,
+        BrockmannInteractionRegion(
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: context.brockmann.line)),
+            ),
+            child: Column(
+              children: [
+                if (_message != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Semantics(
+                      liveRegion: true,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _message!,
+                              style: TextStyle(
+                                color: context.palette.muted,
+                                fontSize: 12,
+                              ),
                             ),
                           ),
-                        ),
-                        CampusTextAction(
-                          onPressed: () => setState(() => _message = null),
-                          tooltip: tr(context, 'Закрыть', 'Dismiss'),
-                          label: tr(context, 'Закрыть', 'Dismiss'),
-                        ),
-                      ],
+                          CampusTextAction(
+                            onPressed: () => setState(() => _message = null),
+                            tooltip: tr(context, 'Закрыть', 'Dismiss'),
+                            label: tr(context, 'Закрыть', 'Dismiss'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (_reauthAccount != null && widget.onReauth != null && !_busy)
+                  CampusButton.text(
+                    onPressed: () => widget.onReauth!(_reauthAccount!),
+                    child: Text(tr(context, 'Войти снова', 'Sign in again')),
+                  ),
+                if (_nfcDisabled)
+                  CampusButton.action(
+                    onPressed: () =>
+                        nfcPassChannel.invokeMethod<void>('openNfcSettings'),
+                    label: Text(tr(context, 'Настройки NFC', 'NFC settings')),
+                    style: CampusButtonStyle.text,
+                  ),
+                SizedBox(
+                  width: double.infinity,
+                  child: CampusButton.action(
+                    onPressed: _running
+                        ? _stop
+                        : enabled &&
+                              _numbers.isEmpty &&
+                              widget.accounts.isNotEmpty
+                        ? _bulkEnroll
+                        : enabled && _activeIds.isNotEmpty
+                        ? _start
+                        : null,
+                    label: Text(
+                      _busy
+                          ? tr(context, 'Подождите…', 'Please wait…')
+                          : _running
+                          ? (_single
+                                ? tr(
+                                    context,
+                                    'Отключить пропуск',
+                                    'Deactivate pass',
+                                  )
+                                : tr(
+                                    context,
+                                    'Остановить очередь',
+                                    'Stop queue',
+                                  ))
+                          : _numbers.isEmpty
+                          ? tr(context, 'Подключить пропуска', 'Enroll passes')
+                          : (_single
+                                ? tr(
+                                    context,
+                                    'Активировать пропуск',
+                                    'Activate pass',
+                                  )
+                                : tr(
+                                    context,
+                                    'Запустить очередь',
+                                    'Start queue',
+                                  )),
                     ),
                   ),
                 ),
-              if (_reauthAccount != null && widget.onReauth != null && !_busy)
-                CampusButton.text(
-                  onPressed: () => widget.onReauth!(_reauthAccount!),
-                  child: Text(tr(context, 'Войти снова', 'Sign in again')),
-                ),
-              if (_nfcDisabled)
-                CampusButton.action(
-                  onPressed: () =>
-                      nfcPassChannel.invokeMethod<void>('openNfcSettings'),
-                  label: Text(tr(context, 'Настройки NFC', 'NFC settings')),
-                  style: CampusButtonStyle.text,
-                ),
-              SizedBox(
-                width: double.infinity,
-                child: CampusButton.action(
-                  onPressed: _running
-                      ? _stop
-                      : enabled &&
-                            _numbers.isEmpty &&
-                            widget.accounts.isNotEmpty
-                      ? _bulkEnroll
-                      : enabled && _activeIds.isNotEmpty
-                      ? _start
-                      : null,
-                  label: Text(
-                    _busy
-                        ? tr(context, 'Подождите…', 'Please wait…')
-                        : _running
-                        ? (_single
-                              ? tr(
-                                  context,
-                                  'Отключить пропуск',
-                                  'Deactivate pass',
-                                )
-                              : tr(context, 'Остановить очередь', 'Stop queue'))
-                        : _numbers.isEmpty
-                        ? tr(context, 'Подключить пропуска', 'Enroll passes')
-                        : (_single
-                              ? tr(
-                                  context,
-                                  'Активировать пропуск',
-                                  'Activate pass',
-                                )
-                              : tr(
-                                  context,
-                                  'Запустить очередь',
-                                  'Start queue',
-                                )),
+                if (_numbers.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    _single
+                        ? tr(
+                            context,
+                            'Не закрывайте вкладку, пока пропуск активен.',
+                            'Keep this tab open while the pass is active.',
+                          )
+                        : tr(
+                            context,
+                            'Не закрывайте вкладку, пока очередь работает.',
+                            'Keep this tab open while the queue runs.',
+                          ),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: context.palette.muted,
+                      fontSize: 11,
+                    ),
                   ),
-                ),
-              ),
-              if (_numbers.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  _single
-                      ? tr(
-                          context,
-                          'Не закрывайте вкладку, пока пропуск активен.',
-                          'Keep this tab open while the pass is active.',
-                        )
-                      : tr(
-                          context,
-                          'Не закрывайте вкладку, пока очередь работает.',
-                          'Keep this tab open while the queue runs.',
-                        ),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: context.palette.muted, fontSize: 11),
-                ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ],

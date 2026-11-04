@@ -423,7 +423,7 @@ class _DebugMenuPageState extends State<DebugMenuPage> {
       Navigator.of(context).push<void>(MaterialPageRoute(builder: (_) => page));
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => CampusScaffold(
     appBar: CampusAppBar(
       automaticallyImplyLeading: !widget.embedded,
       title: Text(

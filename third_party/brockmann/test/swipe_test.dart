@@ -98,7 +98,7 @@ void main() {
         await tester.pumpAndSettle();
       }
       expect(selected, 3);
-      expect(tester.getBottomRight(find.text('four')).dx, closeTo(308, .1));
+      expect(tester.getTopLeft(find.text('four')).dx, closeTo(12, .1));
     },
   );
 }

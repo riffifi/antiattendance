@@ -1,3 +1,5 @@
+import 'frontend_test_helpers.dart';
+
 import 'package:brockmann/brockmann.dart';
 
 import 'dart:async';
@@ -5,8 +7,6 @@ import 'dart:async';
 import 'package:antiattendance/app_settings.dart';
 import 'package:antiattendance/app_theme.dart';
 import 'package:antiattendance/editorial_controls.dart';
-import 'package:antiattendance/screen_navigation.dart';
-import 'package:antiattendance/screen_selector.dart';
 import 'package:antiattendance/settings_page.dart';
 import 'package:antiattendance/study_summary.dart';
 import 'package:antiattendance/theme_crossfade.dart';
@@ -16,50 +16,6 @@ import 'package:flutter/material.dart';
 
 void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
-
-  testWidgets('return morph hands its label back on the completion frame', (
-    tester,
-  ) async {
-    var visible = true;
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light,
-        home: StatefulBuilder(
-          builder: (context, update) => ScreenNavigation(
-            selectorVisible: visible,
-            selectedIndex: 2,
-            onIndex: () => update(() => visible = true),
-            onSelected: (_) => update(() => visible = false),
-            child: const SizedBox.expand(),
-          ),
-        ),
-      ),
-    );
-    await tester.tap(find.byKey(const ValueKey('screen-selector-2')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('INDEX'));
-    await tester.pump();
-    for (var frame = 0; frame < 20; frame++) {
-      await tester.pump(const Duration(milliseconds: 16));
-      final selector = tester.widget<ScreenSelector>(
-        find.byType(ScreenSelector),
-      );
-      if (find
-          .byKey(const ValueKey('navigation-morph-layer'))
-          .evaluate()
-          .isEmpty) {
-        expect(
-          selector.hiddenIndex,
-          isNull,
-          reason: 'The selector must show the label as soon as the morph ends',
-        );
-      }
-    }
-    expect(
-      tester.widget<ScreenSelector>(find.byType(ScreenSelector)).hiddenIndex,
-      isNull,
-    );
-  });
 
   testWidgets(
     'compact Brockmann switch has a 48 dp gesture target and commits on release',
@@ -134,7 +90,13 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        await tester.scrollUntilVisible(find.byType(CampusSwitch), 250);
+        await tester.scrollUntilVisible(
+          find.byType(CampusSwitch),
+          250,
+          scrollable: bodyScroll(),
+        );
+        await tester.ensureVisible(find.byType(CampusSwitch));
+        await tester.pumpAndSettle();
         await tester.tap(find.byType(CampusSwitch));
         await tester.pump();
         expect(
@@ -158,6 +120,8 @@ void main() {
         expect(await store.loadDaySummaryEnabled(), permission);
         expect(enableCalls, permission ? [true] : isEmpty);
         if (permission) {
+          await tester.ensureVisible(find.byType(CampusSwitch));
+          await tester.pumpAndSettle();
           await tester.tap(find.byType(CampusSwitch));
           await tester.pumpAndSettle();
           expect(await store.loadDaySummaryEnabled(), isFalse);

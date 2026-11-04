@@ -429,3 +429,143 @@ class BrockmannFeather extends StatelessWidget {
     );
   }
 }
+
+/// A pivot's persistent viewport. It moves one live subtree, so forms, scroll
+/// positions, platform views and GlobalKeys survive destination changes.
+/// Interactive regions own their gestures; ordinary content supports page swipes.
+class BrockmannPivotViewport extends StatefulWidget {
+  const BrockmannPivotViewport({
+    super.key,
+    required this.selected,
+    required this.pageCount,
+    required this.child,
+    this.onChanged,
+    this.enabled = true,
+  });
+  final int selected, pageCount;
+  final Widget child;
+  final ValueChanged<int>? onChanged;
+  final bool enabled;
+  @override
+  State<BrockmannPivotViewport> createState() => _BrockmannPivotViewportState();
+}
+
+class _BrockmannPivotViewportState extends State<BrockmannPivotViewport>
+    with SingleTickerProviderStateMixin {
+  late final _offset = AnimationController.unbounded(vsync: this);
+  final _blocked = <int>{};
+  double _width = 1, _drag = 0;
+  bool get _reduced => context.brockmann.motionReduced(context);
+  int get _axis => Directionality.of(context) == TextDirection.rtl ? -1 : 1;
+
+  void _settle() {
+    if (_reduced) {
+      _offset.value = 0;
+      return;
+    }
+    _offset.animateTo(
+      0,
+      duration: context.brockmann.duration(context, 220),
+      curve: brockmannOutExpo,
+    );
+  }
+
+  @override
+  void didUpdateWidget(BrockmannPivotViewport oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selected != widget.selected) {
+      _offset.stop();
+      if (_reduced || !widget.enabled) {
+        _offset.value = 0;
+        return;
+      }
+      final direction = widget.selected > oldWidget.selected ? 1 : -1;
+      _offset.value = direction * _axis * math.min(48.0, _width * .14);
+      _settle();
+    }
+  }
+
+  @override
+  void dispose() {
+    _offset.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, bounds) {
+      _width = math.max(1.0, bounds.maxWidth);
+      return BrockmannGestureScope(
+        pointers: _blocked,
+        child: RawGestureDetector(
+          behavior: HitTestBehavior.translucent,
+          gestures:
+              !widget.enabled ||
+                  widget.pageCount < 2 ||
+                  widget.onChanged == null
+              ? {}
+              : {
+                  _PageSwipeRecognizer:
+                      GestureRecognizerFactoryWithHandlers<
+                        _PageSwipeRecognizer
+                      >(
+                        () => _PageSwipeRecognizer(),
+                        (recognizer) => recognizer
+                          ..blockedPointers = _blocked
+                          ..onStart = (_) {
+                            _offset.stop();
+                            _drag = 0;
+                          }
+                          ..onUpdate = (event) {
+                            _drag += event.delta.dx;
+                            final next =
+                                widget.selected + (_drag * _axis < 0 ? 1 : -1);
+                            if (!_reduced) {
+                              _offset.value =
+                                  _drag *
+                                  (next < 0 || next >= widget.pageCount
+                                      ? .18
+                                      : .6);
+                            }
+                          }
+                          ..onCancel = _settle
+                          ..onEnd = (event) {
+                            final velocity = event.velocity.pixelsPerSecond.dx;
+                            final committed =
+                                _drag.abs() >= math.max(56, _width * .18) ||
+                                (_drag.abs() >= 16 && velocity.abs() >= 600);
+                            if (committed) {
+                              final direction =
+                                  (velocity.abs() >= 600 ? velocity : _drag) *
+                                  _axis;
+                              final next =
+                                  (widget.selected + (direction < 0 ? 1 : -1))
+                                      .clamp(0, widget.pageCount - 1);
+                              if (next != widget.selected) {
+                                widget.onChanged!(next);
+                              }
+                            }
+                            _settle();
+                          },
+                      ),
+                },
+          child: ClipRect(
+            child: AnimatedBuilder(
+              animation: _offset,
+              child: widget.child,
+              builder: (context, child) => Transform.translate(
+                offset: Offset(_reduced ? 0 : _offset.value, 0),
+                child: Opacity(
+                  opacity: _reduced
+                      ? 1
+                      : (1 - _offset.value.abs() / _width * .7).clamp(.65, 1),
+                  child: child,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}

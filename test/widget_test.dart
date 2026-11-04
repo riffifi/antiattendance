@@ -1,3 +1,5 @@
+import 'frontend_test_helpers.dart';
+
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:antiattendance/campus_design.dart';
 import 'package:antiattendance/accounts.dart';
@@ -100,14 +102,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('User'),
       150,
-      scrollable: find
-          .byWidgetPredicate(
-            (w) =>
-                w is Scrollable &&
-                (w.axisDirection == AxisDirection.down ||
-                    w.axisDirection == AxisDirection.up),
-          )
-          .first,
+      scrollable: bodyScroll(),
     );
     await tester.tap(
       find.byWidgetPredicate(
@@ -151,13 +146,24 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.textContaining('Session expires:'), findsNothing);
-    await tester.tap(
-      find
-          .byWidgetPredicate(
-            (w) => w is CampusTextAction && w.tooltip == 'Account actions',
+    await tester.scrollUntilVisible(
+      find.text('User'),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(CustomScrollView),
+            matching: find.byType(Scrollable),
           )
           .first,
     );
+    final actions = find
+        .byWidgetPredicate(
+          (w) => w is CampusTextAction && w.tooltip == 'Account actions',
+        )
+        .first;
+    await tester.ensureVisible(actions);
+    await tester.pumpAndSettle();
+    await tester.tap(actions);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Details'));
     await tester.pumpAndSettle();
@@ -167,14 +173,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('Expired user'),
       150,
-      scrollable: find
-          .byWidgetPredicate(
-            (w) =>
-                w is Scrollable &&
-                (w.axisDirection == AxisDirection.down ||
-                    w.axisDirection == AxisDirection.up),
-          )
-          .first,
+      scrollable: bodyScroll(),
     );
     expect(find.text('Session expired. Sign in again.'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
@@ -196,6 +195,13 @@ void main() {
         ),
       ),
     );
+    await tester.scrollUntilVisible(
+      find.text('Dark'),
+      200,
+      scrollable: bodyScroll(),
+    );
+    await tester.ensureVisible(find.text('Dark'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Dark'));
     await tester.pumpAndSettle();
     expect(find.text('Phone colors (Monet)'), findsNothing);
@@ -214,22 +220,15 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Посещаемость'), findsNWidgets(2));
+    expect(find.text('посещаемость'), findsOneWidget);
     expect(find.text('Сканировать QR · 0'), findsOneWidget);
     expect(find.text('Режим очереди'), findsNothing);
     await tester.scrollUntilVisible(
-      find.text('Аккаунты'),
+      find.text('аккаунты'),
       200,
-      scrollable: find
-          .byWidgetPredicate(
-            (w) =>
-                w is Scrollable &&
-                (w.axisDirection == AxisDirection.down ||
-                    w.axisDirection == AxisDirection.up),
-          )
-          .first,
+      scrollable: bodyScroll(),
     );
-    expect(find.text('Аккаунты'), findsOneWidget);
+    expect(find.text('аккаунты'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -261,14 +260,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('Аня'),
       200,
-      scrollable: find
-          .byWidgetPredicate(
-            (w) =>
-                w is Scrollable &&
-                (w.axisDirection == AxisDirection.down ||
-                    w.axisDirection == AxisDirection.up),
-          )
-          .first,
+      scrollable: bodyScroll(),
     );
     expect(find.text('Отметка подтверждена'), findsWidgets);
     await tester.tap(
@@ -308,32 +300,18 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('Борис'),
       200,
-      scrollable: find
-          .byWidgetPredicate(
-            (w) =>
-                w is Scrollable &&
-                (w.axisDirection == AxisDirection.down ||
-                    w.axisDirection == AxisDirection.up),
-          )
-          .first,
+      scrollable: bodyScroll(),
     );
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -120));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Борис'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.text('Selected: 1'),
+      find.text('Manage'),
       -200,
-      scrollable: find
-          .byWidgetPredicate(
-            (w) =>
-                w is Scrollable &&
-                (w.axisDirection == AxisDirection.down ||
-                    w.axisDirection == AxisDirection.up),
-          )
-          .first,
+      scrollable: bodyScroll(),
     );
-    expect(find.text('Selected: 1'), findsOneWidget);
+    expect(find.text('Scan QR · 1'), findsOneWidget);
     await tester.tap(find.text('Manage'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Assign group'));
@@ -390,7 +368,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Attendance'), findsNWidgets(2));
+    expect(find.text('attendance'), findsOneWidget);
+    expect(find.text('your accounts'), findsOneWidget);
     expect(find.text('Add'), findsOneWidget);
     // Sessions are never received from other phones any more.
     expect(find.text('Receive'), findsNothing);
@@ -439,14 +418,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('Use phone language'),
       200,
-      scrollable: find
-          .byWidgetPredicate(
-            (w) =>
-                w is Scrollable &&
-                (w.axisDirection == AxisDirection.down ||
-                    w.axisDirection == AxisDirection.up),
-          )
-          .first,
+      scrollable: bodyScroll(),
     );
     await tester.tap(find.text('Use phone language'));
     await tester.pumpAndSettle();
@@ -459,14 +431,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('NFC diagnostics'),
       300,
-      scrollable: find
-          .byWidgetPredicate(
-            (w) =>
-                w is Scrollable &&
-                (w.axisDirection == AxisDirection.down ||
-                    w.axisDirection == AxisDirection.up),
-          )
-          .first,
+      scrollable: bodyScroll(),
     );
     await tester.ensureVisible(find.text('NFC diagnostics'));
     await tester.pumpAndSettle();
@@ -478,14 +443,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('About AntiAttendance'),
       300,
-      scrollable: find
-          .byWidgetPredicate(
-            (w) =>
-                w is Scrollable &&
-                (w.axisDirection == AxisDirection.down ||
-                    w.axisDirection == AxisDirection.up),
-          )
-          .first,
+      scrollable: bodyScroll(),
     );
     await tester.ensureVisible(find.text('About AntiAttendance'));
     await tester.pumpAndSettle();
@@ -523,10 +481,10 @@ void main() {
     final offset = position.pixels;
     expect(offset, greaterThan(0));
     final bar = find.byType(CampusNavigation);
-    await tester.tap(find.descendant(of: bar, matching: find.text('Schedule')));
+    await tester.tap(find.descendant(of: bar, matching: find.text('schedule')));
     await tester.pumpAndSettle();
     await tester.tap(
-      find.descendant(of: bar, matching: find.text('Attendance')),
+      find.descendant(of: bar, matching: find.text('attendance')),
     );
     await tester.pumpAndSettle();
     expect(position.pixels, offset);

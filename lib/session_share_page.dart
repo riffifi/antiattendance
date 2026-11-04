@@ -60,7 +60,7 @@ class _SessionSharePageState extends State<SessionSharePage> {
   @override
   Widget build(BuildContext context) {
     final transfer = _transfer;
-    return Scaffold(
+    return CampusScaffold(
       appBar: CampusAppBar(
         title: Text(tr(context, 'Передать аккаунты', 'Share sessions')),
         automaticallyImplyLeading: true,
@@ -69,10 +69,10 @@ class _SessionSharePageState extends State<SessionSharePage> {
         top: false,
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 440),
+            constraints: const BoxConstraints(maxWidth: 560),
             child: ListView(
-              shrinkWrap: true,
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+              shrinkWrap: false,
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
               children: [
                 _error != null
                     ? Text(
@@ -89,7 +89,7 @@ class _SessionSharePageState extends State<SessionSharePage> {
                     : transfer == null
                     ? const CampusProgress.compact()
                     : Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(
                             _showCode
@@ -100,10 +100,10 @@ class _SessionSharePageState extends State<SessionSharePage> {
                                     'Scan all QR frames',
                                   ),
                             style: const TextStyle(
-                              fontSize: 21,
+                              fontSize: 24,
                               fontWeight: FontWeight.w400,
                             ),
-                            textAlign: TextAlign.center,
+                            textAlign: TextAlign.left,
                           ),
                           const SizedBox(height: 8),
                           Text(
@@ -118,7 +118,7 @@ class _SessionSharePageState extends State<SessionSharePage> {
                                     'Откройте «Получить аккаунты» на другом телефоне и держите камеру на экране.',
                                     'Open “Import sessions” on the other phone and keep its camera pointed here.',
                                   ),
-                            textAlign: TextAlign.center,
+                            textAlign: TextAlign.left,
                           ),
                           const SizedBox(height: 24),
                           if (_showCode)
@@ -134,7 +134,7 @@ class _SessionSharePageState extends State<SessionSharePage> {
                                 fontWeight: FontWeight.w400,
                                 letterSpacing: 2,
                               ),
-                              textAlign: TextAlign.center,
+                              textAlign: TextAlign.left,
                             )
                           else ...[
                             Container(
@@ -173,7 +173,7 @@ class _SessionSharePageState extends State<SessionSharePage> {
                               'Сессии дают доступ к аккаунтам. Передавайте QR и код только доверенному человеку.',
                               'Sessions grant account access. Share the QR and code only with someone you trust.',
                             ),
-                            textAlign: TextAlign.center,
+                            textAlign: TextAlign.left,
                             style: TextStyle(
                               color: Theme.of(context).colorScheme.error,
                               fontSize: 12,

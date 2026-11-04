@@ -435,8 +435,9 @@ class _BatchLoginPageState extends State<BatchLoginPage> {
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) unawaited(_leave());
       },
-      child: Scaffold(
+      child: CampusScaffold(
         appBar: CampusAppBar(
+          preserveTitleCase: active != null,
           leading: CampusTextAction(
             icon: Icons.arrow_back_rounded,
             onPressed: _leave,
@@ -511,7 +512,7 @@ class _BatchLoginPageState extends State<BatchLoginPage> {
                     child: Column(
                       children: [
                         Padding(
-                          padding: const EdgeInsets.all(20),
+                          padding: const EdgeInsets.all(24),
                           child: Text(
                             tr(
                               context,

@@ -1,12 +1,10 @@
-import 'package:flutter_localizations/flutter_localizations.dart';
-
 import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:antiattendance/app_theme.dart';
 import 'package:antiattendance/accounts.dart';
 import 'package:antiattendance/main.dart';
-import 'package:antiattendance/screen_selector.dart';
+import 'package:antiattendance/screen_navigation.dart';
 import 'package:antiattendance/schedule_api.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -46,190 +44,81 @@ class _PreviewSchedule extends ScheduleApi {
 
 void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
-
-  for (final size in [
-    const Size(320, 568),
-    const Size(390, 844),
-    const Size(844, 390),
-  ]) {
-    testWidgets(
-      'four full-height columns fit $size with large translated text',
-      (tester) async {
-        tester.view.physicalSize = size;
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.resetPhysicalSize);
-        addTearDown(tester.view.resetDevicePixelRatio);
-        for (final language in ['en', 'ru', 'fr', 'pt', 'zh']) {
-          int? chosen;
-          await tester.pumpWidget(
-            MaterialApp(
-              theme: AppTheme.light,
-              locale: Locale(language),
-              supportedLocales: const [
-                Locale('en'),
-                Locale('ru'),
-                Locale('fr'),
-                Locale('pt'),
-                Locale('zh'),
-              ],
-              localizationsDelegates: GlobalMaterialLocalizations.delegates,
-              home: MediaQuery(
-                data: MediaQueryData(
-                  size: size,
-                  textScaler: const TextScaler.linear(2),
-                ),
-                child: Scaffold(
-                  body: ScreenSelector(onSelected: (index) => chosen = index),
-                ),
-              ),
-            ),
-          );
-          for (var index = 0; index < 4; index++) {
-            final column = find.byKey(ValueKey('screen-selector-$index'));
-            final rect = tester.getRect(column);
-            expect(rect.width, closeTo(size.width / 4, .01));
-            expect(rect.height, size.height);
-            expect(rect.left, closeTo(index * size.width / 4, .01));
-            await tester.tap(column);
-            expect(chosen, index);
-          }
-          expect(
-            tester
-                .widgetList<RotatedBox>(find.byType(RotatedBox))
-                .every((box) => box.quarterTurns == 3),
-            isTrue,
-          );
-          expect(tester.takeException(), isNull);
-        }
-      },
-    );
-  }
-
-  testWidgets(
-    'destinations open from the index and system back returns to it',
-    (tester) async {
-      tester.view.physicalSize = const Size(390, 844);
+  for (final width in [320.0, 390.0, 1200.0]) {
+    testWidgets('all destinations fit $width at double text size', (
+      tester,
+    ) async {
+      tester.view.physicalSize = Size(width, 900);
       tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.reset);
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: const TextScaler.linear(2)),
+            child: child!,
+          ),
           home: HomePage(
-            startAtSelector: true,
-            store: MemoryAccountStore([]),
+            useAdaptiveNavigation: true,
+            store: MemoryAccountStore(const [
+              SavedAccount(id: 'a', label: 'Alex Morgan', cookie: 'test'),
+            ]),
             logStore: MemoryLogStore(),
           ),
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.byType(ScreenSelector), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('screen-selector-0')));
-      await tester.pumpAndSettle();
-      expect(find.byType(ScreenSelector), findsNothing);
-      expect(find.text('INDEX'), findsOneWidget);
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
-      expect(find.byType(ScreenSelector), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('screen-selector-1')));
-      await tester.pumpAndSettle();
-      expect(find.byType(ScreenSelector), findsNothing);
-      await tester.tap(find.text('INDEX'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('screen-selector-3')));
-      await tester.pumpAndSettle();
-      expect(find.text('Settings'), findsWidgets);
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
-      expect(find.byType(ScreenSelector), findsOneWidget);
-      expect(tester.takeException(), isNull);
-      await tester.pumpWidget(const SizedBox.shrink());
-    },
-  );
-
-  testWidgets('all destinations fit a narrow inset phone with enlarged text', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(320, 640);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light,
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            padding: const EdgeInsets.only(top: 24, bottom: 34),
-            textScaler: const TextScaler.linear(1.5),
-          ),
-          child: child!,
-        ),
-        home: HomePage(
-          startAtSelector: true,
-          store: MemoryAccountStore(const [
-            SavedAccount(
-              id: 'a',
-              label: 'Alex Morgan',
-              cookie: 'test',
-              groupId: 42,
-              groupName: 'CS-42',
-            ),
-          ]),
-          logStore: MemoryLogStore(),
-          scheduleApi: _PreviewSchedule(),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    for (var index = 0; index < 4; index++) {
-      await tester.tap(find.byKey(ValueKey('screen-selector-$index')));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull, reason: 'Destination $index');
-      if (index == 0) {
-        expect(
-          tester.getRect(find.text('Scan QR · 1')).bottom,
-          lessThanOrEqualTo(606),
-        );
+      await tester.scrollUntilVisible(
+        find.text('Alex Morgan'),
+        250,
+        scrollable: find
+            .descendant(
+              of: find.byType(CustomScrollView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      expect(find.text('Alex Morgan'), findsOneWidget);
+      for (var i = 1; i < 4; i++) {
+        tester
+            .widget<ScreenNavigation>(find.byType(ScreenNavigation))
+            .onSelected(i);
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
       }
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
-    }
-    await tester.pumpWidget(const SizedBox.shrink());
-  });
-
-  testWidgets('selector exposes four named, actionable semantic buttons', (
-    tester,
-  ) async {
-    final semantics = tester.ensureSemantics();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(body: ScreenSelector(onSelected: (_) {})),
-      ),
-    );
-    for (final label in ['Attendance', 'Schedule', 'Passes', 'Settings']) {
-      expect(
-        tester.getSemantics(find.bySemanticsLabel(label)),
-        matchesSemantics(
-          label: label,
-          isButton: true,
-          hasEnabledState: true,
-          isEnabled: true,
-          hasTapAction: true,
-        ),
+      await tester.scrollUntilVisible(
+        find.text('Alex Morgan'),
+        250,
+        scrollable: find
+            .descendant(
+              of: find.byType(CustomScrollView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
       );
-    }
-    semantics.dispose();
-  });
-
+      expect(find.text('Alex Morgan'), findsOneWidget);
+    });
+  }
   if (Platform.environment['TYPOGRAPHY_PREVIEW_DIR']
       case final String directory) {
     testWidgets('export typography previews', (tester) async {
-      await (FontLoader(
-        'Geist',
-      )..addFont(rootBundle.load('font/Geist[wght].ttf'))).load();
-      await (FontLoader(
-        'GeistMono',
-      )..addFont(rootBundle.load('font/GeistMono[wght].ttf'))).load();
+      for (final (family, asset) in [
+        ('Geist', 'font/Geist[wght].ttf'),
+        ('GeistMono', 'font/GeistMono[wght].ttf'),
+        (
+          'packages/brockmann/Geist',
+          'packages/brockmann/assets/fonts/Geist.ttf',
+        ),
+        (
+          'packages/brockmann/Geist Mono',
+          'packages/brockmann/assets/fonts/GeistMono.ttf',
+        ),
+      ]) {
+        await (FontLoader(family)..addFont(rootBundle.load(asset))).load();
+      }
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
@@ -243,7 +132,7 @@ void main() {
               debugShowCheckedModeBanner: false,
               theme: AppTheme.build(mode),
               home: HomePage(
-                startAtSelector: true,
+                useAdaptiveNavigation: true,
                 themeMode: mode,
                 store: MemoryAccountStore(const [
                   SavedAccount(
@@ -279,16 +168,11 @@ void main() {
           });
         }
 
-        await capture('selector');
-        await tester.tap(find.byKey(const ValueKey('screen-selector-0')));
-        await tester.pumpAndSettle();
         await capture('attendance');
         for (var destination = 1; destination < 4; destination++) {
-          await tester.tap(find.text('INDEX'));
-          await tester.pumpAndSettle();
-          await tester.tap(
-            find.byKey(ValueKey('screen-selector-$destination')),
-          );
+          tester
+              .widget<ScreenNavigation>(find.byType(ScreenNavigation))
+              .onSelected(destination);
           await tester.pumpAndSettle();
           await capture(
             ['attendance', 'schedule', 'passes', 'settings'][destination],

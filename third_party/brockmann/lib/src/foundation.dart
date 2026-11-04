@@ -22,6 +22,7 @@ class BrockmannPressable extends StatefulWidget {
     this.selected,
     this.toggled,
     this.button = true,
+    this.header = false,
     this.tooltip,
     this.tiltStrength = 0,
     this.onKey,
@@ -32,7 +33,7 @@ class BrockmannPressable extends StatefulWidget {
   final VoidCallback? onPressed;
   final BrockmannSound? sound;
   final bool? selected, toggled;
-  final bool button;
+  final bool button, header;
   final bool excludeSemantics;
   final String? tooltip;
   final double tiltStrength;
@@ -58,6 +59,7 @@ class _BrockmannPressableState extends State<BrockmannPressable> {
     Widget child = Semantics(
       label: widget.label,
       button: widget.button,
+      header: widget.header,
       enabled: widget.onPressed != null,
       selected: widget.selected,
       toggled: widget.toggled,

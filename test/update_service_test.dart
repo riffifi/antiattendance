@@ -1,3 +1,5 @@
+import 'frontend_test_helpers.dart';
+
 import 'dart:convert';
 import 'dart:io';
 
@@ -312,6 +314,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('Version v1.2.0 is available'),
       200,
+      scrollable: bodyScroll(),
     );
     expect(find.text('Version v1.2.0 is available'), findsOneWidget);
     await tester.ensureVisible(find.text('Version v1.2.0 is available'));
@@ -319,7 +322,7 @@ void main() {
     await tester.tap(find.text('Version v1.2.0 is available'));
     await tester.pumpAndSettle();
     expect(find.text('Open release'), findsOneWidget);
-    expect(find.text('WHAT’S NEW'), findsOneWidget);
+    expect(find.text('what’s new'), findsOneWidget);
     expect(find.text('Improvements'), findsOneWidget);
     expect(find.textContaining('Smooth scrolling'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());

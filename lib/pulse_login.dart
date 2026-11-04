@@ -117,7 +117,7 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
     color: Theme.of(context).scaffoldBackgroundColor,
     child: Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 440),
+        constraints: const BoxConstraints(maxWidth: 560),
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -371,8 +371,9 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => CampusScaffold(
     appBar: CampusAppBar(
+      preserveTitleCase: widget.accountLabel != null,
       title: Text(
         widget.accountLabel ??
             tr(context, 'Войти через МИРЭА', 'Sign in through MIREA'),

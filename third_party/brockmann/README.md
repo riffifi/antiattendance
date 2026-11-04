@@ -58,12 +58,13 @@ Controls are controlled widgets: store their values in your app, and update them
 
 | Purpose | Components |
 | --- | --- |
-| Application | `BrockmannApp`, `BrockmannPage`, `BrockmannThemeData` |
+| Application | `BrockmannApp`, `BrockmannPage`, `BrockmannThemeData`, `BrockmannAdaptiveScaffold` |
+| Layout | `BrockmannResponsive`, `BrockmannGrid`, `BrockmannColumns`, `BrockmannSplitView`, `BrockmannContent`, `BrockmannStack`, `BrockmannSection`, `BrockmannPageHeader`, `BrockmannButtonBar`, `BrockmannDivider`, `BrockmannGap`, `BrockmannSpace` |
 | Typography | `BrockmannText`, `BrockmannType` (14 roles) |
 | Input | `BrockmannButton`, `BrockmannSwitch`, `BrockmannSlider`, `BrockmannKnob`, `BrockmannTextField`, `BrockmannSearchField`, `BrockmannRangeSlider`, `BrockmannStepper` |
 | Navigation | `BrockmannPivot`, `BrockmannPicker` (full-page or anchored), `BrockmannNavigationBar` |
 | Colour | `BrockmannColorPicker`, `BrockmannColorField`, `BrockmannColorScheme`, `brockmannPalette()` |
-| Display | `BrockmannTile`, `BrockmannLiveTile`, `BrockmannListItem`, `BrockmannMeter`, `BrockmannProgress` |
+| Display | `BrockmannTile`, `BrockmannLiveTile`, `BrockmannListItem`, `BrockmannMeter`, `BrockmannProgress`, `BrockmannStat`, `BrockmannPropertyList`, `BrockmannPlaceholder` |
 | Overlays | `showBrockmannDialog`, `showBrockmannMenu`, `showBrockmannCommands`, `showBrockmannToast` |
 | Selection | `BrockmannCheckbox`, `BrockmannRadioGroup`, `BrockmannSegmentedControl`, `BrockmannChip` |
 | Composition | `BrockmannAccordion`, `BrockmannBadge`, `BrockmannBanner`, `BrockmannEmptyState` |
@@ -88,3 +89,16 @@ flutter test integration_test/showcase_test.dart -d <android-device-id>
 Widgets use standard Flutter rendering and native text editing. Android is the first supported platform; optional sound and preference persistence have an Android implementation. Other platforms can supply their own sound backend and persistence.
 
 MIT licensed. Geist fonts retain their SIL Open Font License; Phosphor icons retain their MIT license in `assets/`. The eight short synthesized cues are original project assets.
+
+### Persistent application navigation (0.2)
+
+`BrockmannAdaptiveScaffold` now uses a single live `BrockmannPivotViewport` for
+compact navigation. Keep an `IndexedStack` or another stable state-owning body
+inside it; destination changes never render duplicate keyed bodies. Declare
+custom drag surfaces and command docks with `BrockmannInteractionRegion`.
+`BrockmannTextField` already protects its native editing gestures.
+
+Feature headers can set `reuseNavigationHeading: true` to reuse the compact
+pivot title. Wider layouts retain their normal page heading. `titleWidget` accepts
+a small application mark in place of the application-name label. See
+[the Metro implementation notes](docs/metro-audit.md).

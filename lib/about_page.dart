@@ -1,3 +1,5 @@
+import 'package:brockmann/brockmann.dart';
+
 import 'campus_design.dart';
 import 'about_logo.dart';
 
@@ -55,16 +57,16 @@ class _AboutPageState extends State<AboutPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => CampusScaffold(
     appBar: CampusAppBar(title: Text(tr(context, 'О приложении', 'About'))),
     bottomNavigationBar: SafeArea(
       top: false,
       child: Center(
         heightFactor: 1,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
+          constraints: const BoxConstraints(maxWidth: 960),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
             child: SizedBox(
               width: double.infinity,
               child: CampusButton.action(
@@ -80,9 +82,9 @@ class _AboutPageState extends State<AboutPage> {
       top: false,
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
+          constraints: const BoxConstraints(maxWidth: 960),
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
             children: [
               TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0, end: 1),
@@ -98,8 +100,12 @@ class _AboutPageState extends State<AboutPage> {
                   ),
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const AboutLogo(),
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: AboutLogo(),
+                    ),
                     const SizedBox(height: 8),
                     FittedBox(
                       fit: BoxFit.scaleDown,
@@ -115,7 +121,7 @@ class _AboutPageState extends State<AboutPage> {
                         'Пульс и расписание — в одном месте.',
                         'Pulse and your schedule in one place.',
                       ),
-                      textAlign: TextAlign.center,
+                      textAlign: TextAlign.left,
                       style: TextStyle(
                         color: context.palette.muted,
                         fontSize: 15,
@@ -127,27 +133,10 @@ class _AboutPageState extends State<AboutPage> {
                       builder: (context, snapshot) => snapshot.data == null
                           ? const SizedBox(height: 20)
                           : Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: context.palette.surface,
-                                  border: Border.all(
-                                    color: context.palette.line,
-                                  ),
-                                  borderRadius: BorderRadius.zero,
-                                ),
-                                child: Text(
-                                  'v${snapshot.data}',
-                                  style: TextStyle(
-                                    color: context.palette.muted,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                              padding: const EdgeInsets.symmetric(vertical: 24),
+                              child: BrockmannText(
+                                'v${snapshot.data}',
+                                role: BrockmannType.monoLarge,
                               ),
                             ),
                     ),
@@ -206,7 +195,7 @@ class _Feature extends StatelessWidget {
         children: [
           Text(
             label,
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.left,
             style: TextStyle(
               color: context.palette.ink,
               fontSize: 12,

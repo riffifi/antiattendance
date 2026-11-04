@@ -169,7 +169,7 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return CampusScaffold(
       appBar: CampusAppBar(
         title: Text(tr(context, 'Сигнал турникета', 'Turnstile signal')),
         automaticallyImplyLeading: true,
@@ -178,14 +178,14 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
         top: false,
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
+            constraints: const BoxConstraints(maxWidth: 960),
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+              padding: const EdgeInsets.fromLTRB(24, 32, 24, 48),
               children: [
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: context.palette.surface,
+                    color: Colors.transparent,
                     borderRadius: BorderRadius.zero,
                   ),
                   child: Column(
@@ -194,8 +194,8 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
                       Text(
                         _message(context),
                         style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w400,
                         ),
                       ),
                       if (_listening && _frames.isEmpty) ...[
@@ -263,7 +263,7 @@ class _TurnstileProbePageState extends State<TurnstileProbePage> {
                       child: Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: context.palette.surface,
+                          color: Colors.transparent,
                           borderRadius: BorderRadius.zero,
                         ),
                         child: Column(

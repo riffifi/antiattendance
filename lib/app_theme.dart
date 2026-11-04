@@ -9,8 +9,8 @@ abstract final class AppColors {
   static const paper = Colors.white;
   static const ink = Color(0xFF111111);
   static const muted = Color(0xFF6C6C6C);
-  static const blue = Color(0xFF202020);
-  static const deepBlue = Color(0xFF202020);
+  static const blue = Color(0xFF244BD8);
+  static const deepBlue = Color(0xFF244BD8);
   static const line = Color(0xFFC9C9C9);
   static const lime = Color(0xFFD9F36B);
   static const mint = Color(0xFFE7F6EE);
@@ -86,7 +86,10 @@ abstract final class AppTheme {
       onSurfaceVariant: brockmann.secondary,
       outline: brockmann.lineStrong,
       outlineVariant: brockmann.line,
-      primaryContainer: brockmann.surface,
+      primaryContainer: Color.alphaBlend(
+        brockmann.accent.withValues(alpha: .09),
+        brockmann.background,
+      ),
       onPrimaryContainer: brockmann.foreground,
       secondary: brockmann.accent,
       onSecondary: brockmann.onAccent,
@@ -178,7 +181,9 @@ class _AATheme extends BrockmannThemeData {
         brightness: mode == AppThemeMode.light
             ? Brightness.light
             : Brightness.dark,
-        accent: mode == AppThemeMode.light ? Colors.black : Colors.white,
+        accent: mode == AppThemeMode.light
+            ? const Color(0xff244bd8)
+            : const Color(0xff91aaff),
         tilt: false,
       );
   final AppThemeMode mode;

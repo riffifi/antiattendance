@@ -1,3 +1,5 @@
+import 'package:brockmann/brockmann.dart';
+
 import 'dart:async';
 import 'dart:io';
 
@@ -41,7 +43,7 @@ class _AaIdGateState extends State<AaIdGate> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_ready) return const Scaffold(body: SizedBox.expand());
+    if (!_ready) return const CampusScaffold(body: SizedBox.expand());
     return AaId.signedIn ? widget.child : const AaIdSignInPage();
   }
 }
@@ -138,12 +140,18 @@ class _AaIdSignInPageState extends State<AaIdSignInPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => CampusScaffold(
     body: SafeArea(
       child: CampusPageBody(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 32, 20, 32),
+          padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
           children: [
+            BrockmannText(
+              'ANTIATTENDANCE',
+              role: BrockmannType.label,
+              color: context.brockmann.secondary,
+            ),
+            const SizedBox(height: 48),
             CampusHeader(
               title: 'AA ID',
               subtitle: tr(
@@ -152,14 +160,21 @@ class _AaIdSignInPageState extends State<AaIdSignInPage> {
                 'One account per person',
               ),
             ),
-            CampusPanel(
-              child: Text(
-                tr(
-                  context,
-                  'Войдите через МИРЭА, чтобы подтвердить, что это вы. AA ID привязывается к вашему аккаунту МИРЭА навсегда, и без него приложение не работает. Пароль и сессия МИРЭА не сохраняются.',
-                  'Sign in with MIREA to confirm it is you. AA ID is permanently bound to your MIREA account, and the app does not work without it. Your MIREA password and session are not saved.',
-                ),
+            BrockmannSection(
+              title: tr(
+                context,
+                'Ваша учёба. Ваш день.',
+                'Your university. Your day.',
               ),
+              children: [
+                Text(
+                  tr(
+                    context,
+                    'Войдите через МИРЭА, чтобы подтвердить, что это вы. AA ID привязывается к вашему аккаунту МИРЭА навсегда, и без него приложение не работает. Пароль и сессия МИРЭА не сохраняются.',
+                    'Sign in with MIREA to confirm it is you. AA ID is permanently bound to your MIREA account, and the app does not work without it. Your MIREA password and session are not saved.',
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             Text(
@@ -188,7 +203,7 @@ class _AaIdSignInPageState extends State<AaIdSignInPage> {
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 32),
             CampusButton.filled(
               onPressed: _busy ? null : _signIn,
               child: Text(
@@ -276,11 +291,11 @@ class _AaIdAccountPageState extends State<AaIdAccountPage> {
   Widget build(BuildContext context) {
     final session = AaId.session;
     final localizations = MaterialLocalizations.of(context);
-    return Scaffold(
+    return CampusScaffold(
       appBar: const CampusAppBar(title: Text('AA ID')),
       body: CampusPageBody(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+          padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
           children: [
             CampusPanel(
               child: Column(

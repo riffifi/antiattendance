@@ -1,6 +1,8 @@
 import 'package:brockmann/brockmann.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+
 import 'aa_id_page.dart';
+import 'frontend/attendance_page.dart';
 import 'debug_menu_page.dart';
 import 'server_sessions.dart';
 import 'session_server_sync.dart';
@@ -267,7 +269,7 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
     localizationsDelegates: GlobalMaterialLocalizations.delegates,
     home: AaIdGate(
       child: HomePage(
-        startAtSelector: true,
+        useAdaptiveNavigation: true,
         legacyMode: false,
         store: ServerAccountStore(),
         settingsStore: _settingsStore,
@@ -306,11 +308,11 @@ class HomePage extends StatefulWidget {
     this.onThemeModeChanged,
     this.updates,
     this.sessionChecker = checkSession,
-    this.startAtSelector = false,
+    this.useAdaptiveNavigation = false,
     this.legacyMode = false,
   });
 
-  final bool startAtSelector;
+  final bool useAdaptiveNavigation;
   final bool legacyMode;
   final Future<SessionCheckResult> Function(SavedAccount) sessionChecker;
   final AccountStore? store;
@@ -338,8 +340,6 @@ class _HomePageState extends State<HomePage> {
       widget.logStore ?? AttendanceLogStore();
   late final AppSettingsStore _settingsStore =
       widget.settingsStore ?? AppSettingsStore();
-  final _accountSearch = TextEditingController();
-  String _accountQuery = '';
   int? _attendanceGroupId;
   bool _matchesAttendanceGroup(SavedAccount a) =>
       _attendanceGroupId == null ||
@@ -347,21 +347,8 @@ class _HomePageState extends State<HomePage> {
           ? a.groupId == null
           : a.groupId == _attendanceGroupId);
   int _tab = 0;
-  late bool _showSelector = widget.startAtSelector;
 
-  void _returnToSelector() {
-    if (_tab == 2) {
-      unawaited(
-        _nfcPageKey.currentState?.deactivateQueue() ?? Future<void>.value(),
-      );
-      _nfcPageKey = GlobalKey<NfcPassPageState>();
-    }
-    setState(() => _showSelector = true);
-  }
-
-  void _selectScreen(int index) {
-    _changeTab(index);
-  }
+  void _selectScreen(int index) => _changeTab(index);
 
   bool _scheduleVisited = false;
   bool _settingsVisited = false;
@@ -369,7 +356,6 @@ class _HomePageState extends State<HomePage> {
   StreamSubscription<void>? _serverUpdates;
 
   void _changeTab(int index) {
-    if (_showSelector) setState(() => _showSelector = false);
     if (index == _tab) return;
     if (_tab == 3) {
       unawaited(_load(preserveSelection: true));
@@ -549,7 +535,6 @@ class _HomePageState extends State<HomePage> {
     _counterRefreshTimer?.cancel();
     _sessionRefreshTimer?.cancel();
     _summarySyncTimer?.cancel();
-    _accountSearch.dispose();
     if (widget.api == null) _api.close();
     if (widget.scheduleApi == null) _scheduleApi.close();
     super.dispose();
@@ -689,7 +674,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _openSettings() async {
-    if (widget.startAtSelector) {
+    if (widget.useAdaptiveNavigation) {
       _selectScreen(3);
       return;
     }
@@ -1697,7 +1682,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _settingsButton(BuildContext context) {
     final updates = widget.updates;
-    Widget button(bool available) => widget.startAtSelector
+    Widget button(bool available) => widget.useAdaptiveNavigation
         ? CampusButton.text(
             onPressed: _openSettings,
             child: Badge(
@@ -1719,53 +1704,21 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final visibleAccounts = _accounts
-        .where(
-          (account) =>
-              _matchesAttendanceGroup(account) &&
-              '${account.label} ${account.groupName ?? ''}'
-                  .toLowerCase()
-                  .contains(_accountQuery),
-        )
-        .toList();
     final countsByAccount = _marks == null
         ? null
         : AttendanceCounts.fromMarks(_marks!);
     final content = Scaffold(
       extendBody: false,
-      appBar: widget.startAtSelector
+      appBar: widget.useAdaptiveNavigation
           ? null
           : CampusAppBar(
-              leadingWidth: widget.startAtSelector ? 96 : null,
-              leading: widget.startAtSelector
-                  ? CampusButton.text(
-                      onPressed: _returnToSelector,
-                      child: Text(tr(context, 'МЕНЮ', 'INDEX')),
-                    )
-                  : null,
-              title: InkWell(
-                borderRadius: BorderRadius.zero,
-                child: SizedBox(
-                  height: 48,
-                  child: widget.startAtSelector
-                      ? Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            '0${_tab + 1} / ${[tr(context, 'Посещаемость', 'Attendance'), tr(context, 'Расписание', 'Schedule'), tr(context, 'Пропуска', 'Passes'), tr(context, 'Настройки', 'Settings')][_tab].toUpperCase()}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.labelMedium,
-                          ),
-                        )
-                      : widget.legacyMode && Navigator.of(context).canPop()
-                      ? Text(tr(context, 'Старый режим', 'Legacy'))
-                      : CampusBrand(
-                          width: 74,
-                          height: 34,
-                          label: tr(context, 'Логотип приложения', 'App logo'),
-                        ),
-                ),
-              ),
+              title: widget.legacyMode && Navigator.of(context).canPop()
+                  ? Text(tr(context, 'Старый режим', 'Legacy'))
+                  : CampusBrand(
+                      width: 74,
+                      height: 34,
+                      label: tr(context, 'Логотип приложения', 'App logo'),
+                    ),
               actions: [_settingsButton(context), const SizedBox(width: 8)],
               automaticallyImplyLeading: true,
             ),
@@ -1775,43 +1728,13 @@ class _HomePageState extends State<HomePage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (_tab == 0 && !_loading && !_loadError)
-              Center(
-                heightFactor: 1,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 640),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: CampusButton.action(
-                            onPressed: _busy || _selected.isEmpty
-                                ? null
-                                : _scan,
-                            label: Text(
-                              trf(
-                                context,
-                                'Сканировать QR · {count}',
-                                'Scan QR · {count}',
-                                {'count': _selected.length},
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        CampusTextAction(
-                          onPressed: _busy || _selected.isEmpty
-                              ? null
-                              : _pasteLink,
-                          tooltip: tr(context, 'Вставить ссылку', 'Paste link'),
-                          label: tr(context, 'вставить', 'paste'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              AttendanceActionBar(
+                selectedCount: _selected.length,
+                busy: _busy,
+                onScan: _scan,
+                onPaste: _pasteLink,
               ),
-            if (!widget.startAtSelector)
+            if (!widget.useAdaptiveNavigation)
               CampusNavigation(
                 selectedIndex: _tab,
                 onDestinationSelected: _changeTab,
@@ -1827,7 +1750,7 @@ class _HomePageState extends State<HomePage> {
       body: Builder(
         builder: (context) => Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
+            constraints: const BoxConstraints(maxWidth: 960),
             child: _loading
                 ? const Center(child: CampusProgress.compact())
                 : _loadError
@@ -1854,402 +1777,72 @@ class _HomePageState extends State<HomePage> {
                     index: _tab,
                     children: [
                       TickerMode(
-                        enabled: _tab == 0 && !_showSelector,
-                        child: CustomScrollView(
-                          key: const PageStorageKey('attendance-tab'),
-                          slivers: [
-                            SliverPadding(
-                              padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-                              sliver: SliverList.list(
-                                children: [
-                                  CampusHeader(
-                                    fitTitle: true,
-                                    title: tr(
-                                      context,
-                                      'Посещаемость',
-                                      'Attendance',
-                                    ),
-                                    subtitle: tr(
-                                      context,
-                                      'Выберите аккаунты и сканируйте QR-код.',
-                                      'Choose accounts, then scan a QR.',
-                                    ),
-                                  ),
-                                  AppPassPicker(
-                                    enabled: !_busy,
-                                    hint: tr(context, 'Группа', 'Group'),
-                                    items: [
-                                      PassPickerItem(
-                                        value: '',
-                                        label: tr(
-                                          context,
-                                          'Все группы',
-                                          'All groups',
-                                        ),
-                                        selected: _attendanceGroupId == null,
-                                      ),
-                                      for (final entry in {
-                                        for (final a in _accounts)
-                                          if (a.groupId != null)
-                                            a.groupId!:
-                                                a.groupName ?? '${a.groupId}',
-                                      }.entries)
-                                        PassPickerItem(
-                                          value: '${entry.key}',
-                                          label: entry.value,
-                                          selected:
-                                              _attendanceGroupId == entry.key,
-                                        ),
-                                      if (_accounts.any(
-                                        (a) => a.groupId == null,
-                                      ))
-                                        PassPickerItem(
-                                          value: '0',
-                                          label: tr(
-                                            context,
-                                            'Без группы',
-                                            'No group',
-                                          ),
-                                          selected: _attendanceGroupId == 0,
-                                        ),
-                                    ],
-                                    onChanged: (items) => setState(() {
-                                      _attendanceGroupId = int.tryParse(
-                                        items.first.value,
-                                      );
-                                      _selected
-                                        ..clear()
-                                        ..addAll(
-                                          _accounts
-                                              .where(_matchesAttendanceGroup)
-                                              .map((a) => a.id),
-                                        );
-                                    }),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  if (_submitting) ...[
-                                    const SizedBox(height: 12),
-                                    const CampusProgress.linear(),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      tr(
-                                        context,
-                                        'Отправляем отметки…',
-                                        'Submitting attendance…',
-                                      ),
-                                      style: TextStyle(
-                                        color: context.palette.muted,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          tr(context, 'Аккаунты', 'Accounts'),
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleLarge,
-                                        ),
-                                      ),
-                                      CampusButton.action(
-                                        onPressed: _busy ? null : _addAccounts,
-                                        label: Text(
-                                          tr(context, 'Добавить', 'Add'),
-                                        ),
-                                        style: CampusButtonStyle.text,
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  if (_accounts.isEmpty && widget.legacyMode)
-                                    CampusButton.action(
-                                      onPressed: _busy ? null : _importSessions,
-                                      label: Text(
-                                        tr(context, 'Получить', 'Receive'),
-                                      ),
-                                      style: CampusButtonStyle.text,
-                                    ),
-                                  if (_accounts.isEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 30,
-                                      ),
-                                      child: Text(
-                                        tr(
-                                          context,
-                                          widget.legacyMode
-                                              ? 'Добавьте первый аккаунт через МИРЭА.'
-                                              : 'Подключите сервер в настройках и добавьте аккаунт на сервере.',
-                                          widget.legacyMode
-                                              ? 'Add your first account through MIREA.'
-                                              : 'Connect a server in Settings and add an account on the server.',
-                                        ),
-                                        style: TextStyle(
-                                          color: context.palette.muted,
-                                        ),
-                                      ),
-                                    ),
-                                  if (_accounts.isNotEmpty) ...[
-                                    Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
-                                      children: [
-                                        AppActionMenu(
-                                          entries: [
-                                            if (widget.legacyMode)
-                                              CampusMenuEntry(
-                                                value: 'share',
-                                                label: tr(
-                                                  context,
-                                                  'Передать',
-                                                  'Share',
-                                                ),
-                                              ),
-                                            if (widget.legacyMode)
-                                              CampusMenuEntry(
-                                                value: 'receive',
-                                                label: tr(
-                                                  context,
-                                                  'Получить',
-                                                  'Receive',
-                                                ),
-                                              ),
-                                            if (_selected.isNotEmpty)
-                                              CampusMenuEntry(
-                                                value: 'group',
-                                                label: tr(
-                                                  context,
-                                                  'Назначить группу',
-                                                  'Assign group',
-                                                ),
-                                              ),
-                                            if (_accounts.any(
-                                              (a) =>
-                                                  _selected.contains(a.id) &&
-                                                  a.isExpiredAt(DateTime.now()),
-                                            ))
-                                              CampusMenuEntry(
-                                                value: 'restore',
-                                                label: tr(
-                                                  context,
-                                                  'Восстановить вход',
-                                                  'Restore sessions',
-                                                ),
-                                              ),
-                                          ],
-                                          onSelected: (value) {
-                                            if (value == 'share') {
-                                              _shareSessions();
-                                            }
-                                            if (value == 'receive') {
-                                              _importSessions();
-                                            }
-                                            if (value == 'group') {
-                                              _chooseGroup(Set.of(_selected));
-                                            }
-                                            if (value == 'restore') {
-                                              _recoverSessions();
-                                            }
-                                          },
-                                          anchorBuilder: (context, open) =>
-                                              CampusButton.action(
-                                                onPressed: _busy ? null : open,
-                                                label: Text(
-                                                  tr(
-                                                    context,
-                                                    'Управление',
-                                                    'Manage',
-                                                  ),
-                                                ),
-                                                style: CampusButtonStyle.text,
-                                              ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Align(
-                                            alignment: Alignment.centerRight,
-                                            child: CampusButton.text(
-                                              onPressed: _busy
-                                                  ? null
-                                                  : () => setState(() {
-                                                      if (_selected.length ==
-                                                          _accounts
-                                                              .where(
-                                                                _matchesAttendanceGroup,
-                                                              )
-                                                              .length) {
-                                                        _selected.clear();
-                                                      } else {
-                                                        _selected
-                                                          ..clear()
-                                                          ..addAll(
-                                                            _accounts
-                                                                .where(
-                                                                  _matchesAttendanceGroup,
-                                                                )
-                                                                .map(
-                                                                  (a) => a.id,
-                                                                ),
-                                                          );
-                                                      }
-                                                    }),
-                                              child: Text(
-                                                _selected.length ==
-                                                        _accounts
-                                                            .where(
-                                                              _matchesAttendanceGroup,
-                                                            )
-                                                            .length
-                                                    ? tr(
-                                                        context,
-                                                        'Снять выбор',
-                                                        'Clear selection',
-                                                      )
-                                                    : tr(
-                                                        context,
-                                                        'Выбрать все',
-                                                        'Select all',
-                                                      ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      trf(
-                                        context,
-                                        'Выбрано: {count}',
-                                        'Selected: {count}',
-                                        {
-                                          'count': _selected
-                                              .where(
-                                                (id) => _accounts.any(
-                                                  (a) => a.id == id,
-                                                ),
-                                              )
-                                              .length,
-                                        },
-                                      ),
-                                      style: TextStyle(
-                                        color: context.palette.muted,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 10),
-                                  ],
-                                  if (_accounts.length > 5 ||
-                                      _accountQuery.isNotEmpty) ...[
-                                    CampusTextField(
-                                      controller: _accountSearch,
-                                      label: tr(
-                                        context,
-                                        'Найти аккаунт или группу',
-                                        'Search accounts or groups',
-                                      ),
-                                      trailing: _accountQuery.isEmpty
-                                          ? null
-                                          : CampusTextAction(
-                                              onPressed: () {
-                                                _accountSearch.clear();
-                                                setState(
-                                                  () => _accountQuery = '',
-                                                );
-                                              },
-                                              tooltip: tr(
-                                                context,
-                                                'Очистить поиск',
-                                                'Clear search',
-                                              ),
-                                              label: tr(
-                                                context,
-                                                'очистить',
-                                                'clear',
-                                              ),
-                                            ),
-                                      onChanged: (value) => setState(
-                                        () => _accountQuery = value
-                                            .trim()
-                                            .toLowerCase(),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                  ],
-                                  if (visibleAccounts.isEmpty &&
-                                      _accountQuery.isNotEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.all(20),
-                                      child: Text(
-                                        tr(
-                                          context,
-                                          'Ничего не найдено.',
-                                          'No matches found.',
-                                        ),
-                                        style: TextStyle(
-                                          color: context.palette.muted,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                            SliverPadding(
-                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-                              sliver: SliverList.builder(
-                                itemCount: visibleAccounts.length,
-                                itemBuilder: (context, index) {
-                                  final account = visibleAccounts[index];
-                                  return _AccountRow(
-                                    key: ValueKey(account.id),
-                                    account: account,
-                                    counts: countsByAccount == null
-                                        ? null
-                                        : (countsByAccount[account.id] ??
-                                              AttendanceCounts.zero),
-                                    selected: _selected.contains(account.id),
-                                    busy: _submitting,
-                                    result: _results[account.id],
-                                    error: _errors[account.id],
-                                    onTap: () {
-                                      AppHaptics.selection();
-                                      setState(() {
-                                        if (!_selected.add(account.id)) {
-                                          _selected.remove(account.id);
-                                        }
-                                      });
-                                    },
-                                    sessionCheck: _sessionChecks[account.id],
-                                    checkingSession: _checkingSessions.contains(
-                                      account.id,
-                                    ),
-                                    onCheckSession: () =>
-                                        _checkAccountSession(account),
-                                    onReauth: () => _login(replace: account),
-                                    onRename: () => _rename(account),
-                                    onGroup: () => _chooseGroup({account.id}),
-                                    onRemove: () => _remove(account),
-                                  );
-                                },
-                              ),
-                            ),
-                            SliverToBoxAdapter(
-                              child: SizedBox(
-                                height:
-                                    MediaQuery.paddingOf(context).bottom + 16,
-                              ),
-                            ),
-                          ],
+                        enabled: _tab == 0,
+                        child: AttendancePage(
+                          accounts: _accounts,
+                          selected: _selected,
+                          groupId: _attendanceGroupId,
+                          counts: countsByAccount,
+                          results: _results,
+                          errors: _errors,
+                          sessionChecks: _sessionChecks,
+                          checkingSessions: _checkingSessions,
+                          busy: _busy,
+                          submitting: _submitting,
+                          legacyMode: widget.legacyMode,
+                          onRefresh: () => _load(preserveSelection: true),
+                          onAdd: _addAccounts,
+                          onReceive: _importSessions,
+                          onManage: (action) {
+                            switch (action) {
+                              case AttendanceAction.share:
+                                _shareSessions();
+                              case AttendanceAction.receive:
+                                _importSessions();
+                              case AttendanceAction.group:
+                                _chooseGroup(Set.of(_selected));
+                              case AttendanceAction.restore:
+                                _recoverSessions();
+                            }
+                          },
+                          onGroupChanged: (id) => setState(() {
+                            _attendanceGroupId = id;
+                            _selected
+                              ..clear()
+                              ..addAll(
+                                _accounts
+                                    .where(_matchesAttendanceGroup)
+                                    .map((a) => a.id),
+                              );
+                          }),
+                          onToggle: (account) {
+                            AppHaptics.selection();
+                            setState(() {
+                              if (!_selected.add(account.id)) {
+                                _selected.remove(account.id);
+                              }
+                            });
+                          },
+                          onToggleAll: (ids) => setState(() {
+                            if (ids.every(_selected.contains)) {
+                              _selected.removeAll(ids);
+                            } else {
+                              _selected.addAll(ids);
+                            }
+                          }),
+                          onCheckSession: _checkAccountSession,
+                          onReauth: (account) => _login(replace: account),
+                          onRename: _rename,
+                          onGroup: (account) => _chooseGroup({account.id}),
+                          onRemove: _remove,
                         ),
                       ),
                       TickerMode(
-                        enabled: _tab == 1 && !_showSelector,
+                        enabled: _tab == 1,
                         child: _scheduleVisited
                             ? SchedulePage(
                                 key: const ValueKey('schedule-tab'),
-                                active: _tab == 1 && !_showSelector,
+                                active: _tab == 1,
                                 accounts: _accounts,
                                 api: _scheduleApi,
                                 log: _logStore,
@@ -2267,7 +1860,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                       // NFC is deliberately disposed on exit: its queue belongs
                       // to the visible screen and must stop when leaving it.
-                      _tab == 2 && !_showSelector
+                      _tab == 2
                           ? SafeArea(
                               top: false,
                               child: NfcPassPage(
@@ -2280,7 +1873,7 @@ class _HomePageState extends State<HomePage> {
                               ),
                             )
                           : const SizedBox.shrink(),
-                      if (widget.startAtSelector)
+                      if (widget.useAdaptiveNavigation)
                         _settingsVisited
                             ? SettingsPage(
                                 embedded: true,
@@ -2298,7 +1891,7 @@ class _HomePageState extends State<HomePage> {
                             : const SizedBox.shrink(),
                       if (_debugVisible)
                         TickerMode(
-                          enabled: _tab == 4 && !_showSelector,
+                          enabled: _tab == 4,
                           child: DebugMenuPage(
                             embedded: true,
                             loadReport: _loadDebugReport,
@@ -2312,310 +1905,21 @@ class _HomePageState extends State<HomePage> {
       ),
     );
     return PopScope(
-      canPop: !widget.startAtSelector || _showSelector,
+      canPop: !widget.useAdaptiveNavigation || _tab == 0,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop && widget.startAtSelector) _returnToSelector();
+        if (!didPop && widget.useAdaptiveNavigation) _changeTab(0);
       },
-      child: widget.startAtSelector
+      child: widget.useAdaptiveNavigation
           ? ScreenNavigation(
               debugVisible: _debugVisible,
               onRevealDebug: _revealDebug,
-              selectorVisible: _showSelector,
               selectedIndex: _tab,
               onSelected: _selectScreen,
-              onIndex: _returnToSelector,
               child: content,
             )
           : content,
     );
   }
-}
-
-class _AccountRow extends StatelessWidget {
-  const _AccountRow({
-    super.key,
-    required this.account,
-    required this.counts,
-    required this.selected,
-    required this.busy,
-    required this.result,
-    required this.error,
-    required this.onTap,
-    required this.onReauth,
-    required this.onCheckSession,
-    this.sessionCheck,
-    this.checkingSession = false,
-    required this.onRename,
-    required this.onGroup,
-    required this.onRemove,
-  });
-
-  final SavedAccount account;
-  final AttendanceCounts? counts;
-  final bool selected;
-  final bool busy;
-  final ApprovalResult? result;
-  final String? error;
-  final VoidCallback onTap;
-  final VoidCallback onReauth;
-  final VoidCallback onCheckSession;
-  final String? sessionCheck;
-  final bool checkingSession;
-  final VoidCallback onRename;
-  final VoidCallback onGroup;
-  final VoidCallback onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    final expired = account.isExpiredAt(DateTime.now());
-    final expiry = account.expiresAt?.toLocal();
-    final date = expiry == null
-        ? null
-        : '${MaterialLocalizations.of(context).formatMediumDate(expiry)} ${MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(expiry), alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context))}';
-    final sessionStatus = expired
-        ? tr(
-            context,
-            'Сессия истекла. Войдите снова.',
-            'Session expired. Sign in again.',
-          )
-        : date == null
-        ? tr(
-            context,
-            'Срок действия сессии неизвестен',
-            'Session expiry unknown',
-          )
-        : trf(context, 'Сессия истекает: {date}', 'Session expires: {date}', {
-            'date': date,
-          });
-    final status =
-        error ?? result?.message ?? (busy && selected ? 'Отправка…' : null);
-    final color = error != null || result?.state == ApprovalState.rejected
-        ? Theme.of(context).colorScheme.error
-        : result?.state == ApprovalState.approved
-        ? context.palette.success
-        : context.palette.muted;
-    return Semantics(
-      selected: selected,
-      child: Padding(
-        padding: EdgeInsets.zero,
-        child: CampusPressable(
-          enabled: !busy,
-          child: Container(
-            decoration: BoxDecoration(
-              color: selected
-                  ? context.palette.surface
-                  : context.palette.surface,
-              border: Border(
-                bottom: BorderSide(color: context.palette.line, width: .5),
-              ),
-              borderRadius: BorderRadius.zero,
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Material(
-              color: Colors.transparent,
-              borderRadius: BorderRadius.zero,
-              child: InkWell(
-                onTap: busy ? null : onTap,
-                borderRadius: BorderRadius.zero,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 6, 12),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 28,
-                        height: 28,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? context.palette.selectionSurface
-                              : context.palette.paper,
-                          borderRadius: BorderRadius.zero,
-                        ),
-                        child: Text(
-                          selected ? '×' : '',
-                          style: const TextStyle(fontSize: 22, height: 1),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              account.label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.titleLarge,
-                            ),
-                            if (account.groupName != null)
-                              Text(
-                                account.groupName!,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: context.palette.muted,
-                                ),
-                              ),
-                            if (status != null)
-                              Text(
-                                trMessage(context, status),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 12, color: color),
-                              ),
-                            if (expired)
-                              Text(
-                                sessionStatus,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Theme.of(context).colorScheme.error,
-                                ),
-                              ),
-                            if (sessionCheck != null &&
-                                sessionCheck != sessionStatus)
-                              Text(
-                                sessionCheck!,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: context.palette.muted,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      AppActionMenu(
-                        entries: [
-                          CampusMenuEntry(
-                            value: 'details',
-                            label: tr(context, 'Подробнее', 'Details'),
-                          ),
-                          CampusMenuEntry(
-                            value: 'checkSession',
-                            label: tr(
-                              context,
-                              'Проверить сессию',
-                              'Check session',
-                            ),
-                          ),
-                          CampusMenuEntry(
-                            value: 'rename',
-                            label: tr(context, 'Переименовать', 'Rename'),
-                          ),
-                          CampusMenuEntry(
-                            value: 'login',
-                            label: tr(context, 'Войти снова', 'Sign in again'),
-                          ),
-                          CampusMenuEntry(
-                            value: 'group',
-                            label: tr(
-                              context,
-                              'Выбрать группу',
-                              'Choose group',
-                            ),
-                          ),
-                          CampusMenuEntry(
-                            value: 'remove',
-                            label: tr(context, 'Удалить', 'Delete'),
-                          ),
-                        ],
-                        onSelected: (value) {
-                          if (value == 'details') {
-                            showExpressiveSheet<void>(
-                              context: context,
-                              compact: true,
-                              builder: (context) => Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                  20,
-                                  0,
-                                  20,
-                                  24,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      account.label,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleLarge,
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(sessionStatus),
-                                    const SizedBox(height: 16),
-                                    Wrap(
-                                      spacing: 16,
-                                      runSpacing: 8,
-                                      children: [
-                                        _countText(
-                                          context,
-                                          'Сегодня',
-                                          'Today',
-                                          counts?.today,
-                                        ),
-                                        _countText(
-                                          context,
-                                          'Неделя',
-                                          'Week',
-                                          counts?.week,
-                                        ),
-                                        _countText(
-                                          context,
-                                          'Всего',
-                                          'Total',
-                                          counts?.total,
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }
-
-                          if (value == 'checkSession' && !checkingSession) {
-                            onCheckSession();
-                          }
-                          if (value == 'login') onReauth();
-                          if (value == 'rename') onRename();
-                          if (value == 'group') onGroup();
-                          if (value == 'remove') onRemove();
-                        },
-                        anchorBuilder: (context, open) => CampusTextAction(
-                          onPressed: (!busy) ? open : null,
-                          tooltip: tr(
-                            context,
-                            'Действия с аккаунтом',
-                            'Account actions',
-                          ),
-                          label: tr(context, 'действия', 'actions'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _countText(BuildContext context, String ru, String en, int? count) =>
-      Text.rich(
-        TextSpan(
-          children: [
-            TextSpan(text: '${tr(context, ru, en)} '),
-            TextSpan(
-              text: '${count ?? '—'}',
-              style: const TextStyle(
-                fontFamily: 'GeistMono',
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        style: TextStyle(fontSize: 12, color: context.palette.muted),
-      );
 }
 
 class _TextInputDialog extends StatefulWidget {

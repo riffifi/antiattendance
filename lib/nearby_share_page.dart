@@ -148,7 +148,7 @@ class _NearbySharePageState extends State<NearbySharePage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => CampusScaffold(
     appBar: CampusAppBar(
       title: Text(tr(context, 'Передать рядом', 'Share nearby')),
       automaticallyImplyLeading: true,
@@ -159,7 +159,7 @@ class _NearbySharePageState extends State<NearbySharePage> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 600),
           child: ListView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(24),
             children: [
               CampusHeader(
                 title: tr(context, 'Выберите получателей', 'Select receivers'),

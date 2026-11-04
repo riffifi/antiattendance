@@ -930,84 +930,86 @@ class BrockmannTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.brockmann;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (label.isNotEmpty)
-          BrockmannText(
-            label,
-            role: BrockmannType.label,
-            color: enabled ? t.secondary : t.disabled,
+    return BrockmannInteractionRegion(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (label.isNotEmpty)
+            BrockmannText(
+              label,
+              role: BrockmannType.label,
+              color: enabled ? t.secondary : t.disabled,
+            ),
+          if (label.isNotEmpty) const SizedBox(height: 8),
+          TextFormField(
+            controller: controller,
+            inputFormatters: inputFormatters,
+            textCapitalization: textCapitalization,
+            textAlign: textAlign,
+            initialValue: initialValue,
+            onChanged: onChanged,
+            enabled: enabled,
+            obscureText: obscureText,
+            focusNode: focusNode,
+            onFieldSubmitted: onSubmitted,
+            textInputAction: textInputAction,
+            maxLength: maxLength,
+            autofocus: autofocus,
+            autofillHints: autofillHints,
+            minLines: multiline ? 3 : 1,
+            maxLines: multiline ? 8 : 1,
+            keyboardType:
+                keyboardType ??
+                (multiline ? TextInputType.multiline : TextInputType.text),
+            style:
+                ((mono ?? multiline)
+                        ? BrockmannType.monoValue
+                        : BrockmannType.body)
+                    .style(color: t.foreground),
+            cursorColor: t.accent,
+            decoration: InputDecoration(
+              prefixIcon: leading,
+              suffixText: suffixText,
+              isDense: true,
+              contentPadding: const EdgeInsets.all(12),
+              errorText: error,
+              errorMaxLines: 3,
+              hintText: hint ?? placeholder,
+              hintStyle: BrockmannType.body.style(color: t.disabled),
+              helperText: helper,
+              helperMaxLines: 3,
+              helperStyle: BrockmannType.caption.style(color: t.secondary),
+              counterStyle: BrockmannType.caption.style(color: t.secondary),
+              suffixIcon: suffix ?? trailing,
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.zero,
+                borderSide: BorderSide(color: t.danger),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.zero,
+                borderSide: BorderSide(color: t.danger, width: 2),
+              ),
+              errorStyle: BrockmannType.caption.style(color: t.danger),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.zero,
+                borderSide: BorderSide(color: t.lineStrong),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.zero,
+                borderSide: BorderSide(color: t.lineStrong),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.zero,
+                borderSide: BorderSide(color: t.accent, width: 2),
+              ),
+              disabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.zero,
+                borderSide: BorderSide(color: t.line),
+              ),
+            ),
           ),
-        if (label.isNotEmpty) const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          inputFormatters: inputFormatters,
-          textCapitalization: textCapitalization,
-          textAlign: textAlign,
-          initialValue: initialValue,
-          onChanged: onChanged,
-          enabled: enabled,
-          obscureText: obscureText,
-          focusNode: focusNode,
-          onFieldSubmitted: onSubmitted,
-          textInputAction: textInputAction,
-          maxLength: maxLength,
-          autofocus: autofocus,
-          autofillHints: autofillHints,
-          minLines: multiline ? 3 : 1,
-          maxLines: multiline ? 8 : 1,
-          keyboardType:
-              keyboardType ??
-              (multiline ? TextInputType.multiline : TextInputType.text),
-          style:
-              ((mono ?? multiline)
-                      ? BrockmannType.monoValue
-                      : BrockmannType.body)
-                  .style(color: t.foreground),
-          cursorColor: t.accent,
-          decoration: InputDecoration(
-            prefixIcon: leading,
-            suffixText: suffixText,
-            isDense: true,
-            contentPadding: const EdgeInsets.all(12),
-            errorText: error,
-            errorMaxLines: 3,
-            hintText: hint ?? placeholder,
-            hintStyle: BrockmannType.body.style(color: t.disabled),
-            helperText: helper,
-            helperMaxLines: 3,
-            helperStyle: BrockmannType.caption.style(color: t.secondary),
-            counterStyle: BrockmannType.caption.style(color: t.secondary),
-            suffixIcon: suffix ?? trailing,
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.zero,
-              borderSide: BorderSide(color: t.danger),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.zero,
-              borderSide: BorderSide(color: t.danger, width: 2),
-            ),
-            errorStyle: BrockmannType.caption.style(color: t.danger),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.zero,
-              borderSide: BorderSide(color: t.lineStrong),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.zero,
-              borderSide: BorderSide(color: t.lineStrong),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.zero,
-              borderSide: BorderSide(color: t.accent, width: 2),
-            ),
-            disabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.zero,
-              borderSide: BorderSide(color: t.line),
-            ),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

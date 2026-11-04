@@ -189,7 +189,7 @@ class _UpdatesPageState extends State<UpdatesPage> {
       final updates = widget.updates;
       final release = updates.release;
       final available = updates.updateAvailable && release != null;
-      return Scaffold(
+      return CampusScaffold(
         appBar: CampusAppBar(
           title: Text(tr(context, 'Обновления', 'Updates')),
           actions: [
@@ -206,9 +206,9 @@ class _UpdatesPageState extends State<UpdatesPage> {
           child: Center(
             heightFactor: 1,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 640),
+              constraints: const BoxConstraints(maxWidth: 960),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -282,9 +282,9 @@ class _UpdatesPageState extends State<UpdatesPage> {
           top: false,
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 640),
+              constraints: const BoxConstraints(maxWidth: 960),
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
                 children: [
                   AnimatedContainer(
                     duration: MediaQuery.disableAnimationsOf(context)

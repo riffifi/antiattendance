@@ -79,7 +79,7 @@ Future<T?> showExpressiveSheet<T>({
               child: Center(
                 heightFactor: 1,
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 640),
+                  constraints: const BoxConstraints(maxWidth: 960),
                   child: compact
                       ? SingleChildScrollView(child: builder(context))
                       : builder(context),

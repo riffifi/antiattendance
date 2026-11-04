@@ -166,13 +166,13 @@ class _SessionServerPageState extends State<SessionServerPage> {
   @override
   Widget build(BuildContext context) {
     final server = ServerSessions.active;
-    return Scaffold(
+    return CampusScaffold(
       appBar: CampusAppBar(
         title: Text(tr(context, 'Сервер сессий', 'Session server')),
       ),
       body: CampusPageBody(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+          padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
           children: [
             CampusPanel(
               child: Column(

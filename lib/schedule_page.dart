@@ -1,6 +1,8 @@
 import 'package:brockmann/brockmann.dart';
 
 import 'campus_maps_page.dart';
+import 'frontend/schedule_calendar.dart';
+import 'frontend/page_layout.dart';
 import 'campus_design.dart';
 import 'expressive.dart';
 
@@ -326,13 +328,12 @@ class _SchedulePageState extends State<SchedulePage> {
   Widget build(BuildContext context) {
     final groups = <int, String>{
       for (final account in widget.accounts)
-        if (account.groupId != null && account.groupName != null)
-          account.groupId!: account.groupName!,
+        if (account.groupId != null)
+          account.groupId!: account.groupName ?? '${account.groupId}',
     };
     final groupAccounts = widget.accounts
         .where((account) => account.groupId == _groupId)
         .toList();
-    final week = _weekOf(_day);
     final today = _today();
     final now = _moscowNow();
     final dailyLessons = _lessons
@@ -344,15 +345,6 @@ class _SchedulePageState extends State<SchedulePage> {
           mark.lessonKey == null &&
           _sameDay(local, _day);
     }).toList();
-    final dayNames = [
-      tr(context, 'Пн', 'Mon'),
-      tr(context, 'Вт', 'Tue'),
-      tr(context, 'Ср', 'Wed'),
-      tr(context, 'Чт', 'Thu'),
-      tr(context, 'Пт', 'Fri'),
-      tr(context, 'Сб', 'Sat'),
-      tr(context, 'Вс', 'Sun'),
-    ];
     final dateText = MaterialLocalizations.of(context)
         .formatMediumDate(DateTime(_day.year, _day.month, _day.day));
     return RefreshIndicator(
@@ -360,48 +352,34 @@ class _SchedulePageState extends State<SchedulePage> {
       child: ListView(
         key: const PageStorageKey('schedule-scroll'),
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(
-          20,
-          18,
-          20,
-          MediaQuery.paddingOf(context).bottom + 32,
-        ),
+        padding: AaPageLayout.insets(context),
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                tr(context, 'Расписание', 'Schedule'),
-                style: Theme.of(context).textTheme.headlineLarge,
+          CampusHeader(title: tr(context, 'Расписание', 'Schedule')),
+          ScheduleCalendar(
+            day: _day,
+            today: today,
+            groups: groups,
+            groupId: _groupId,
+            lessonDays: _lessons.map((l) => l.start).toSet(),
+            loading: _loading,
+            onDayChanged: (day) {
+              if (mounted) _selectDay(day);
+            },
+            onGroupChanged: (id) {
+              setState(() => _groupId = id);
+              widget.onGroupChanged?.call(id);
+              _refresh();
+            },
+            onRefresh: () => _refresh(force: true),
+            onMaps: () => Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                builder: (_) => CampusMapsPage(lessons: dailyLessons),
               ),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 12,
-                children: [
-                  CampusTextAction(
-                    onPressed: () => Navigator.of(context).push<void>(
-                      MaterialPageRoute(
-                        builder: (_) => CampusMapsPage(lessons: dailyLessons),
-                      ),
-                    ),
-                    tooltip: tr(context, 'Карты кампусов', 'Campus maps'),
-                    label: tr(context, 'карты', 'maps'),
-                  ),
-                  CampusTextAction(
-                    icon: Icons.refresh_rounded,
-                    onPressed: groups.isEmpty || _loading
-                        ? null
-                        : () => _refresh(force: true),
-                    tooltip: tr(context, 'Обновить', 'Refresh'),
-                    label: tr(context, 'Обновить', 'Refresh'),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 24),
           if (groups.isEmpty)
-            _EmptyPanel(
+            AaEmptyState(
               title: tr(context, 'Выберите группу', 'Choose a group'),
               detail: tr(
                 context,
@@ -410,125 +388,6 @@ class _SchedulePageState extends State<SchedulePage> {
               ),
             )
           else ...[
-            AppActionMenu(
-              entries: [
-                for (final entry in groups.entries)
-                  CampusMenuEntry(value: entry.key, label: entry.value),
-              ],
-              onSelected: (value) {
-                final id = value as int;
-                setState(() => _groupId = id);
-                widget.onGroupChanged?.call(id);
-                _refresh();
-              },
-              anchorBuilder: (context, open) => InkWell(
-                onTap: open,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 13,
-                  ),
-                  decoration: BoxDecoration(
-                    color: context.palette.surface,
-                    borderRadius: BorderRadius.zero,
-                    border: Border.all(color: context.palette.line),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          groups[_groupId] ?? '',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontWeight: FontWeight.w400),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Column(
-              children: [
-                Text(
-                  '${_date(week)} — ${_date(week.add(const Duration(days: 6)))}',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontWeight: FontWeight.w400),
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: CampusTextAction(
-                        icon: Icons.chevron_left_rounded,
-                        onPressed: () =>
-                            _selectDay(_day.subtract(const Duration(days: 7))),
-                        tooltip: tr(
-                          context,
-                          'Предыдущая неделя',
-                          'Previous week',
-                        ),
-                        label: tr(context, 'назад', 'previous'),
-                      ),
-                    ),
-                    Expanded(
-                      child: CampusTextAction(
-                        onPressed: () async {
-                          final date = await showBrockmannDatePicker(
-                            context,
-                            initialDate: DateTime(
-                              _day.year,
-                              _day.month,
-                              _day.day,
-                            ),
-                            firstDate: DateTime(today.year - 1),
-                            lastDate: DateTime(today.year + 2),
-                          );
-                          if (date != null && mounted) {
-                            _selectDay(
-                              DateTime.utc(date.year, date.month, date.day),
-                            );
-                          }
-                        },
-                        tooltip: tr(context, 'Выбрать дату', 'Choose date'),
-                        label: tr(context, 'дата', 'date'),
-                      ),
-                    ),
-                    Expanded(
-                      child: CampusTextAction(
-                        icon: Icons.chevron_right_rounded,
-                        onPressed: () =>
-                            _selectDay(_day.add(const Duration(days: 7))),
-                        tooltip: tr(context, 'Следующая неделя', 'Next week'),
-                        label: tr(context, 'вперёд', 'next'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                for (var index = 0; index < 7; index++)
-                  Expanded(
-                    child: _DayButton(
-                      date: week.add(Duration(days: index)),
-                      label: dayNames[index],
-                      selected: _sameDay(week.add(Duration(days: index)), _day),
-                      today: _sameDay(week.add(Duration(days: index)), today),
-                      hasLessons: _lessons.any(
-                        (lesson) => _sameDay(
-                          lesson.start,
-                          week.add(Duration(days: index)),
-                        ),
-                      ),
-                      onTap: () => _selectDay(week.add(Duration(days: index))),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 16),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -557,44 +416,11 @@ class _SchedulePageState extends State<SchedulePage> {
                     ],
                   ),
                 ),
-                if (!_sameDay(_day, today))
-                  CampusButton.text(
-                    onPressed: () => _selectDay(today),
-                    child: Text(tr(context, 'Сегодня', 'Today')),
-                  ),
               ],
             ),
             const SizedBox(height: 14),
             if (_error != null && dailyLessons.isNotEmpty) ...[
               Text(_error!, style: TextStyle(color: context.palette.muted)),
-              const SizedBox(height: 12),
-            ],
-            if (_sameDay(_day, today) &&
-                dailyLessons.any((lesson) => lesson.end.isAfter(now))) ...[
-              CampusPanel(
-                child: Builder(
-                  builder: (context) {
-                    final lesson = dailyLessons.firstWhere(
-                      (lesson) => lesson.end.isAfter(now),
-                    );
-                    final current = !lesson.start.isAfter(now);
-                    final minutes = (current ? lesson.end : lesson.start)
-                        .difference(now)
-                        .inMinutes;
-                    return CampusListItem(
-                      headline: lesson.subject,
-                      supportingText:
-                          '${current ? tr(context, 'Сейчас', 'Now') : tr(context, 'Следующая пара', 'Next class')} · ${_time(lesson.start)}–${_time(lesson.end)} · ${lesson.location}',
-                      trailing: Text(
-                        trf(context, '{minutes} мин', '{minutes} min', {
-                          'minutes': minutes,
-                        }),
-                      ),
-                      onTap: () => _openLesson(lesson, groupAccounts),
-                    );
-                  },
-                ),
-              ),
               const SizedBox(height: 12),
             ],
             if (_loading && dailyLessons.isEmpty) ...[
@@ -664,89 +490,6 @@ class _SchedulePageState extends State<SchedulePage> {
   }
 }
 
-class _DayButton extends StatelessWidget {
-  const _DayButton({
-    required this.date,
-    required this.label,
-    required this.selected,
-    required this.today,
-    required this.hasLessons,
-    required this.onTap,
-  });
-  final DateTime date;
-  final String label;
-  final bool selected;
-  final bool today;
-  final bool hasLessons;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 2),
-    child: CampusPressable(
-      child: Material(
-        animationDuration: Duration.zero,
-        color: selected ? context.palette.selectionSurface : Colors.transparent,
-        borderRadius: BorderRadius.zero,
-        child: InkWell(
-          borderRadius: BorderRadius.zero,
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  label,
-                  maxLines: 1,
-                  softWrap: false,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: selected
-                        ? context.palette.blue.withValues(alpha: .75)
-                        : context.palette.muted,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${date.day}',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w400,
-                    color: selected
-                        ? context.palette.blue
-                        : context.palette.ink,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  width: today ? 6 : 5,
-                  height: today ? 6 : 5,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: hasLessons
-                        ? (selected
-                              ? context.palette.blue
-                              : context.palette.blue)
-                        : (today
-                              ? (selected
-                                    ? context.palette.blue.withValues(
-                                        alpha: .75,
-                                      )
-                                    : context.palette.line)
-                              : Colors.transparent),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
 class _LessonRow extends StatelessWidget {
   const _LessonRow({
     required this.lesson,
@@ -767,153 +510,82 @@ class _LessonRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = context.palette.ink;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: MediaQuery.textScalerOf(context).scale(52).clamp(52, 96),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 15),
-            child: Column(
+    final t = context.brockmann;
+    return BrockmannPressable(
+      label: '',
+      excludeSemantics: false,
+      onPressed: onTap,
+      builder: (context, pressed) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        decoration: BoxDecoration(
+          color: pressed ? t.surface : null,
+          border: Border(
+            bottom: BorderSide(color: isCurrent ? t.accent : t.line),
+          ),
+        ),
+        child: BrockmannColumns(
+          breakpoint: 440,
+          flex: const [1, 4],
+          spacing: 16,
+          children: [
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                BrockmannText(
                   time,
-                  style: const TextStyle(
-                    fontFamily: 'GeistMono',
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    height: 1.4,
-                  ),
+                  role: BrockmannType.monoValue,
+                  color: isCurrent ? t.accentText : t.foreground,
                 ),
-                Text(
+                BrockmannText(
                   endTime,
-                  style: TextStyle(
-                    fontFamily: 'GeistMono',
-                    fontSize: 11,
-                    height: 1.4,
-                    color: context.palette.muted,
-                  ),
+                  role: BrockmannType.caption,
+                  color: t.secondary,
                 ),
               ],
             ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: CampusPressable(
-            child: Material(
-              color: context.palette.surface,
-              borderRadius: BorderRadius.zero,
-              clipBehavior: Clip.antiAlias,
-              child: InkWell(
-                onTap: onTap,
-                borderRadius: BorderRadius.zero,
-                child: Ink(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.zero,
-                    border: Border(
-                      bottom: BorderSide(
-                        color: isCurrent ? accent : context.palette.line,
-                        width: .5,
-                      ),
-                    ),
-                    color: isCurrent
-                        ? context.palette.selectionSurface
-                        : context.palette.surface,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (isCurrent) ...[
+                  BrockmannBadge(
+                    label: tr(context, '● Сейчас', '● Now'),
+                    tone: BrockmannTone.accent,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              lesson.subject,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                        ],
+                  const SizedBox(height: 8),
+                ],
+                BrockmannText(lesson.subject, role: BrockmannType.heading),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    if (lesson.type.isNotEmpty)
+                      BrockmannText(
+                        lesson.type,
+                        role: BrockmannType.caption,
+                        color: t.secondary,
                       ),
-                      if (isCurrent) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          tr(context, '● Сейчас', '● Now'),
-                          style: TextStyle(
-                            color: context.palette.blue,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ],
-                      if (lesson.type.isNotEmpty || lesson.location.isNotEmpty)
-                        Wrap(
-                          spacing: 6,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            if (lesson.type.isNotEmpty)
-                              Text(
-                                lesson.type,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: context.palette.muted,
-                                ),
-                              ),
-                            if (lesson.location.isNotEmpty)
-                              CampusButton.text(
-                                onPressed: onRoom,
-                                child: Text(
-                                  lesson.location,
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              ),
-                          ],
-                        ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              confirmed.isEmpty
-                                  ? tr(
-                                      context,
-                                      'Нет отметок',
-                                      'No confirmations',
-                                    )
-                                  : confirmed
-                                        .map((mark) => mark.accountLabel)
-                                        .join(', '),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: confirmed.isEmpty
-                                    ? context.palette.muted
-                                    : context.palette.success,
-                                fontWeight: confirmed.isEmpty
-                                    ? FontWeight.w400
-                                    : FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
+                    if (lesson.location.isNotEmpty)
+                      CampusButton.text(
+                        onPressed: onRoom,
+                        child: Text(lesson.location),
                       ),
-                    ],
-                  ),
+                  ],
                 ),
-              ),
+                const SizedBox(height: 8),
+                BrockmannText(
+                  confirmed.isEmpty
+                      ? tr(context, 'Нет отметок', 'No confirmations')
+                      : confirmed.map((mark) => mark.accountLabel).join(', '),
+                  role: BrockmannType.caption,
+                  color: confirmed.isEmpty ? t.secondary : t.accentText,
+                ),
+              ],
             ),
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
@@ -924,27 +596,6 @@ class _EmptyPanel extends StatelessWidget {
   final String detail;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
-    decoration: BoxDecoration(
-      color: context.palette.surface,
-      borderRadius: BorderRadius.zero,
-    ),
-    child: Column(
-      children: [
-        Text(
-          title,
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          detail,
-          textAlign: TextAlign.center,
-          style: TextStyle(color: context.palette.muted, fontSize: 13),
-        ),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) =>
+      AaEmptyState(title: title, detail: detail);
 }

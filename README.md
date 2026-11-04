@@ -30,11 +30,12 @@ accessibility actions and callback behavior. Android launcher widgets use matchi
 flat monochrome surfaces and Geist on Android 8+. Their provider IDs and actions
 remain compatible with existing widgets.
 
-The four-column selector morphs into the left navigation rail. Swipe the rail
-vertically to change screens, or use INDEX to return. Light, Dark and Black
-appearances use Geist typography, thin rules, rectangular controls and small
-utility icons. Dialogs/sheets support native back, safe system insets and reduced
-motion. See [the screen and modal audit](docs/ui-audit.md).
+The frontend uses a shared adaptive application frame: a title pivot on phones
+and a navigation list on larger screens. Attendance, schedule, passes and settings
+use one page rhythm, flat sections and fixed primary actions where needed. Light,
+Dark and Black appearances use Geist typography, thin rules and rectangular
+controls. Dialogs and sheets support native back, safe system insets and reduced
+motion. See [frontend structure](docs/frontend.md).
 
 ### Owner approval in Telegram
 

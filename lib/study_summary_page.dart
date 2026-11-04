@@ -45,7 +45,7 @@ class _StudySummaryPageState extends State<StudySummaryPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => CampusScaffold(
     appBar: CampusAppBar(
       title: Text(tr(context, 'Итоги учебного дня', 'Study day summary')),
     ),
@@ -53,7 +53,7 @@ class _StudySummaryPageState extends State<StudySummaryPage> {
       child: _loading
           ? const Center(child: CampusProgress.compact())
           : ListView(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+              padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
               children: [
                 Text(
                   tr(
@@ -88,6 +88,7 @@ class _StudySummaryPageState extends State<StudySummaryPage> {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: CampusPanel(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [

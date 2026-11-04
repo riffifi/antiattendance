@@ -1,3 +1,9 @@
+import 'package:brockmann/brockmann.dart';
+
+import 'frontend_test_helpers.dart';
+
+import 'package:antiattendance/screen_navigation.dart';
+
 import 'dart:convert';
 
 import 'package:antiattendance/accounts.dart';
@@ -150,7 +156,7 @@ void main() {
         MaterialApp(
           theme: AppTheme.light,
           home: HomePage(
-            startAtSelector: true,
+            useAdaptiveNavigation: true,
             store: MemoryAccountStore([
               const SavedAccount(
                 id: 'a',
@@ -163,9 +169,9 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('screen-selector-0')));
+
       await tester.pumpAndSettle();
-      final rail = find.byKey(const ValueKey('screen-rail'));
+      final rail = find.byKey(const ValueKey('app-diagnostics-gesture'));
       for (var swipe = 0; swipe < 4; swipe++) {
         await tester.drag(rail, const Offset(0, 220));
         await tester.pumpAndSettle();
@@ -174,8 +180,11 @@ void main() {
       await tester.drag(rail, const Offset(0, 220));
       await tester.pumpAndSettle();
       expect(find.byType(DebugMenuPage), findsOneWidget);
-      expect(find.text('00'), findsOneWidget);
-      expect(find.text('Developer'), findsWidgets);
+      expect(
+        tester.widget<BrockmannPivot>(find.byType(BrockmannPivot)).selected,
+        4,
+      );
+      expect(find.text('developer'), findsWidgets);
       expect(find.text('App'), findsOneWidget);
       await tester.tap(find.byTooltip('Copy report'));
       await tester.pumpAndSettle();
@@ -184,20 +193,22 @@ void main() {
       expect((report['Device'] as Map)['model'], 'Test phone');
       expect(copied, isNot(contains('secret-cookie')));
       expect(copied, isNot(contains('Private Name')));
-      await tester.drag(rail, const Offset(0, -420));
+      tester
+          .widget<ScreenNavigation>(find.byType(ScreenNavigation))
+          .onSelected(0);
       await tester.pumpAndSettle();
-      expect(find.text('01'), findsOneWidget);
-      await tester.drag(rail, const Offset(0, 420));
+      expect(
+        tester.widget<BrockmannPivot>(find.byType(BrockmannPivot)).selected,
+        0,
+      );
+      tester
+          .widget<ScreenNavigation>(find.byType(ScreenNavigation))
+          .onSelected(4);
       await tester.pumpAndSettle();
-      expect(find.text('00'), findsOneWidget);
-      await tester.tap(find.text('INDEX'));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('screen-selector-4')), findsNothing);
-      await tester.tap(find.byKey(const ValueKey('screen-selector-0')));
-      await tester.pumpAndSettle();
-      await tester.drag(rail, const Offset(0, 420));
-      await tester.pumpAndSettle();
-      expect(find.text('00'), findsOneWidget);
+      expect(
+        tester.widget<BrockmannPivot>(find.byType(BrockmannPivot)).selected,
+        4,
+      );
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
       await tester.pumpAndSettle();
@@ -205,18 +216,23 @@ void main() {
         MaterialApp(
           theme: AppTheme.light,
           home: HomePage(
-            startAtSelector: true,
+            useAdaptiveNavigation: true,
             store: MemoryAccountStore([]),
             logStore: MemoryLogStore(),
           ),
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('screen-selector-0')));
+
       await tester.pumpAndSettle();
       expect(find.byType(DebugMenuPage), findsNothing);
       expect(
-        tester.widget<PageView>(rail).childrenDelegate.estimatedChildCount,
+        tester
+            .widget<BrockmannAdaptiveScaffold>(
+              find.byType(BrockmannAdaptiveScaffold),
+            )
+            .destinations
+            .length,
         4,
       );
       await tester.pumpWidget(const SizedBox());
@@ -253,11 +269,7 @@ void main() {
               w is ExpansionTile && w.key == PageStorageKey('debug-$section'),
         );
         for (var cycle = 0; cycle < 2; cycle++) {
-          await tester.scrollUntilVisible(
-            tile,
-            180,
-            scrollable: find.byType(Scrollable).first,
-          );
+          await tester.scrollUntilVisible(tile, 180, scrollable: bodyScroll());
           await tester.ensureVisible(tile);
           await tester.pumpAndSettle();
           await tester.tap(
@@ -322,7 +334,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('Session server'),
       250,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: bodyScroll(),
     );
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());

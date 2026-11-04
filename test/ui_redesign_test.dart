@@ -1,3 +1,5 @@
+import 'frontend_test_helpers.dart';
+
 import 'package:antiattendance/accounts.dart';
 import 'package:antiattendance/app_settings.dart';
 import 'package:antiattendance/app_theme.dart';
@@ -96,7 +98,11 @@ void main() {
     );
     await tester.pumpAndSettle();
     for (final label in ['Study day summary', 'Mark-all widget']) {
-      await tester.scrollUntilVisible(find.text(label), 250);
+      await tester.scrollUntilVisible(
+        find.text(label),
+        250,
+        scrollable: bodyScroll(),
+      );
       expect(find.text(label), findsOneWidget);
     }
     expect(tester.takeException(), isNull);
@@ -113,7 +119,7 @@ void main() {
       MaterialApp(
         theme: AppTheme.light,
         home: HomePage(
-          startAtSelector: true,
+          useAdaptiveNavigation: true,
           store: MemoryAccountStore([
             for (var i = 0; i < 12; i++)
               SavedAccount(id: '$i', label: 'Student $i', cookie: '$i'),
@@ -123,12 +129,12 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('screen-selector-0')));
+
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.text('Student 0'),
       100,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: bodyScroll(),
     );
     await tester.pumpAndSettle();
     expect(
@@ -138,7 +144,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('Student 11'),
       250,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: bodyScroll(),
     );
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -200));
     await tester.pumpAndSettle();

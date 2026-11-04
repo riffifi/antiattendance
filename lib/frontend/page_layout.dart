@@ -23,7 +23,7 @@ class AaEmptyState extends StatelessWidget {
   final Widget? action;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 32),
+    padding: const EdgeInsets.symmetric(vertical: 24),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -43,7 +43,7 @@ class AaSectionHeading extends StatelessWidget {
   final Widget? action;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: 24, bottom: 12),
+    padding: const EdgeInsets.only(top: 20, bottom: 8),
     child: Wrap(
       alignment: WrapAlignment.spaceBetween,
       crossAxisAlignment: WrapCrossAlignment.center,

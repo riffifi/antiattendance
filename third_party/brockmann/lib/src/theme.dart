@@ -1,9 +1,12 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
+
+import 'motion.dart';
 
 import 'feedback.dart';
 import 'layout.dart';
+
+enum BrockmannStyle { brockmann, wp8 }
 
 /// Achromatic chrome with one content-independent accent.
 @immutable
@@ -14,15 +17,21 @@ class BrockmannThemeData extends ThemeExtension<BrockmannThemeData> {
     this.reduceMotion = false,
     this.tilt = true,
     this.motionScale = 1,
+    this.style = BrockmannStyle.brockmann,
   });
   final Brightness brightness;
+  final BrockmannStyle style;
+  bool get windowsPhone => style == BrockmannStyle.wp8;
+  Duration pivotDuration(BuildContext context) =>
+      duration(context, windowsPhone ? 240 : 420);
   final Color accent;
   final bool reduceMotion, tilt;
   final double motionScale;
   bool get light => brightness == Brightness.light;
   Color get background => light ? Colors.white : Colors.black;
-  Color get surface =>
-      light ? const Color(0xfff2f2f2) : const Color(0xff121212);
+  Color get surface => windowsPhone
+      ? (light ? const Color(0xffededed) : const Color(0xff1f1f1f))
+      : (light ? const Color(0xfff2f2f2) : const Color(0xff121212));
   Color get foreground => light ? Colors.black : Colors.white;
   Color get secondary =>
       light ? const Color(0xff5a5a5a) : const Color(0xffa6a6a6);
@@ -69,12 +78,14 @@ class BrockmannThemeData extends ThemeExtension<BrockmannThemeData> {
     bool? reduceMotion,
     bool? tilt,
     double? motionScale,
+    BrockmannStyle? style,
   }) => BrockmannThemeData(
     brightness: brightness ?? this.brightness,
     accent: accent ?? this.accent,
     reduceMotion: reduceMotion ?? this.reduceMotion,
     tilt: tilt ?? this.tilt,
     motionScale: motionScale ?? this.motionScale,
+    style: style ?? this.style,
   );
   @override
   BrockmannThemeData lerp(covariant BrockmannThemeData? other, double t) =>
@@ -92,13 +103,23 @@ class BrockmannThemeData extends ThemeExtension<BrockmannThemeData> {
           surface: background,
           onSurface: foreground,
         ),
-    pageTransitionsTheme: const PageTransitionsTheme(
+    pageTransitionsTheme: PageTransitionsTheme(
       builders: {
-        TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
-        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-        TargetPlatform.linux: FadeForwardsPageTransitionsBuilder(),
-        TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
-        TargetPlatform.windows: FadeForwardsPageTransitionsBuilder(),
+        TargetPlatform.android: BrockmannPageTransitionsBuilder(
+          windowsPhone: windowsPhone,
+        ),
+        TargetPlatform.iOS: BrockmannPageTransitionsBuilder(
+          windowsPhone: windowsPhone,
+        ),
+        TargetPlatform.linux: BrockmannPageTransitionsBuilder(
+          windowsPhone: windowsPhone,
+        ),
+        TargetPlatform.macOS: BrockmannPageTransitionsBuilder(
+          windowsPhone: windowsPhone,
+        ),
+        TargetPlatform.windows: BrockmannPageTransitionsBuilder(
+          windowsPhone: windowsPhone,
+        ),
       },
     ),
     extensions: [this],
@@ -123,6 +144,7 @@ class _BlendedTheme extends BrockmannThemeData {
         reduceMotion: to.reduceMotion,
         tilt: to.tilt,
         motionScale: to.motionScale,
+        style: to.style,
       );
   final BrockmannThemeData from, to;
   final double fraction;

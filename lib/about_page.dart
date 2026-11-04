@@ -2,6 +2,8 @@ import 'package:brockmann/brockmann.dart';
 
 import 'campus_design.dart';
 import 'about_logo.dart';
+import 'frontend/command_bar.dart';
+import 'frontend/page_layout.dart';
 
 import 'dart:async';
 
@@ -9,7 +11,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-import 'app_theme.dart';
 import 'external_links.dart';
 import 'l10n.dart';
 
@@ -56,151 +57,115 @@ class _AboutPageState extends State<AboutPage> {
     );
   }
 
+  Widget _identity(BuildContext context) {
+    final t = context.brockmann;
+    final details = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        BrockmannText('AntiAttendance', role: BrockmannType.heading),
+        const SizedBox(height: 8),
+        FutureBuilder<String?>(
+          future: _version,
+          builder: (context, snapshot) => BrockmannText(
+            snapshot.data == null ? '—' : 'v${snapshot.data}',
+            role: BrockmannType.monoValue,
+            color: t.secondary,
+          ),
+        ),
+      ],
+    );
+    return LayoutBuilder(
+      builder: (context, bounds) {
+        const logo = AboutLogo(size: 72, reserveRotationSpace: false);
+        if (bounds.maxWidth < 340 ||
+            MediaQuery.textScalerOf(context).scale(16) > 21) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [logo, const SizedBox(height: 20), details],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            logo,
+            const SizedBox(width: 20),
+            Expanded(child: details),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) => CampusScaffold(
     appBar: CampusAppBar(title: Text(tr(context, 'О приложении', 'About'))),
-    bottomNavigationBar: SafeArea(
-      top: false,
-      child: Center(
-        heightFactor: 1,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 960),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-            child: SizedBox(
-              width: double.infinity,
-              child: CampusButton.action(
-                onPressed: _openRepository,
-                label: const Text('GitHub'),
+    bottomNavigationBar: CampusCommandBar(
+      commands: [
+        CampusCommand(
+          icon: Icons.link_rounded,
+          label: 'GitHub',
+          onPressed: _openRepository,
+        ),
+      ],
+    ),
+    body: CampusPageBody(
+      child: ListView(
+        padding: AaPageLayout.insets(context),
+        children: [
+          BrockmannFeather(index: 0, child: _identity(context)),
+          const SizedBox(height: 28),
+          BrockmannFeather(
+            index: 1,
+            child: BrockmannText(
+              tr(
+                context,
+                'Пульс и расписание — в одном месте.',
+                'Pulse and your schedule in one place.',
               ),
             ),
           ),
-        ),
-      ),
-    ),
-    body: SafeArea(
-      top: false,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 960),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-            children: [
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0, end: 1),
-                duration: MediaQuery.disableAnimationsOf(context)
-                    ? Duration.zero
-                    : const Duration(milliseconds: 320),
-                curve: Curves.easeOutCubic,
-                builder: (context, value, child) => Opacity(
-                  opacity: value,
-                  child: Transform.translate(
-                    offset: Offset(0, 10 * (1 - value)),
-                    child: child,
+          const SizedBox(height: 32),
+          BrockmannFeather(
+            index: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                BrockmannText(
+                  tr(context, 'Исходный код', 'Source code'),
+                  role: BrockmannType.caption,
+                  color: context.brockmann.secondary,
+                ),
+                const SizedBox(height: 8),
+                BrockmannPressable(
+                  label: 'riffifi/antiattendance',
+                  onPressed: _openRepository,
+                  builder: (context, pressed) => ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 48),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: BrockmannText(
+                        'riffifi/antiattendance',
+                        color: pressed
+                            ? context.brockmann.foreground
+                            : context.brockmann.accentText,
+                      ),
+                    ),
                   ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Align(
-                      alignment: Alignment.centerLeft,
-                      child: AboutLogo(),
-                    ),
-                    const SizedBox(height: 8),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        'AntiAttendance',
-                        style: Theme.of(context).textTheme.headlineLarge,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      tr(
-                        context,
-                        'Пульс и расписание — в одном месте.',
-                        'Pulse and your schedule in one place.',
-                      ),
-                      textAlign: TextAlign.left,
-                      style: TextStyle(
-                        color: context.palette.muted,
-                        fontSize: 15,
-                        height: 1.5,
-                      ),
-                    ),
-                    FutureBuilder<String?>(
-                      future: _version,
-                      builder: (context, snapshot) => snapshot.data == null
-                          ? const SizedBox(height: 20)
-                          : Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 24),
-                              child: BrockmannText(
-                                'v${snapshot.data}',
-                                role: BrockmannType.monoLarge,
-                              ),
-                            ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              CampusPanel(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _Feature(label: tr(context, 'Посещаемость', 'Attendance')),
-                    _Feature(label: tr(context, 'Расписание', 'Schedule')),
-                    _Feature(label: tr(context, 'Передача', 'Transfer')),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              CampusPanel(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        tr(
-                          context,
-                          'Пароли не сохраняются. Приложение не является официальным сервисом МИРЭА.',
-                          'Passwords are not saved. This is not an official MIREA app.',
-                        ),
-                        style: TextStyle(
-                          color: context.palette.muted,
-                          fontSize: 13,
-                          height: 1.6,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ),
-    ),
-  );
-}
-
-class _Feature extends StatelessWidget {
-  const _Feature({required this.label});
-  final String label;
-  @override
-  Widget build(BuildContext context) => Expanded(
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Column(
-        children: [
-          Text(
-            label,
-            textAlign: TextAlign.left,
-            style: TextStyle(
-              color: context.palette.ink,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              height: 1.4,
+          const SizedBox(height: 24),
+          BrockmannFeather(
+            index: 3,
+            child: BrockmannText(
+              tr(
+                context,
+                'Пароли не сохраняются. Приложение не является официальным сервисом МИРЭА.',
+                'Passwords are not saved. This is not an official MIREA app.',
+              ),
+              role: BrockmannType.body,
+              color: context.brockmann.secondary,
             ),
           ),
         ],

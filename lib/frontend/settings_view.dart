@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:brockmann/brockmann.dart';
 
 import '../campus_design.dart';
 import '../l10n.dart';
@@ -26,10 +27,24 @@ class SettingsView extends StatelessWidget {
       children: [
         if (embedded)
           CampusHeader(title: tr(context, 'Параметры', 'Preferences')),
-        for (final section in sections) ...[
-          AaSectionHeading(title: section.title),
-          ...section.children,
-          const SizedBox(height: 16),
+        for (final (sectionIndex, section) in sections.indexed) ...[
+          Padding(
+            padding: EdgeInsets.only(
+              top: sectionIndex == 0 ? 8 : 24,
+              bottom: 8,
+            ),
+            child: Semantics(
+              header: true,
+              child: BrockmannText(
+                section.title.toUpperCase(),
+                role: BrockmannType.label,
+                color: context.brockmann.secondary,
+              ),
+            ),
+          ),
+          for (final (index, child) in section.children.indexed)
+            BrockmannFeather(index: index + 1, child: child),
+          const SizedBox(height: 12),
         ],
       ],
     ),

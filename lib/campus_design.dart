@@ -236,13 +236,14 @@ class CampusListItem extends StatelessWidget {
     this.trailing,
     this.onTap,
     this.selected = false,
+    this.showDivider = true,
   });
   final String headline;
   final String? supportingText;
   final Widget? leading;
   final Widget? trailing;
   final VoidCallback? onTap;
-  final bool selected;
+  final bool selected, showDivider;
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, bounds) => Column(
@@ -272,7 +273,8 @@ class CampusListItem extends StatelessWidget {
               ),
           ],
         ),
-        Divider(height: .5, thickness: .5, color: context.brockmann.line),
+        if (showDivider)
+          Divider(height: .5, thickness: .5, color: context.brockmann.line),
       ],
     ),
   );

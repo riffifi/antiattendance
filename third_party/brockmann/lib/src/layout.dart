@@ -716,8 +716,30 @@ class BrockmannAdaptiveScaffold extends StatefulWidget {
       _BrockmannAdaptiveScaffoldState();
 }
 
-class _BrockmannAdaptiveScaffoldState extends State<BrockmannAdaptiveScaffold> {
+class _BrockmannAdaptiveScaffoldState extends State<BrockmannAdaptiveScaffold>
+    with SingleTickerProviderStateMixin {
   final _bodyKey = GlobalKey();
+  late final _motion = BrockmannPivotMotion(
+    vsync: this,
+    initialPage: widget.selected,
+  );
+  @override
+  void didUpdateWidget(BrockmannAdaptiveScaffold oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selected != widget.selected) {
+      _motion.settle(
+        widget.selected,
+        duration: context.brockmann.pivotDuration(context),
+        reduced: context.brockmann.motionReduced(context),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _motion.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -754,6 +776,7 @@ class _BrockmannAdaptiveScaffoldState extends State<BrockmannAdaptiveScaffold> {
         pageCount: widget.destinations.length,
         onChanged: widget.onChanged,
         enabled: !wide,
+        motion: _motion,
         child: KeyedSubtree(key: _bodyKey, child: widget.body),
       ),
     );
@@ -788,6 +811,7 @@ class _BrockmannAdaptiveScaffoldState extends State<BrockmannAdaptiveScaffold> {
                     ),
                   const SizedBox(height: 12),
                   BrockmannPivot(
+                    motion: _motion,
                     options: widget.destinations,
                     selected: widget.selected,
                     onChanged: widget.onChanged,

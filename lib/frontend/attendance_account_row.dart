@@ -79,7 +79,7 @@ class AttendanceAccountRow extends StatelessWidget {
       selected: selected,
       onPressed: busy ? null : onTap,
       builder: (context, pressed) => Container(
-        padding: const EdgeInsets.symmetric(vertical: 20),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
           color: pressed ? t.surface : null,
           border: Border(bottom: BorderSide(color: t.line)),
@@ -105,7 +105,7 @@ class AttendanceAccountRow extends StatelessWidget {
                       color: t.secondary,
                     ),
                   ],
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   Wrap(
                     spacing: 16,
                     runSpacing: 8,
@@ -127,7 +127,7 @@ class AttendanceAccountRow extends StatelessWidget {
                     BrockmannText(
                       sessionStatus,
                       role: BrockmannType.caption,
-                      color: t.danger,
+                      color: Theme.of(context).colorScheme.error,
                     ),
                   ],
                   if (sessionCheck != null &&
@@ -146,6 +146,7 @@ class AttendanceAccountRow extends StatelessWidget {
             SizedBox(
               width: 48,
               child: AppActionMenu(
+                title: account.label,
                 entries: [
                   CampusMenuEntry(
                     value: 'details',
@@ -254,7 +255,7 @@ class AttendanceAccountRow extends StatelessWidget {
               text: '${count ?? '—'}',
               style: const TextStyle(
                 fontFamily: 'GeistMono',
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],

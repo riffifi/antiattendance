@@ -12,7 +12,7 @@ Brockmann combines typographic hierarchy, open space, and direct manipulation. A
 
 Page titles, section headings and tab-switcher headers use lowercase; reserve uppercase for tiny category tags. Preserve the case of user data such as names, room codes and identifiers.
 
-The title switcher uses the full available width with 12 dp of space at the beginning and end of the strip. Keep the page content at its normal inset. Swiping titles selects one adjacent screen on release; let selection reveal the title rather than allowing free panning. Compact tabs remain scrollable.
+The title switcher uses the full available width with 12 dp of space at the beginning and end of the strip. Keep the page content at its normal inset. A shared fractional page position drives the titles and content throughout a drag on either surface. Release selects one adjacent screen; cancellation returns both to the same page. Title drags track the measured title span directly. Compact tabs remain scrollable.
 
 ## Motion
 
@@ -33,3 +33,8 @@ Keep safe areas, Android Back cancellation, native IME/clipboard, screen-reader 
 ## Haptic rhythms
 
 A deliberate physical gesture can have one tactile response. Essential mode covers committed switches, deliberate date/time detents, reorder pickup/landing and explicit outcomes. Slider and range handles get one pickup response after a 160 ms hold or initial drag; never repeat that impact during a gesture. Use a brief double tick for confirmation and three spaced ticks for rejection. Subtle mode can add selections and opening/closing. Never repeat pulses throughout a continuous gesture. Sound and haptics have independent preferences; honor Android's system touch-feedback choice. Do not let a rhythm substitute for readable outcome text. Details and API: [haptics](haptics.md).
+
+The optional `BrockmannStyle.wp8` profile selects square outlined buttons, light
+text-entry surfaces with black ink, full-width message bands, and shorter route
+and pivot timings. The default Brockmann profile is unchanged. Both profiles
+retain gesture tracking, predictive Back, reduced motion, and Geist.

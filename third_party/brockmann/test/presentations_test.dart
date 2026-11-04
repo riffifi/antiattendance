@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:brockmann/brockmann.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -161,7 +162,7 @@ void main() {
           matching: find.byType(BrockmannText),
         ),
       );
-      expect(actionLabel.weight, 300);
+      expect(actionLabel.weight, 400);
       expect(
         tester.getSize(find.byType(BottomSheet)).width,
         tester.view.physicalSize.width / tester.view.devicePixelRatio,
@@ -176,7 +177,7 @@ void main() {
               ),
             )
             .role,
-        BrockmannType.heading,
+        BrockmannType.value,
       );
       await tester.tap(find.text('Delete'));
       await tester.pumpAndSettle();
@@ -257,6 +258,77 @@ void main() {
         await tester.tap(find.text('new'));
         await tester.pumpAndSettle();
         expect(result, 1);
+      }
+    },
+  );
+  testWidgets(
+    'ordinary page routes use the shared pose and predictive back can cancel or commit',
+    (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      try {
+        await tester.pumpWidget(
+          BrockmannApp(
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: TextButton(
+                  onPressed: () => Navigator.of(context).push<void>(
+                    MaterialPageRoute(
+                      builder: (_) => const Scaffold(
+                        body: BrockmannFeather(
+                          index: 0,
+                          child: Text('route detail'),
+                        ),
+                      ),
+                    ),
+                  ),
+                  child: const Text('open detail'),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('open detail'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 80));
+        expect(
+          tester
+              .widget<BrockmannPageFrame>(
+                find
+                    .ancestor(
+                      of: find.text('route detail'),
+                      matching: find.byType(BrockmannPageFrame),
+                    )
+                    .first,
+              )
+              .progress,
+          greaterThan(0),
+        );
+        await tester.pumpAndSettle();
+        final surface = find.byType(BrockmannPredictiveBackSurface).last;
+        final observer = tester.state(surface) as WidgetsBindingObserver;
+        final route = ModalRoute.of(tester.element(surface))!;
+        PredictiveBackEvent event(double progress) =>
+            PredictiveBackEvent.fromMap({
+              'progress': progress,
+              'swipeEdge': 0,
+              'touchOffset': [0.0, 300.0],
+            });
+        expect(observer.handleStartBackGesture(event(0)), isTrue);
+        observer.handleUpdateBackGestureProgress(event(.6));
+        await tester.pump();
+        expect(route.animation!.value, closeTo(.4, .001));
+        observer.handleCancelBackGesture();
+        await tester.pumpAndSettle();
+        expect(find.text('route detail'), findsOneWidget);
+        expect(observer.handleStartBackGesture(event(0)), isTrue);
+        observer.handleUpdateBackGestureProgress(event(.8));
+        observer.handleCommitBackGesture();
+        await tester.pumpAndSettle();
+        expect(find.text('route detail'), findsNothing);
+        expect(find.text('open detail'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
       }
     },
   );

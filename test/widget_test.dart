@@ -344,11 +344,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.byWidgetPredicate(
-        (w) => w is CampusTextAction && w.tooltip == 'Вставить ссылку',
-      ),
-    );
+    await tester.tap(find.byTooltip('Вставить ссылку'));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byType(CampusTextField),

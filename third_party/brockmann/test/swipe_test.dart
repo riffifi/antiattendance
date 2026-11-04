@@ -23,7 +23,13 @@ void main() {
     );
     Transform turn(String label) => tester.widget<Transform>(
       find
-          .ancestor(of: find.text(label), matching: find.byType(Transform))
+          .ancestor(
+            of: find.text(label),
+            matching: find.descendant(
+              of: find.byType(BrockmannPageSwitcher),
+              matching: find.byType(Transform),
+            ),
+          )
           .last,
     );
     final finger = await tester.startGesture(const Offset(300, 200));
@@ -51,7 +57,13 @@ void main() {
     expect(turn('page 0').transform.entry(0, 0), lessThan(release));
     final feather = tester.widget<Transform>(
       find
-          .ancestor(of: find.text('page 1'), matching: find.byType(Transform))
+          .ancestor(
+            of: find.text('page 1'),
+            matching: find.descendant(
+              of: find.byType(BrockmannPageSwitcher),
+              matching: find.byType(Transform),
+            ),
+          )
           .first,
     );
     expect(feather.transform.entry(0, 3), greaterThan(0));
@@ -61,7 +73,7 @@ void main() {
   });
 
   testWidgets(
-    'Title swipe selects one neighbour without manually panning labels',
+    'Title swipe follows the finger and selects one neighbour on release',
     (tester) async {
       var selected = 0;
       await tester.pumpWidget(
@@ -89,7 +101,7 @@ void main() {
       await finger.moveBy(const Offset(-100, 0));
       await tester.pump();
       expect(selected, 0);
-      expect(tester.getTopLeft(find.text('one')).dx, 12);
+      expect(tester.getTopLeft(find.text('one')).dx, lessThan(12));
       await finger.up();
       await tester.pumpAndSettle();
       expect(selected, 1);

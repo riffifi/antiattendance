@@ -1,4 +1,4 @@
-Vendored from Brockmann Flutter at commit 5f29000 (0.2.0), including the shared app-integration controls and revised Metro application frame.
+Vendored from Brockmann Flutter at commit 7960144 (0.3.1), including the shared app-integration controls and revised Metro application frame.
 
 The framework includes rich button content, compact selection controls, native text input options, arbitrary dialog content, localized calendar actions, and descendant semantics. These APIs now live in the source framework as well as this vendored copy.
 
@@ -11,3 +11,13 @@ heading reuse, a custom title widget, leading-axis pivot alignment and protected
 input gestures. The source framework and this copy share the same implementation
 and regression checks. See docs/metro-audit.md for original Metro references and
 Android-specific adaptations.
+
+The 0.3 revision coordinates title and content gestures through one fractional
+page position, uses the shared turnstile/feather motion for ordinary page routes,
+and retains cancellable Android predictive Back. Inset dialogs, anchored short
+choice lists, and context-labelled command bands share the same presentation
+primitives. AA's schedule and settings use the revised spacing and hierarchy.
+
+AA selects the optional WP8 profile in 0.3.1: outlined square controls, readable
+light text fields, full-width message bands and faster pivot/route transitions.
+Geist remains the interface typeface.

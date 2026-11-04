@@ -42,3 +42,20 @@ viewport supports content swipes while preserving a single keyed content tree.
 Command docks and calendar strips keep ownership of gestures beginning in them.
 The wider navigation list retains ordinary feature headings. See the vendored
 [Metro implementation notes](../third_party/brockmann/docs/metro-audit.md).
+
+The 0.3 Brockmann frame shares fractional gesture progress between titles and
+content. The application theme also applies Brockmann page motion to ordinary
+routes. Fields protect editing gestures, and command docks keep their own pointer
+ownership. Context menus can name their account, short choices stay anchored when
+they fit, and dialogs use a bounded inset surface. Preview output includes dialog
+and command-menu examples in both themes.
+
+AA uses Brockmann’s optional WP8 profile while retaining Geist. Bottom commands
+use circled glyphs and short labels; buttons have square outlines and input
+fields use a light fill with dark ink in both appearance modes. Profile timings
+are 240 ms for pivot settling and 320/180 ms for route entry/exit, with reduced
+motion still respected. These are app timings, not measured WP8 timings.
+
+About now uses a compact square identity, version, project link and quiet
+attribution. Its GitHub command stays at the bottom; the logo’s rotation remains
+an unlabelled Easter egg. The page supports narrow layouts and large text.

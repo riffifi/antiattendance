@@ -102,3 +102,17 @@ Feature headers can set `reuseNavigationHeading: true` to reuse the compact
 pivot title. Wider layouts retain their normal page heading. `titleWidget` accepts
 a small application mark in place of the application-name label. See
 [the Metro implementation notes](docs/metro-audit.md).
+
+### Coherent gestures and presentations (0.3)
+
+The adaptive frame shares `BrockmannPivotMotion` between its title strip and page.
+Both title and content drags track a fractional page position before committing.
+`BrockmannPageFrame` supplies the same turnstile pose to pivots and ordinary page
+routes. Android predictive Back keeps its own cancellable route progress.
+
+Short choices can use anchored phone flyouts. Dialogs use a bounded inset surface,
+and typed context actions have a compact content hierarchy. Applications still
+own authentication, persistence, cancellation and service lifecycle callbacks.
+
+Use `BrockmannThemeData(style: BrockmannStyle.wp8)` for the WP8 control and motion
+profile. The default style remains available.

@@ -5,6 +5,7 @@ import 'foundation.dart';
 import 'pickers.dart';
 import 'controls.dart';
 import 'feedback.dart';
+import 'motion.dart';
 
 /// Flat modal with wrapped, touch-sized text actions. Android back dismisses it.
 Future<String?> showBrockmannDialog(
@@ -53,7 +54,7 @@ Future<String?> showBrockmannDialog(
       ),
     ),
     transitionBuilder: (c, a, _, child) =>
-        FadeTransition(opacity: a, child: child),
+        BrockmannModalTransition(animation: a, child: child),
   );
   feedback?.play(BrockmannSound.close);
   return result;
@@ -106,26 +107,51 @@ class _FlatDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.brockmann;
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Center(
-        child: Material(
-          color: t.surface,
-          shape: Border.symmetric(
-            horizontal: BorderSide(color: t.line, width: 0),
-          ),
-          child: SizedBox(
-            width: double.infinity,
-            child: SafeArea(
-              top: false,
-              bottom: false,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 560),
-                    child: child,
+    if (t.windowsPhone) {
+      return AnimatedPadding(
+        duration: t.duration(context, 120),
+        curve: brockmannOutExpo,
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: SafeArea(
+          child: Center(
+            child: Material(
+              color: t.surface,
+              child: SizedBox(
+                width: double.infinity,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 560),
+                      child: child,
+                    ),
                   ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    return AnimatedPadding(
+      duration: t.duration(context, 160),
+      curve: brockmannOutExpo,
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Material(
+                color: t.surface,
+                elevation: 0,
+                shape: Border.all(color: t.line, width: 0),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: child,
                 ),
               ),
             ),
@@ -184,7 +210,7 @@ Future<String?> showBrockmannMenu(
       ),
     ),
     transitionBuilder: (c, a, _, child) =>
-        FadeTransition(opacity: a, child: child),
+        BrockmannModalTransition(animation: a, child: child),
   );
   if (context.mounted) {
     BrockmannFeedbackScope.play(context, BrockmannSound.close);
@@ -204,7 +230,7 @@ Future<String?> showBrockmannCommands(
     transitionDuration: context.brockmann.duration(context, 160),
     pageBuilder: (c, _, _) => _CommandDialog(commands: commands),
     transitionBuilder: (c, a, _, child) =>
-        FadeTransition(opacity: a, child: child),
+        BrockmannModalTransition(animation: a, child: child),
   );
   if (context.mounted) {
     BrockmannFeedbackScope.play(context, BrockmannSound.close);
@@ -370,10 +396,10 @@ Future<T?> showBrockmannActionSheet<T>(
                           : null,
                       builder: (c, pressed) => AnimatedContainer(
                         duration: t.duration(c, pressed ? 60 : 160),
-                        constraints: const BoxConstraints(minHeight: 64),
+                        constraints: const BoxConstraints(minHeight: 56),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
-                          vertical: 16,
+                          vertical: 12,
                         ),
                         color: pressed
                             ? t.line.withValues(alpha: .3)
@@ -401,8 +427,8 @@ Future<T?> showBrockmannActionSheet<T>(
                                 children: [
                                   BrockmannText(
                                     entry.label,
-                                    role: BrockmannType.heading,
-                                    weight: 300,
+                                    role: BrockmannType.value,
+                                    weight: 400,
                                     color: !entry.enabled
                                         ? t.disabled
                                         : entry.destructive
@@ -545,7 +571,7 @@ Future<T?> _showTypedPicker<T>(
   pageBuilder: (c, _, _) =>
       StatefulBuilder(builder: (c, set) => _FlatDialog(child: content(c, set))),
   transitionBuilder: (c, a, _, child) =>
-      FadeTransition(opacity: a, child: child),
+      BrockmannModalTransition(animation: a, child: child),
 );
 
 /// A discoverable overflow affordance; both orientations use the same typed

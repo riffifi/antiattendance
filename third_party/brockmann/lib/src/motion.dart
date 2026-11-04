@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 
 import 'theme.dart';
 import 'interaction.dart';
@@ -319,7 +320,10 @@ class _PageTransitionState extends State<_PageTransition>
     super.didChangeDependencies();
     if (!_started) {
       _started = true;
-      _entry.duration = context.brockmann.duration(context, 580);
+      _entry.duration = context.brockmann.duration(
+        context,
+        context.brockmann.windowsPhone ? 320 : 580,
+      );
       if (widget.animateEntrance) _entry.forward();
     }
   }
@@ -332,7 +336,8 @@ class _PageTransitionState extends State<_PageTransition>
       _entry.stop();
       _exit.duration = context.brockmann.duration(
         context,
-        (250 * (1 - widget.progress)).round(),
+        ((context.brockmann.windowsPhone ? 180 : 250) * (1 - widget.progress))
+            .round(),
       );
       _exit.forward(from: 0);
     }
@@ -355,30 +360,18 @@ class _PageTransitionState extends State<_PageTransition>
           ? widget.progress +
                 (1 - widget.progress) * brockmannInExpo.transform(_exit.value)
           : widget.progress;
-      final matrix = Matrix4.identity()..setEntry(3, 2, -1 / 800);
-      if (!reduced) {
-        matrix.rotateY((widget.back ? -1 : 1) * 50 * math.pi / 180 * t);
-      }
       return IgnorePointer(
         ignoring: widget.exiting,
         child: ExcludeSemantics(
           excluding: widget.exiting,
           child: ExcludeFocus(
             excluding: widget.exiting,
-            child: Transform(
-              alignment: Alignment.centerLeft,
-              transform: matrix,
-              child: Opacity(
-                opacity:
-                    (1 - t) * (reduced && !widget.exiting ? _entry.value : 1),
-                child: TickerMode(
-                  enabled: !widget.exiting,
-                  child: _PageMotion(
-                    animation: _frozen ?? _entry,
-                    child: child!,
-                  ),
-                ),
-              ),
+            child: BrockmannPageFrame(
+              progress: (widget.back ? 1 : -1) * t,
+              opacity:
+                  (1 - t) * (reduced && !widget.exiting ? _entry.value : 1),
+              entryAnimation: _frozen ?? _entry,
+              child: TickerMode(enabled: !widget.exiting, child: child!),
             ),
           ),
         ),
@@ -401,11 +394,14 @@ class BrockmannFeather extends StatelessWidget {
       child: RepaintBoundary(child: child),
       builder: (c, child) {
         final reduced = c.brockmann.motionReduced(c);
-        final elapsed = scope.animation.value * .58;
+        final wp8 = c.brockmann.windowsPhone;
+        final elapsed = scope.animation.value * (wp8 ? .32 : .58);
         final progress = reduced
             ? scope.animation.value
             : brockmannOutExpo.transform(
-                ((elapsed - math.min(index, 7) * .04) / .3).clamp(0, 1),
+                ((elapsed - math.min(index, 7) * (wp8 ? .018 : .04)) /
+                        (wp8 ? .194 : .3))
+                    .clamp(0, 1),
               );
         final matrix = Matrix4.identity()..setEntry(3, 2, -1 / 800);
         if (!reduced) {
@@ -430,9 +426,127 @@ class BrockmannFeather extends StatelessWidget {
   }
 }
 
-/// A pivot's persistent viewport. It moves one live subtree, so forms, scroll
-/// positions, platform views and GlobalKeys survive destination changes.
-/// Interactive regions own their gestures; ordinary content supports page swipes.
+/// Shared fractional page position for the title strip and live page content.
+/// Both surfaces use the same position during a drag and while settling.
+class BrockmannPivotMotion extends ChangeNotifier {
+  BrockmannPivotMotion({required TickerProvider vsync, int initialPage = 0})
+    : _position = AnimationController.unbounded(
+        vsync: vsync,
+        value: initialPage.toDouble(),
+      ) {
+    _position.addListener(notifyListeners);
+  }
+  final AnimationController _position;
+  double _drag = 0;
+  double get position => _position.value;
+  Animation<double> get animation => _position;
+  void beginDrag() {
+    _position.stop();
+    _drag = 0;
+  }
+
+  void dragBy(
+    double dx, {
+    required double width,
+    required int count,
+    bool rtl = false,
+  }) {
+    _drag += dx;
+    final delta = -dx * (rtl ? -1 : 1) / math.max(1, width);
+    final outside = position + delta < 0 || position + delta > count - 1;
+    _position.value = (position + delta * (outside ? .22 : 1)).clamp(
+      -.15,
+      math.max(0, count - 1) + .15,
+    );
+  }
+
+  int destination({
+    required int selected,
+    required int count,
+    required double width,
+    required double velocity,
+    bool rtl = false,
+  }) {
+    if (count < 2) return selected;
+    if (_drag.abs() < math.max(48, width * .16) &&
+        !(_drag.abs() >= 16 && velocity.abs() >= 600)) {
+      return selected;
+    }
+    final direction =
+        (velocity.abs() >= 600 ? velocity : _drag) * (rtl ? -1 : 1);
+    return (selected + (direction < 0 ? 1 : -1)).clamp(0, count - 1);
+  }
+
+  void settle(
+    int selected, {
+    required Duration duration,
+    bool reduced = false,
+  }) {
+    if (reduced || duration == Duration.zero) {
+      _position.value = selected.toDouble();
+      return;
+    }
+    _position.animateTo(
+      selected.toDouble(),
+      duration: duration,
+      curve: brockmannOutExpo,
+    );
+  }
+
+  @override
+  void dispose() {
+    _position.removeListener(notifyListeners);
+    _position.dispose();
+    super.dispose();
+  }
+}
+
+/// The shared Brockmann turnstile pose, used by pivots and route transitions.
+/// Signed progress makes incoming and outgoing pages turn in opposite directions.
+class BrockmannPageFrame extends StatelessWidget {
+  const BrockmannPageFrame({
+    super.key,
+    required this.progress,
+    required this.child,
+    this.entryAnimation,
+    this.opacity,
+  });
+  final double progress;
+  final double? opacity;
+  final Animation<double>? entryAnimation;
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    final reduced = context.brockmann.motionReduced(context);
+    final pose = progress.clamp(-1.0, 1.0);
+    final matrix = Matrix4.identity()..setEntry(3, 2, -1 / 800);
+    if (!reduced) matrix.rotateY(-pose * 50 * math.pi / 180);
+    final content = entryAnimation == null
+        ? child
+        : _PageMotion(animation: entryAnimation!, child: child);
+    return Transform(
+      alignment: Alignment.centerLeft,
+      transform: matrix,
+      child: Opacity(
+        opacity: (opacity ?? 1 - pose.abs()).clamp(0.0, 1.0),
+        child: content,
+      ),
+    );
+  }
+}
+
+class _PivotEntryAnimation extends Animation<double>
+    with AnimationWithParentMixin<double> {
+  _PivotEntryAnimation(this.parent, this.selected);
+  @override
+  final Animation<double> parent;
+  final int selected;
+  @override
+  double get value => (1 - (parent.value - selected).abs()).clamp(0.0, 1.0);
+}
+
+/// A persistent viewport: moving between destinations never clones keyed forms
+/// or platform views. Its optional motion is shared with the application's pivot.
 class BrockmannPivotViewport extends StatefulWidget {
   const BrockmannPivotViewport({
     super.key,
@@ -441,60 +555,52 @@ class BrockmannPivotViewport extends StatefulWidget {
     required this.child,
     this.onChanged,
     this.enabled = true,
+    this.motion,
   });
   final int selected, pageCount;
   final Widget child;
   final ValueChanged<int>? onChanged;
   final bool enabled;
+  final BrockmannPivotMotion? motion;
   @override
   State<BrockmannPivotViewport> createState() => _BrockmannPivotViewportState();
 }
 
 class _BrockmannPivotViewportState extends State<BrockmannPivotViewport>
     with SingleTickerProviderStateMixin {
-  late final _offset = AnimationController.unbounded(vsync: this);
+  BrockmannPivotMotion? _ownMotion;
+  BrockmannPivotMotion get _motion =>
+      widget.motion ??
+      (_ownMotion ??= BrockmannPivotMotion(
+        vsync: this,
+        initialPage: widget.selected,
+      ));
   final _blocked = <int>{};
-  double _width = 1, _drag = 0;
-  bool get _reduced => context.brockmann.motionReduced(context);
-  int get _axis => Directionality.of(context) == TextDirection.rtl ? -1 : 1;
-
-  void _settle() {
-    if (_reduced) {
-      _offset.value = 0;
-      return;
-    }
-    _offset.animateTo(
-      0,
-      duration: context.brockmann.duration(context, 220),
-      curve: brockmannOutExpo,
-    );
-  }
-
+  double _width = 1;
+  bool get _rtl => Directionality.of(context) == TextDirection.rtl;
+  void _settle() => _motion.settle(
+    widget.selected,
+    duration: context.brockmann.pivotDuration(context),
+    reduced: context.brockmann.motionReduced(context),
+  );
   @override
   void didUpdateWidget(BrockmannPivotViewport oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.selected != widget.selected) {
-      _offset.stop();
-      if (_reduced || !widget.enabled) {
-        _offset.value = 0;
-        return;
-      }
-      final direction = widget.selected > oldWidget.selected ? 1 : -1;
-      _offset.value = direction * _axis * math.min(48.0, _width * .14);
+    if (widget.motion == null && oldWidget.selected != widget.selected) {
       _settle();
     }
   }
 
   @override
   void dispose() {
-    _offset.dispose();
+    _ownMotion?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, bounds) {
-      _width = math.max(1.0, bounds.maxWidth);
+      _width = math.max(1, bounds.maxWidth);
       return BrockmannGestureScope(
         pointers: _blocked,
         child: RawGestureDetector(
@@ -513,37 +619,27 @@ class _BrockmannPivotViewportState extends State<BrockmannPivotViewport>
                         (recognizer) => recognizer
                           ..blockedPointers = _blocked
                           ..onStart = (_) {
-                            _offset.stop();
-                            _drag = 0;
+                            _motion.beginDrag();
                           }
                           ..onUpdate = (event) {
-                            _drag += event.delta.dx;
-                            final next =
-                                widget.selected + (_drag * _axis < 0 ? 1 : -1);
-                            if (!_reduced) {
-                              _offset.value =
-                                  _drag *
-                                  (next < 0 || next >= widget.pageCount
-                                      ? .18
-                                      : .6);
-                            }
+                            _motion.dragBy(
+                              event.delta.dx,
+                              width: _width,
+                              count: widget.pageCount,
+                              rtl: _rtl,
+                            );
                           }
                           ..onCancel = _settle
                           ..onEnd = (event) {
-                            final velocity = event.velocity.pixelsPerSecond.dx;
-                            final committed =
-                                _drag.abs() >= math.max(56, _width * .18) ||
-                                (_drag.abs() >= 16 && velocity.abs() >= 600);
-                            if (committed) {
-                              final direction =
-                                  (velocity.abs() >= 600 ? velocity : _drag) *
-                                  _axis;
-                              final next =
-                                  (widget.selected + (direction < 0 ? 1 : -1))
-                                      .clamp(0, widget.pageCount - 1);
-                              if (next != widget.selected) {
-                                widget.onChanged!(next);
-                              }
+                            final next = _motion.destination(
+                              selected: widget.selected,
+                              count: widget.pageCount,
+                              width: _width,
+                              velocity: event.velocity.pixelsPerSecond.dx,
+                              rtl: _rtl,
+                            );
+                            if (next != widget.selected) {
+                              widget.onChanged!(next);
                             }
                             _settle();
                           },
@@ -551,19 +647,162 @@ class _BrockmannPivotViewportState extends State<BrockmannPivotViewport>
                 },
           child: ClipRect(
             child: AnimatedBuilder(
-              animation: _offset,
+              animation: _motion,
               child: widget.child,
-              builder: (context, child) => Transform.translate(
-                offset: Offset(_reduced ? 0 : _offset.value, 0),
-                child: Opacity(
-                  opacity: _reduced
-                      ? 1
-                      : (1 - _offset.value.abs() / _width * .7).clamp(.65, 1),
-                  child: child,
-                ),
+              builder: (context, child) => BrockmannPageFrame(
+                key: const ValueKey('brockmann-pivot-frame'),
+                progress: widget.enabled
+                    ? (widget.selected - _motion.position).clamp(-.95, .95)
+                    : 0,
+                entryAnimation: widget.enabled
+                    ? _PivotEntryAnimation(_motion.animation, widget.selected)
+                    : null,
+                child: child!,
               ),
             ),
           ),
+        ),
+      );
+    },
+  );
+}
+
+/// Scrubs the route's own animation for Android Back, including cancellation.
+class BrockmannPredictiveBackSurface extends StatefulWidget {
+  const BrockmannPredictiveBackSurface({super.key, required this.child});
+  final Widget child;
+  @override
+  State<BrockmannPredictiveBackSurface> createState() =>
+      _BrockmannPredictiveBackSurfaceState();
+}
+
+class _BrockmannPredictiveBackSurfaceState
+    extends State<BrockmannPredictiveBackSurface>
+    with WidgetsBindingObserver {
+  ModalRoute<dynamic>? _gestureRoute;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  bool handleStartBackGesture(PredictiveBackEvent event) {
+    final route = ModalRoute.of(context);
+    if (event.isButtonEvent ||
+        route == null ||
+        !route.isCurrent ||
+        !route.popGestureEnabled ||
+        Theme.of(context).platform != TargetPlatform.android) {
+      return false;
+    }
+    _gestureRoute = route;
+    route.handleStartBackGesture(progress: 1 - event.progress);
+    return true;
+  }
+
+  @override
+  void handleUpdateBackGestureProgress(PredictiveBackEvent event) =>
+      _gestureRoute?.handleUpdateBackGestureProgress(
+        progress: 1 - event.progress,
+      );
+  @override
+  void handleCancelBackGesture() {
+    _gestureRoute?.handleCancelBackGesture();
+    _gestureRoute = null;
+  }
+
+  @override
+  void handleCommitBackGesture() {
+    _gestureRoute?.handleCommitBackGesture();
+    _gestureRoute = null;
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
+class _RouteEntryAnimation extends Animation<double>
+    with AnimationWithParentMixin<double> {
+  _RouteEntryAnimation(this.parent, this.route);
+  @override
+  final Animation<double> parent;
+  final PageRoute<dynamic> route;
+  @override
+  double get value => route.isFirst
+      ? 1
+      : route.popGestureInProgress
+      ? parent.value
+      : brockmannOutExpo.transform(parent.value);
+}
+
+/// One route transition for all Brockmann pages: turnstile pose and feather entry.
+class BrockmannPageTransitionsBuilder extends PageTransitionsBuilder {
+  const BrockmannPageTransitionsBuilder({this.windowsPhone = false});
+  final bool windowsPhone;
+  @override
+  Duration get transitionDuration =>
+      Duration(milliseconds: windowsPhone ? 320 : 580);
+  @override
+  Duration get reverseTransitionDuration =>
+      Duration(milliseconds: windowsPhone ? 180 : 250);
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final entry = _RouteEntryAnimation(animation, route);
+    final transition = AnimatedBuilder(
+      animation: Listenable.merge([animation, secondaryAnimation]),
+      child: child,
+      builder: (context, child) {
+        final exit = secondaryAnimation.value;
+        return BrockmannPageFrame(
+          progress: (1 - entry.value - exit).clamp(-1.0, 1.0),
+          opacity: entry.value * (1 - exit),
+          entryAnimation: animation,
+          child: child!,
+        );
+      },
+    );
+    return route.isFirst
+        ? transition
+        : BrockmannPredictiveBackSurface(child: transition);
+  }
+}
+
+/// Consistent short reveal for dialogs and transient surfaces.
+class BrockmannModalTransition extends StatelessWidget {
+  const BrockmannModalTransition({
+    super.key,
+    required this.animation,
+    required this.child,
+  });
+  final Animation<double> animation;
+  final Widget child;
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: animation,
+    child: child,
+    builder: (context, child) {
+      final value = brockmannOutExpo.transform(animation.value);
+      return Opacity(
+        opacity: animation.value,
+        child: Transform.translate(
+          offset: Offset(
+            0,
+            context.brockmann.motionReduced(context) ? 0 : 16 * (1 - value),
+          ),
+          child: child,
         ),
       );
     },

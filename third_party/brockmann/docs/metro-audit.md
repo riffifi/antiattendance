@@ -43,7 +43,7 @@ choices retain their normal tap and keyboard interaction.
 `showBrockmannContextMenu`, `BrockmannContextMenu`, and `BrockmannOverflowMenu`
 all use the existing bottom action sheet. The legacy `position` argument remains
 accepted for source compatibility; it no longer positions a floating menu.
-The context title uses the secondary label style. Actions use light 24 dp heading typography in rows at least 64 dp tall, with a shared 24 dp text inset. This keeps the menu readable without treating every row and the context label as equal headings. Options wrap when needed and retain disabled and
+The context title uses the secondary label style. Actions use 20 dp content typography in rows at least 56 dp tall, with a shared 24 dp text inset. This keeps the menu readable without treating every row and the context label as equal headings. Options wrap when needed and retain disabled and
 destructive states. Sheets scroll and respect system insets.
 
 This bottom-sheet presentation and the hold-and-drag choice shortcut are explicit
@@ -78,3 +78,22 @@ Brockmann adaptations, not measurements claimed from Windows Phone.
 
 Regression checks cover keyed-state retention, interrupted navigation, cancellation,
 text selection, reduced motion, resize, and the app's NFC exit path.
+
+## Gesture and presentation coherence (0.3)
+
+`BrockmannPivotMotion` supplies a shared fractional page position to the pivot
+and its persistent viewport. Header and content drags scrub that same position;
+commit and cancellation settle both surfaces with the same curve. The body uses
+`BrockmannPageFrame`, the shared turnstile pose, and feathered row entry. Normal
+Material page routes receive the same pose through `BrockmannPageTransitionsBuilder`.
+Android predictive Back updates the route's own animation and supports cancellation.
+
+Dialog surfaces have 24 dp safe outer insets and a 560 dp maximum reading width.
+Their reveal uses the shared modal transition. Short picker lists can stay anchored
+on phones at ordinary text sizes; longer lists and enlarged text retain full-page
+selection. A caret and underline identify the closed choice field. Context commands
+use a small context label with 20 dp action text, independently of page headings.
+
+Checks hold the pointer before release to verify both title and content movement,
+cancel gestures, preserve a keyed form through repeated changes and window resize,
+and scrub/cancel/commit predictive Back on an ordinary page route.

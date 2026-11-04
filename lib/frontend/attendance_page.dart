@@ -9,6 +9,7 @@ import '../l10n.dart';
 import '../pulse_api.dart';
 import 'attendance_account_row.dart';
 import 'page_layout.dart';
+import 'command_bar.dart';
 
 enum AttendanceAction { share, receive, group, restore }
 
@@ -299,24 +300,29 @@ class _AttendancePageState extends State<AttendancePage> {
               itemCount: visible.length,
               itemBuilder: (context, index) {
                 final account = visible[index];
-                return AttendanceAccountRow(
-                  key: ValueKey(account.id),
-                  account: account,
-                  counts: widget.counts == null
-                      ? null
-                      : widget.counts![account.id] ?? AttendanceCounts.zero,
-                  selected: widget.selected.contains(account.id),
-                  busy: widget.busy,
-                  result: widget.results[account.id],
-                  error: widget.errors[account.id],
-                  sessionCheck: widget.sessionChecks[account.id],
-                  checkingSession: widget.checkingSessions.contains(account.id),
-                  onTap: () => widget.onToggle(account),
-                  onCheckSession: () => widget.onCheckSession(account),
-                  onReauth: () => widget.onReauth(account),
-                  onRename: () => widget.onRename(account),
-                  onGroup: () => widget.onGroup(account),
-                  onRemove: () => widget.onRemove(account),
+                return BrockmannFeather(
+                  index: index,
+                  child: AttendanceAccountRow(
+                    key: ValueKey(account.id),
+                    account: account,
+                    counts: widget.counts == null
+                        ? null
+                        : widget.counts![account.id] ?? AttendanceCounts.zero,
+                    selected: widget.selected.contains(account.id),
+                    busy: widget.busy,
+                    result: widget.results[account.id],
+                    error: widget.errors[account.id],
+                    sessionCheck: widget.sessionChecks[account.id],
+                    checkingSession: widget.checkingSessions.contains(
+                      account.id,
+                    ),
+                    onTap: () => widget.onToggle(account),
+                    onCheckSession: () => widget.onCheckSession(account),
+                    onReauth: () => widget.onReauth(account),
+                    onRename: () => widget.onRename(account),
+                    onGroup: () => widget.onGroup(account),
+                    onRemove: () => widget.onRemove(account),
+                  ),
                 );
               },
             ),
@@ -339,53 +345,21 @@ class AttendanceActionBar extends StatelessWidget {
   final bool busy;
   final VoidCallback onScan, onPaste;
   @override
-  Widget build(BuildContext context) => BrockmannInteractionRegion(
-    child: Center(
-      heightFactor: 1,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: AaPageLayout.maxWidth),
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border(top: BorderSide(color: context.brockmann.line)),
-          ),
-          padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final scan = CampusButton.action(
-                onPressed: busy || selectedCount == 0 ? null : onScan,
-                label: Text(
-                  trf(
-                    context,
-                    'Сканировать QR · {count}',
-                    'Scan QR · {count}',
-                    {'count': selectedCount},
-                  ),
-                ),
-              );
-              final paste = CampusTextAction(
-                onPressed: busy || selectedCount == 0 ? null : onPaste,
-                tooltip: tr(context, 'Вставить ссылку', 'Paste link'),
-                label: tr(context, 'вставить', 'paste'),
-              );
-              if (constraints.maxWidth < 300 ||
-                  MediaQuery.textScalerOf(context).scale(16) > 24) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [scan, paste],
-                );
-              }
-              return Row(
-                children: [
-                  Expanded(child: scan),
-                  const SizedBox(width: 8),
-                  paste,
-                ],
-              );
-            },
-          ),
-        ),
+  Widget build(BuildContext context) => CampusCommandBar(
+    commands: [
+      CampusCommand(
+        icon: Icons.qr_code_scanner_rounded,
+        label: trf(context, 'Сканировать QR · {count}', 'Scan QR · {count}', {
+          'count': selectedCount,
+        }),
+        onPressed: busy || selectedCount == 0 ? null : onScan,
       ),
-    ),
+      CampusCommand(
+        icon: Icons.content_paste_rounded,
+        label: tr(context, 'вставить', 'paste'),
+        tooltip: tr(context, 'Вставить ссылку', 'Paste link'),
+        onPressed: busy || selectedCount == 0 ? null : onPaste,
+      ),
+    ],
   );
 }

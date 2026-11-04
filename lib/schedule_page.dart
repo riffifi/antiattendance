@@ -388,36 +388,37 @@ class _SchedulePageState extends State<SchedulePage> {
               ),
             )
           else ...[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _sameDay(_day, today)
-                            ? tr(context, 'Сегодня', 'Today')
-                            : dateText,
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      if (!_loading && _error == null)
+            if (dailyLessons.isNotEmpty || _loading || _error != null)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          (_sameDay(_day, today) ? '$dateText · ' : '') +
-                              classCountLabel(context, dailyLessons.length),
+                          _sameDay(_day, today)
+                              ? tr(context, 'Сегодня', 'Today')
+                              : dateText,
                           style: TextStyle(
-                            color: context.palette.muted,
-                            fontSize: 13,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w400,
                           ),
                         ),
-                    ],
+                        if (!_loading && _error == null)
+                          Text(
+                            (_sameDay(_day, today) ? '$dateText · ' : '') +
+                                classCountLabel(context, dailyLessons.length),
+                            style: TextStyle(
+                              color: context.palette.muted,
+                              fontSize: 13,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
             const SizedBox(height: 14),
             if (_error != null && dailyLessons.isNotEmpty) ...[
               Text(_error!, style: TextStyle(color: context.palette.muted)),
@@ -447,21 +448,25 @@ class _SchedulePageState extends State<SchedulePage> {
             ] else ...[
               for (var index = 0; index < dailyLessons.length; index++) ...[
                 if (index > 0) const SizedBox(height: 10),
-                _LessonRow(
-                  lesson: dailyLessons[index],
-                  confirmed: _confirmed(dailyLessons[index]),
-                  time: _time(dailyLessons[index].start),
-                  endTime: _time(dailyLessons[index].end),
-                  isCurrent:
-                      _sameDay(_day, today) &&
-                      !now.isBefore(dailyLessons[index].start) &&
-                      now.isBefore(dailyLessons[index].end),
-                  onTap: () => _openLesson(dailyLessons[index], groupAccounts),
-                  onRoom: () => Navigator.of(context).push<void>(
-                    MaterialPageRoute(
-                      builder: (_) => CampusMapsPage(
-                        room: dailyLessons[index].location,
-                        lessons: dailyLessons,
+                BrockmannFeather(
+                  index: index,
+                  child: _LessonRow(
+                    lesson: dailyLessons[index],
+                    confirmed: _confirmed(dailyLessons[index]),
+                    time: _time(dailyLessons[index].start),
+                    endTime: _time(dailyLessons[index].end),
+                    isCurrent:
+                        _sameDay(_day, today) &&
+                        !now.isBefore(dailyLessons[index].start) &&
+                        now.isBefore(dailyLessons[index].end),
+                    onTap: () =>
+                        _openLesson(dailyLessons[index], groupAccounts),
+                    onRoom: () => Navigator.of(context).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) => CampusMapsPage(
+                          room: dailyLessons[index].location,
+                          lessons: dailyLessons,
+                        ),
                       ),
                     ),
                   ),
@@ -516,7 +521,7 @@ class _LessonRow extends StatelessWidget {
       excludeSemantics: false,
       onPressed: onTap,
       builder: (context, pressed) => Container(
-        padding: const EdgeInsets.symmetric(vertical: 24),
+        padding: const EdgeInsets.symmetric(vertical: 20),
         decoration: BoxDecoration(
           color: pressed ? t.surface : null,
           border: Border(
@@ -524,7 +529,9 @@ class _LessonRow extends StatelessWidget {
           ),
         ),
         child: BrockmannColumns(
-          breakpoint: 440,
+          breakpoint: MediaQuery.textScalerOf(context).scale(16) > 22
+              ? 600
+              : 300,
           flex: const [1, 4],
           spacing: 16,
           children: [

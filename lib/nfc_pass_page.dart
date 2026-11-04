@@ -1,3 +1,4 @@
+import 'frontend/command_bar.dart';
 import 'frontend/page_layout.dart';
 import 'frontend/pass_status_panel.dart';
 
@@ -1496,15 +1497,16 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
         ),
         BrockmannInteractionRegion(
           child: Container(
-            padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
+            padding: const EdgeInsets.only(bottom: 8),
             decoration: BoxDecoration(
+              color: context.brockmann.surface,
               border: Border(top: BorderSide(color: context.brockmann.line)),
             ),
             child: Column(
               children: [
                 if (_message != null)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 10),
                     child: Semantics(
                       liveRegion: true,
                       child: Row(
@@ -1539,20 +1541,24 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                     label: Text(tr(context, 'Настройки NFC', 'NFC settings')),
                     style: CampusButtonStyle.text,
                   ),
-                SizedBox(
-                  width: double.infinity,
-                  child: CampusButton.action(
-                    onPressed: _running
-                        ? _stop
-                        : enabled &&
-                              _numbers.isEmpty &&
-                              widget.accounts.isNotEmpty
-                        ? _bulkEnroll
-                        : enabled && _activeIds.isNotEmpty
-                        ? _start
-                        : null,
-                    label: Text(
-                      _busy
+                CampusCommandBar(
+                  commands: [
+                    CampusCommand(
+                      icon: _running
+                          ? Icons.stop_rounded
+                          : _numbers.isEmpty
+                          ? Icons.add_rounded
+                          : Icons.play_arrow_rounded,
+                      onPressed: _running
+                          ? _stop
+                          : enabled &&
+                                _numbers.isEmpty &&
+                                widget.accounts.isNotEmpty
+                          ? _bulkEnroll
+                          : enabled && _activeIds.isNotEmpty
+                          ? _start
+                          : null,
+                      label: _busy
                           ? tr(context, 'Подождите…', 'Please wait…')
                           : _running
                           ? (_single
@@ -1580,9 +1586,9 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                                     'Start queue',
                                   )),
                     ),
-                  ),
+                  ],
                 ),
-                if (_numbers.isNotEmpty) ...[
+                if (_running && _numbers.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Text(
                     _single

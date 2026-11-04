@@ -73,6 +73,57 @@ class BrockmannButton extends StatelessWidget {
     builder: (c, p) {
       final t = c.brockmann;
       final enabled = onPressed != null;
+      if (t.windowsPhone && style != BrockmannButtonStyle.text) {
+        final ink = !enabled
+            ? t.disabled
+            : p
+            ? t.background
+            : destructive
+            ? t.danger
+            : t.foreground;
+        return AnimatedContainer(
+          duration: t.duration(c, p ? 50 : 100),
+          width: expand ? double.infinity : null,
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: p && enabled ? t.foreground : Colors.transparent,
+            border: Border.all(
+              color: !enabled
+                  ? t.disabled
+                  : p
+                  ? t.foreground
+                  : destructive
+                  ? t.danger
+                  : t.foreground,
+              width: 2,
+            ),
+          ),
+          child: Align(
+            alignment: alignment,
+            widthFactor: expand ? null : 1,
+            heightFactor: 1,
+            child: IconTheme(
+              data: IconThemeData(color: ink, size: 20),
+              child: DefaultTextStyle(
+                style: BrockmannType.body.style(color: ink),
+                child:
+                    child ??
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(child: BrockmannText(label, color: ink)),
+                        if (icon != null) ...[
+                          const SizedBox(width: 12),
+                          BrockmannGlyph(icon!, color: ink),
+                        ],
+                      ],
+                    ),
+              ),
+            ),
+          ),
+        );
+      }
       final fill = destructive ? t.danger : t.accent;
       final onFill = destructive ? Colors.white : t.onAccent;
       final ink = !enabled
@@ -930,6 +981,19 @@ class BrockmannTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.brockmann;
+    final inputFill = t.light ? const Color(0xffe4e4e4) : Colors.white;
+    final inputInk = t.windowsPhone ? Colors.black : t.foreground;
+    Widget? adornment(Widget? child) => child == null || !t.windowsPhone
+        ? child
+        : Theme(
+            data: Theme.of(
+              context,
+            ).copyWith(extensions: [t.copyWith(brightness: Brightness.light)]),
+            child: IconTheme(
+              data: const IconThemeData(color: Colors.black),
+              child: child,
+            ),
+          );
     return BrockmannInteractionRegion(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -965,22 +1029,31 @@ class BrockmannTextField extends StatelessWidget {
                 ((mono ?? multiline)
                         ? BrockmannType.monoValue
                         : BrockmannType.body)
-                    .style(color: t.foreground),
+                    .style(color: inputInk),
             cursorColor: t.accent,
             decoration: InputDecoration(
-              prefixIcon: leading,
+              prefixIcon: adornment(leading),
+              filled: t.windowsPhone,
+              fillColor: t.windowsPhone
+                  ? (enabled ? inputFill : const Color(0xffd0d0d0))
+                  : null,
+              prefixIconColor: t.windowsPhone ? Colors.black : null,
+              suffixIconColor: t.windowsPhone ? Colors.black : null,
+              suffixStyle: BrockmannType.body.style(color: inputInk),
               suffixText: suffixText,
               isDense: true,
               contentPadding: const EdgeInsets.all(12),
               errorText: error,
               errorMaxLines: 3,
               hintText: hint ?? placeholder,
-              hintStyle: BrockmannType.body.style(color: t.disabled),
+              hintStyle: BrockmannType.body.style(
+                color: t.windowsPhone ? const Color(0xff707070) : t.disabled,
+              ),
               helperText: helper,
               helperMaxLines: 3,
               helperStyle: BrockmannType.caption.style(color: t.secondary),
               counterStyle: BrockmannType.caption.style(color: t.secondary),
-              suffixIcon: suffix ?? trailing,
+              suffixIcon: adornment(suffix ?? trailing),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.zero,
                 borderSide: BorderSide(color: t.danger),
@@ -992,11 +1065,17 @@ class BrockmannTextField extends StatelessWidget {
               errorStyle: BrockmannType.caption.style(color: t.danger),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.zero,
-                borderSide: BorderSide(color: t.lineStrong),
+                borderSide: BorderSide(
+                  color: t.windowsPhone ? inputFill : t.lineStrong,
+                  width: t.windowsPhone ? 2 : 1,
+                ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.zero,
-                borderSide: BorderSide(color: t.lineStrong),
+                borderSide: BorderSide(
+                  color: t.windowsPhone ? inputFill : t.lineStrong,
+                  width: t.windowsPhone ? 2 : 1,
+                ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.zero,

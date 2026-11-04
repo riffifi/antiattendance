@@ -52,45 +52,76 @@ class ScheduleCalendar extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (groups.isNotEmpty)
-          AppPassPicker(
-            enabled: true,
-            hint: tr(context, 'Группа', 'Group'),
-            items: [
-              for (final group in groups.entries)
-                PassPickerItem(
-                  value: '${group.key}',
-                  label: group.value,
-                  selected: groupId == group.key,
-                ),
-            ],
-            onChanged: (items) => onGroupChanged(int.parse(items.first.value)),
-          ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            CampusButton.text(
+        LayoutBuilder(
+          builder: (context, bounds) {
+            final picker = groups.isEmpty
+                ? null
+                : AppPassPicker(
+                    enabled: true,
+                    hint: tr(context, 'Группа', 'Group'),
+                    items: [
+                      for (final group in groups.entries)
+                        PassPickerItem(
+                          value: '${group.key}',
+                          label: group.value,
+                          selected: groupId == group.key,
+                        ),
+                    ],
+                    onChanged: (items) =>
+                        onGroupChanged(int.parse(items.first.value)),
+                  );
+            final maps = CampusTextAction(
+              icon: Icons.map_outlined,
               onPressed: onMaps,
-              child: Text(tr(context, 'Карты кампусов', 'Campus maps')),
-            ),
-            CampusTextAction(
+              tooltip: tr(context, 'Карты кампусов', 'Campus maps'),
+              label: tr(context, 'карты', 'maps'),
+            );
+            final refresh = CampusTextAction(
               icon: Icons.refresh_rounded,
               onPressed: groups.isEmpty || loading ? null : onRefresh,
               tooltip: tr(context, 'Обновить', 'Refresh'),
               label: tr(context, 'Обновить', 'Refresh'),
-            ),
-            if (!_same(day, today))
-              CampusButton.text(
-                onPressed: () => onDayChanged(today),
-                child: Text(tr(context, 'Сегодня', 'Today')),
-              ),
-          ],
+            );
+            final todayAction = _same(day, today)
+                ? null
+                : CampusButton.text(
+                    onPressed: () => onDayChanged(today),
+                    child: Text(tr(context, 'Сегодня', 'Today')),
+                  );
+            if (picker != null &&
+                bounds.maxWidth >= 320 &&
+                MediaQuery.textScalerOf(context).scale(16) <= 22) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(child: picker),
+                      const SizedBox(width: 8),
+                      maps,
+                      refresh,
+                    ],
+                  ),
+                  if (todayAction != null)
+                    Align(alignment: Alignment.centerLeft, child: todayAction),
+                ],
+              );
+            }
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ?picker,
+                Wrap(
+                  spacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [maps, refresh, ?todayAction],
+                ),
+              ],
+            );
+          },
         ),
         if (groups.isNotEmpty) ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Row(
             children: [
               CampusTextAction(
@@ -131,7 +162,7 @@ class ScheduleCalendar extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           LayoutBuilder(
             builder: (context, c) {
               final cellWidth = math.max(
@@ -201,7 +232,7 @@ class _CalendarDay extends StatelessWidget {
         onPressed: onTap,
         builder: (context, pressed) => Container(
           margin: const EdgeInsets.symmetric(horizontal: 2),
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
             color: selected
                 ? t.foreground

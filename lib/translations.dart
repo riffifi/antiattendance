@@ -1,6 +1,7 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  'Source code': ('Code source', 'Código-fonte', '源代码'),
   'Account & sync': (
     'Compte et synchronisation',
     'Conta e sincronização',

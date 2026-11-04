@@ -258,4 +258,57 @@ void main() {
       semantics.dispose();
     }
   });
+  for (final surface in ['title', 'content']) {
+    testWidgets(
+      'dragging $surface scrubs the title and page together, then cancels cleanly',
+      (tester) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        var selected = 0;
+        await tester.pumpWidget(
+          BrockmannApp(
+            home: StatefulBuilder(
+              builder: (context, set) => BrockmannAdaptiveScaffold(
+                destinations: const ['people', 'schedule', 'passes'],
+                selected: selected,
+                onChanged: (value) => set(() => selected = value),
+                body: const ColoredBox(
+                  color: Colors.white,
+                  child: SizedBox.expand(),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final target = surface == 'title'
+            ? find.byType(BrockmannPivot)
+            : find.byType(BrockmannPivotViewport);
+        final gesture = await tester.startGesture(tester.getCenter(target));
+        await gesture.moveBy(const Offset(-60, 0));
+        await tester.pump();
+        expect(selected, 0);
+        expect(tester.getTopLeft(find.text('people')).dx, lessThan(12));
+        final frame = tester.widget<BrockmannPageFrame>(
+          find.byKey(const ValueKey('brockmann-pivot-frame')),
+        );
+        expect(frame.progress, lessThan(0));
+        await gesture.cancel();
+        await tester.pumpAndSettle();
+        expect(selected, 0);
+        expect(tester.getTopLeft(find.text('people')).dx, closeTo(12, 1));
+        expect(
+          tester
+              .widget<BrockmannPageFrame>(
+                find.byKey(const ValueKey('brockmann-pivot-frame')),
+              )
+              .progress,
+          closeTo(0, .001),
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 }

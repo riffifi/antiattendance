@@ -4,7 +4,6 @@ import 'l10n.dart';
 
 import 'package:flutter/material.dart';
 import 'package:brockmann/brockmann.dart';
-import 'package:flutter/services.dart';
 
 Future<T?> showExpressiveDialog<T>({
   required BuildContext context,
@@ -21,7 +20,7 @@ Future<T?> showExpressiveDialog<T>({
   pageBuilder: (context, _, _) =>
       PredictiveBackSurface(child: builder(context)),
   transitionBuilder: (context, animation, _, child) =>
-      FadeTransition(opacity: animation, child: child),
+      BrockmannModalTransition(animation: animation, child: child),
 );
 
 Future<T?> showExpressiveSheet<T>({
@@ -152,77 +151,19 @@ class AppPassPicker extends StatelessWidget {
 
 /// Makes popup-route animations follow Android's back gesture, including cancel.
 /// Pages use the theme's PredictiveBackPageTransitionsBuilder instead.
-class PredictiveBackSurface extends StatefulWidget {
-  const PredictiveBackSurface({super.key, required this.child});
-  final Widget child;
-
-  @override
-  State<PredictiveBackSurface> createState() => _PredictiveBackSurfaceState();
-}
-
-class _PredictiveBackSurfaceState extends State<PredictiveBackSurface>
-    with WidgetsBindingObserver {
-  ModalRoute<dynamic>? _gestureRoute;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  bool handleStartBackGesture(PredictiveBackEvent event) {
-    final route = ModalRoute.of(context);
-    if (event.isButtonEvent ||
-        route == null ||
-        !route.isCurrent ||
-        !route.popGestureEnabled ||
-        Theme.of(context).platform != TargetPlatform.android) {
-      return false;
-    }
-    _gestureRoute = route;
-    route.handleStartBackGesture(progress: 1 - event.progress);
-    return true;
-  }
-
-  @override
-  void handleUpdateBackGestureProgress(PredictiveBackEvent event) {
-    _gestureRoute?.handleUpdateBackGestureProgress(
-      progress: 1 - event.progress,
-    );
-  }
-
-  @override
-  void handleCancelBackGesture() {
-    _gestureRoute?.handleCancelBackGesture();
-    _gestureRoute = null;
-  }
-
-  @override
-  void handleCommitBackGesture() {
-    _gestureRoute?.handleCommitBackGesture();
-    _gestureRoute = null;
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => widget.child;
-}
+typedef PredictiveBackSurface = BrockmannPredictiveBackSurface;
 
 /// Brockmann command band with typed app actions and Android Back dismissal.
 class AppActionMenu extends StatelessWidget {
   const AppActionMenu({
     super.key,
     required this.entries,
+    this.title,
     required this.anchorBuilder,
     required this.onSelected,
   });
   final List<CampusMenuEntry> entries;
+  final String? title;
   final CampusMenuAnchorBuilder anchorBuilder;
   final ValueChanged<Object?> onSelected;
 
@@ -230,7 +171,7 @@ class AppActionMenu extends StatelessWidget {
   Widget build(BuildContext context) => anchorBuilder(context, () async {
     final selected = await showBrockmannActionSheet<CampusMenuEntry>(
       context,
-      title: tr(context, 'Управление', 'Manage'),
+      title: title ?? tr(context, 'Управление', 'Manage'),
       entries: [
         for (final entry in entries)
           BrockmannMenuEntry(

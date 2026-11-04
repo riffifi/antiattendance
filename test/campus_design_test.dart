@@ -1,3 +1,4 @@
+import 'package:antiattendance/expressive.dart';
 import 'package:antiattendance/screen_navigation.dart';
 
 import 'frontend_test_helpers.dart';
@@ -361,8 +362,51 @@ void main() {
           'Settings',
           'About',
           'Updates',
+          'Dialog',
+          'Menu',
         ].indexed) {
-          if (index >= 3) {
+          if (index == 6) {
+            showExpressiveDialog<void>(
+              context: tester.element(find.byType(UpdatesPage)),
+              builder: (context) => BrockmannDialog(
+                title: const Text('Rename account'),
+                content: const BrockmannTextField(
+                  label: 'Name',
+                  initialValue: 'Alex Morgan',
+                ),
+                actions: [
+                  CampusButton.text(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                  CampusButton.filled(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Save'),
+                  ),
+                ],
+              ),
+            );
+            await tester.pumpAndSettle();
+          } else if (index == 7) {
+            tester.state<NavigatorState>(find.byType(Navigator).first).pop();
+            await tester.pumpAndSettle();
+            showBrockmannActionSheet<String>(
+              tester.element(find.byType(UpdatesPage)),
+              title: 'Alex Morgan',
+              entries: const [
+                BrockmannMenuEntry(value: 'check', label: 'Check session'),
+                BrockmannMenuEntry(value: 'rename', label: 'Rename'),
+                BrockmannMenuEntry(value: 'login', label: 'Sign in again'),
+                BrockmannMenuEntry(value: 'group', label: 'Choose group'),
+                BrockmannMenuEntry(
+                  value: 'delete',
+                  label: 'Delete',
+                  destructive: true,
+                ),
+              ],
+            );
+            await tester.pumpAndSettle();
+          } else if (index >= 3) {
             tester
                 .state<NavigatorState>(find.byType(Navigator).first)
                 .push(

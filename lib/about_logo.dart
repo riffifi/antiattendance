@@ -11,7 +11,13 @@ import 'l10n.dart';
 
 /// A rigid badge that returns to its resting pose after direct manipulation.
 class AboutLogo extends StatefulWidget {
-  const AboutLogo({super.key});
+  const AboutLogo({
+    super.key,
+    this.size = 144,
+    this.reserveRotationSpace = true,
+  });
+  final double size;
+  final bool reserveRotationSpace;
   @override
   State<AboutLogo> createState() => _AboutLogoState();
 }
@@ -130,14 +136,19 @@ class _AboutLogoState extends State<AboutLogo>
                 onPanUpdate: (details) =>
                     _rotate(details.delta.dx * .018, -details.delta.dy * .008),
                 child: SizedBox(
-                  width: 240,
-                  height: 208,
+                  width: widget.reserveRotationSpace
+                      ? widget.size * 5 / 3
+                      : widget.size,
+                  height: widget.reserveRotationSpace
+                      ? widget.size * 13 / 9
+                      : widget.size,
                   child: Stack(
+                    clipBehavior: Clip.none,
                     alignment: Alignment.center,
                     children: [
                       SizedBox(
-                        width: 144,
-                        height: 144,
+                        width: widget.size,
+                        height: widget.size,
                         child: Stack(
                           children: [
                             Positioned.fill(
@@ -160,7 +171,12 @@ class _AboutLogoState extends State<AboutLogo>
                                   'about-logo-face-transform',
                                 ),
                                 transform: rotation.clone()
-                                  ..translateByDouble(0, 0, back ? -3 : 3, 1)
+                                  ..translateByDouble(
+                                    0,
+                                    0,
+                                    (back ? -1 : 1) * widget.size / 48,
+                                    1,
+                                  )
                                   ..rotateY(back ? math.pi : 0),
                                 child: Container(
                                   key: ValueKey(
@@ -169,7 +185,9 @@ class _AboutLogoState extends State<AboutLogo>
                                         : 'about-logo-front',
                                   ),
                                   padding: EdgeInsets.all(
-                                    back ? (_portraitBack ? 0 : 18) : 22,
+                                    (back ? (_portraitBack ? 0 : 18) : 22) *
+                                        widget.size /
+                                        144,
                                   ),
                                   clipBehavior: Clip.antiAlias,
                                   decoration: BoxDecoration(
@@ -190,8 +208,8 @@ class _AboutLogoState extends State<AboutLogo>
                                                   key: const ValueKey(
                                                     'about-logo-portrait',
                                                   ),
-                                                  width: 144,
-                                                  height: 144,
+                                                  width: widget.size,
+                                                  height: widget.size,
                                                   fit: BoxFit.cover,
                                                   alignment:
                                                       Alignment.topCenter,
@@ -200,17 +218,17 @@ class _AboutLogoState extends State<AboutLogo>
                                                 )
                                               : SvgPicture.asset(
                                                   'icon/legacy_brand.svg',
-                                                  width: 108,
-                                                  height: 108,
+                                                  width: widget.size * .75,
+                                                  height: widget.size * .75,
                                                   semanticsLabel: tr(
                                                     context,
                                                     'Прежний логотип',
                                                     'Original logo',
                                                   ),
                                                 ))
-                                        : const CampusBrand(
-                                            width: 100,
-                                            height: 48,
+                                        : CampusBrand(
+                                            width: widget.size * 100 / 144,
+                                            height: widget.size / 3,
                                           ),
                                   ),
                                 ),
@@ -242,12 +260,12 @@ class _BadgeBodyPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
-    const radius = 30.0;
+    const radius = 0.0;
     final halfWidth = size.width / 2;
     final halfHeight = size.height / 2;
     final points = <Offset>[];
     final matrix = rotation.storage;
-    for (final depth in [-3.0, 3.0]) {
+    for (final depth in [-size.width / 48, size.width / 48]) {
       for (var corner = 0; corner < 4; corner++) {
         final cx = (corner == 0 || corner == 3 ? 1 : -1) * (halfWidth - radius);
         final cy = (corner < 2 ? 1 : -1) * (halfHeight - radius);

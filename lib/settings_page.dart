@@ -124,17 +124,20 @@ class _SettingsPageState extends State<SettingsPage> {
           children: [
             CampusSectionTitle(tr(context, 'Моя группа', 'My group')),
             CampusListItem(
+              showDivider: false,
               headline: tr(context, 'Все группы', 'All groups'),
               selected: _myGroup == null,
               onTap: () => Navigator.pop(context, 'all'),
             ),
             for (final group in groups.values)
               CampusListItem(
+                showDivider: false,
                 headline: group.name,
                 selected: group.id == _myGroup?.id,
                 onTap: () => Navigator.pop(context, group),
               ),
             CampusListItem(
+              showDivider: false,
               headline: tr(context, 'Найти группу', 'Find a group'),
               onTap: () => Navigator.pop(context, 'search'),
             ),
@@ -406,6 +409,7 @@ class _SettingsPageState extends State<SettingsPage> {
           tr(context, 'Аккаунт и синхронизация', 'Account & sync'),
           [
             CampusListItem(
+              showDivider: false,
               headline: 'AA ID',
               supportingText: tr(
                 context,
@@ -415,6 +419,7 @@ class _SettingsPageState extends State<SettingsPage> {
               onTap: () => _openPage(const AaIdAccountPage()),
             ),
             CampusListItem(
+              showDivider: false,
               headline: tr(context, 'Сервер сессий', 'Session server'),
               supportingText: tr(
                 context,
@@ -424,6 +429,7 @@ class _SettingsPageState extends State<SettingsPage> {
               onTap: () => _openPage(const SessionServerPage()),
             ),
             CampusListItem(
+              showDivider: false,
               headline: tr(context, 'Моя группа', 'My group'),
               supportingText:
                   _myGroup?.name ?? tr(context, 'Все группы', 'All groups'),
@@ -465,6 +471,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: 16),
           CampusListItem(
+            showDivider: false,
             headline: tr(context, 'Язык приложения', 'App language'),
             supportingText:
                 _languages[_language] ??
@@ -475,6 +482,7 @@ class _SettingsPageState extends State<SettingsPage> {
         if (Theme.of(context).platform == TargetPlatform.android)
           SettingsSection(tr(context, 'Каждый день', 'Daily tools'), [
             CampusListItem(
+              showDivider: false,
               headline: tr(context, 'Итоги учебного дня', 'Study day summary'),
               supportingText: tr(
                 context,
@@ -488,10 +496,12 @@ class _SettingsPageState extends State<SettingsPage> {
               onTap: _summarySaving ? null : () => _chooseSummary(!_daySummary),
             ),
             CampusListItem(
+              showDivider: false,
               headline: tr(context, 'Последние итоги', 'Last summary'),
               onTap: _saving ? null : () => _openPage(const StudySummaryPage()),
             ),
             CampusListItem(
+              showDivider: false,
               headline: tr(context, 'Виджет отметки всех', 'Mark-all widget'),
               supportingText: tr(
                 context,
@@ -506,6 +516,7 @@ class _SettingsPageState extends State<SettingsPage> {
             AnimatedBuilder(
               animation: widget.updates!,
               builder: (context, _) => CampusListItem(
+                showDivider: false,
                 headline: tr(context, 'Обновления', 'Updates'),
                 supportingText: widget.updates!.updateAvailable
                     ? trf(
@@ -525,12 +536,14 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
           CampusListItem(
+            showDivider: false,
             headline: tr(context, 'О AntiAttendance', 'About AntiAttendance'),
             onTap: () => _openPage(const AboutPage()),
           ),
         ]),
         SettingsSection(tr(context, 'Тестирование', 'Testing'), [
           CampusListItem(
+            showDivider: false,
             headline: tr(context, 'Проверка NFC', 'NFC diagnostics'),
             supportingText: tr(
               context,
@@ -540,6 +553,7 @@ class _SettingsPageState extends State<SettingsPage> {
             onTap: () => _openPage(const NfcDiagnosticsPage()),
           ),
           CampusListItem(
+            showDivider: false,
             headline: tr(context, 'Сигнал турникета', 'Turnstile signal'),
             supportingText: tr(
               context,
@@ -583,6 +597,7 @@ class _Choice extends StatelessWidget {
         color: Colors.transparent,
         borderRadius: BorderRadius.zero,
         child: CampusListItem(
+          showDivider: false,
           selected: selected,
           headline: title,
           trailing: AnimatedSwitcher(

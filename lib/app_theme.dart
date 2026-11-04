@@ -185,6 +185,7 @@ class _AATheme extends BrockmannThemeData {
             ? const Color(0xff244bd8)
             : const Color(0xff91aaff),
         tilt: false,
+        style: BrockmannStyle.wp8,
       );
   final AppThemeMode mode;
   @override

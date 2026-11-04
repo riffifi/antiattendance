@@ -6,7 +6,7 @@ abstract final class AaPageLayout {
   static const maxWidth = 960.0;
   static EdgeInsets insets(BuildContext context) => EdgeInsets.fromLTRB(
     MediaQuery.sizeOf(context).width < 600 ? 24 : 40,
-    16,
+    12,
     MediaQuery.sizeOf(context).width < 600 ? 24 : 40,
     MediaQuery.paddingOf(context).bottom + 32,
   );

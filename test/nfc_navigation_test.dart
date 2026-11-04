@@ -50,7 +50,7 @@ void main() {
     await tester.tap(find.descendant(of: bar, matching: find.text('passes')));
     await tester.pumpAndSettle();
     expect(find.byType(NfcPassPage), findsOneWidget);
-    expect(find.text('Enroll passes'), findsOneWidget);
+    expect(find.byTooltip('Enroll passes'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.ensureVisible(
       find.descendant(of: bar, matching: find.text('attendance')),

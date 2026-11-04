@@ -174,7 +174,7 @@ void main() {
     );
     expect(find.text('Alice'), findsOneWidget);
     expect(find.text('Bob'), findsNothing);
-    expect(find.text('Scan QR · 1'), findsOneWidget);
+    expect(find.byTooltip('Scan QR · 1'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     await tester.pumpAndSettle();
   });

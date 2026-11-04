@@ -59,3 +59,15 @@ motion still respected. These are app timings, not measured WP8 timings.
 About now uses a compact square identity, version, project link and quiet
 attribution. Its GitHub command stays at the bottom; the logo’s rotation remains
 an unlabelled Easter egg. The page supports narrow layouts and large text.
+
+The phone app bar now has compact icons, an expanded labelled state and a
+minimized ellipsis strip. Tap the top-right ellipsis to expand/collapse, drag up
+to expand or down to minimize, and use Back to close an expanded bar. Vertical
+dragging tracks the pointer; cancellation restores the previous state. Hidden
+commands are excluded from interaction and accessibility. Android’s navigation
+safe area and a 48 dp minimum handle remain available. Schedule commands now use
+the same bar as Attendance, Passes and About.
+
+WP8 pivot titles now share the 24 dp reading margin with the page content.
+Settings avoids a second redundant heading; pass status and list rows use flat
+surfaces with the same type hierarchy as Attendance.

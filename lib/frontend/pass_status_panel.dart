@@ -70,13 +70,7 @@ class PassStatusPanel extends StatelessWidget {
     return Semantics(
       liveRegion: running,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(color: running ? t.foreground : t.line),
-            bottom: BorderSide(color: t.line),
-          ),
-        ),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

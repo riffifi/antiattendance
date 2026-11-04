@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../app_haptics.dart';
 import '../icons/campus_icon.dart';
+import '../l10n.dart';
 
 @immutable
 class CampusCommand {
@@ -18,93 +19,28 @@ class CampusCommand {
   final VoidCallback? onPressed;
 }
 
-/// WP8's command vocabulary: circled glyphs, quiet labels, a fixed bottom band.
+/// AA icons, localization and haptics on the shared phone application bar.
 class CampusCommandBar extends StatelessWidget {
-  const CampusCommandBar({super.key, required this.commands, this.overflow})
-    : assert(commands.length <= 4);
+  const CampusCommandBar({super.key, required this.commands});
   final List<CampusCommand> commands;
-  final Widget? overflow;
   @override
-  Widget build(BuildContext context) {
-    final t = context.brockmann;
-    return BrockmannInteractionRegion(
-      child: ColoredBox(
-        color: t.surface,
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                for (final command in commands)
-                  Flexible(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 136),
-                      child: Tooltip(
-                        message: command.tooltip ?? command.label,
-                        excludeFromSemantics: true,
-                        child: BrockmannPressable(
-                          label: command.tooltip ?? command.label,
-                          onPressed: command.onPressed == null
-                              ? null
-                              : () {
-                                  AppHaptics.action(primary: false);
-                                  command.onPressed!();
-                                },
-                          builder: (context, pressed) {
-                            final ink = command.onPressed == null
-                                ? t.disabled
-                                : t.foreground;
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 4,
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 34,
-                                    height: 34,
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: ink,
-                                        width: 1.5,
-                                      ),
-                                      color: pressed ? ink : null,
-                                    ),
-                                    child: CampusIcon(
-                                      command.icon,
-                                      size: 20,
-                                      color: pressed ? t.background : ink,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    command.label,
-                                    textAlign: TextAlign.center,
-                                    style: BrockmannType.caption.style(
-                                      color: ink,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ),
-                ?overflow,
-              ],
-            ),
-          ),
+  Widget build(BuildContext context) => BrockmannCommandBar(
+    expandLabel: tr(context, 'Развернуть панель', 'Expand app bar'),
+    collapseLabel: tr(context, 'Свернуть панель', 'Collapse app bar'),
+    minimizeLabel: tr(context, 'Скрыть команды', 'Minimize app bar'),
+    commands: [
+      for (final command in commands)
+        BrockmannCommand(
+          icon: CampusIcon(command.icon, size: 20),
+          label: command.label,
+          tooltip: command.tooltip,
+          onPressed: command.onPressed == null
+              ? null
+              : () {
+                  AppHaptics.action(primary: false);
+                  command.onPressed!();
+                },
         ),
-      ),
-    );
-  }
+    ],
+  );
 }

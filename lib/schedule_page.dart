@@ -2,6 +2,7 @@ import 'package:brockmann/brockmann.dart';
 
 import 'campus_maps_page.dart';
 import 'frontend/schedule_calendar.dart';
+import 'frontend/command_bar.dart';
 import 'frontend/page_layout.dart';
 import 'campus_design.dart';
 import 'expressive.dart';
@@ -347,150 +348,188 @@ class _SchedulePageState extends State<SchedulePage> {
     }).toList();
     final dateText = MaterialLocalizations.of(context)
         .formatMediumDate(DateTime(_day.year, _day.month, _day.day));
-    return RefreshIndicator(
-      onRefresh: () => _refresh(force: true),
-      child: ListView(
-        key: const PageStorageKey('schedule-scroll'),
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: AaPageLayout.insets(context),
-        children: [
-          CampusHeader(title: tr(context, 'Расписание', 'Schedule')),
-          ScheduleCalendar(
-            day: _day,
-            today: today,
-            groups: groups,
-            groupId: _groupId,
-            lessonDays: _lessons.map((l) => l.start).toSet(),
-            loading: _loading,
-            onDayChanged: (day) {
-              if (mounted) _selectDay(day);
-            },
-            onGroupChanged: (id) {
-              setState(() => _groupId = id);
-              widget.onGroupChanged?.call(id);
-              _refresh();
-            },
+    return Column(
+      children: [
+        Expanded(
+          child: RefreshIndicator(
             onRefresh: () => _refresh(force: true),
-            onMaps: () => Navigator.of(context).push<void>(
-              MaterialPageRoute(
-                builder: (_) => CampusMapsPage(lessons: dailyLessons),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          if (groups.isEmpty)
-            AaEmptyState(
-              title: tr(context, 'Выберите группу', 'Choose a group'),
-              detail: tr(
-                context,
-                'Выберите группу в меню действий аккаунта на экране посещаемости.',
-                'Assign a group to an account using its actions menu on the attendance screen.',
-              ),
-            )
-          else ...[
-            if (dailyLessons.isNotEmpty || _loading || _error != null)
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            child: ListView(
+              key: const PageStorageKey('schedule-scroll'),
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: AaPageLayout.insets(context),
+              children: [
+                CampusHeader(title: tr(context, 'Расписание', 'Schedule')),
+                ScheduleCalendar(
+                  day: _day,
+                  today: today,
+                  groups: groups,
+                  groupId: _groupId,
+                  lessonDays: _lessons.map((l) => l.start).toSet(),
+                  onDayChanged: (day) {
+                    if (mounted) _selectDay(day);
+                  },
+                  onGroupChanged: (id) {
+                    setState(() => _groupId = id);
+                    widget.onGroupChanged?.call(id);
+                    _refresh();
+                  },
+                ),
+                const SizedBox(height: 24),
+                if (groups.isEmpty)
+                  AaEmptyState(
+                    title: tr(context, 'Выберите группу', 'Choose a group'),
+                    detail: tr(
+                      context,
+                      'Выберите группу в меню действий аккаунта на экране посещаемости.',
+                      'Assign a group to an account using its actions menu on the attendance screen.',
+                    ),
+                  )
+                else ...[
+                  if (dailyLessons.isNotEmpty || _loading || _error != null)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text(
-                          _sameDay(_day, today)
-                              ? tr(context, 'Сегодня', 'Today')
-                              : dateText,
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w400,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _sameDay(_day, today)
+                                    ? tr(context, 'Сегодня', 'Today')
+                                    : dateText,
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                              if (!_loading && _error == null)
+                                Text(
+                                  (_sameDay(_day, today)
+                                          ? '$dateText · '
+                                          : '') +
+                                      classCountLabel(
+                                        context,
+                                        dailyLessons.length,
+                                      ),
+                                  style: TextStyle(
+                                    color: context.palette.muted,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
-                        if (!_loading && _error == null)
-                          Text(
-                            (_sameDay(_day, today) ? '$dateText · ' : '') +
-                                classCountLabel(context, dailyLessons.length),
-                            style: TextStyle(
-                              color: context.palette.muted,
-                              fontSize: 13,
-                            ),
-                          ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-            const SizedBox(height: 14),
-            if (_error != null && dailyLessons.isNotEmpty) ...[
-              Text(_error!, style: TextStyle(color: context.palette.muted)),
-              const SizedBox(height: 12),
-            ],
-            if (_loading && dailyLessons.isEmpty) ...[
-              const SizedBox(height: 25),
-              const Center(child: CampusProgress.compact()),
-            ] else if (_error != null && dailyLessons.isEmpty) ...[
-              _EmptyPanel(
-                title: _error!,
-                detail: tr(
-                  context,
-                  'Потяните вниз или нажмите «Обновить».',
-                  'Pull down or tap refresh to retry.',
-                ),
-              ),
-            ] else if (dailyLessons.isEmpty) ...[
-              _EmptyPanel(
-                title: tr(context, 'Свободный день', 'A free day'),
-                detail: tr(
-                  context,
-                  'В этот день занятий нет.',
-                  'No classes on this day.',
-                ),
-              ),
-            ] else ...[
-              for (var index = 0; index < dailyLessons.length; index++) ...[
-                if (index > 0) const SizedBox(height: 10),
-                BrockmannFeather(
-                  index: index,
-                  child: _LessonRow(
-                    lesson: dailyLessons[index],
-                    confirmed: _confirmed(dailyLessons[index]),
-                    time: _time(dailyLessons[index].start),
-                    endTime: _time(dailyLessons[index].end),
-                    isCurrent:
-                        _sameDay(_day, today) &&
-                        !now.isBefore(dailyLessons[index].start) &&
-                        now.isBefore(dailyLessons[index].end),
-                    onTap: () =>
-                        _openLesson(dailyLessons[index], groupAccounts),
-                    onRoom: () => Navigator.of(context).push<void>(
-                      MaterialPageRoute(
-                        builder: (_) => CampusMapsPage(
-                          room: dailyLessons[index].location,
-                          lessons: dailyLessons,
-                        ),
+                  const SizedBox(height: 14),
+                  if (_error != null && dailyLessons.isNotEmpty) ...[
+                    Text(
+                      _error!,
+                      style: TextStyle(color: context.palette.muted),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (_loading && dailyLessons.isEmpty) ...[
+                    const SizedBox(height: 25),
+                    const Center(child: CampusProgress.compact()),
+                  ] else if (_error != null && dailyLessons.isEmpty) ...[
+                    _EmptyPanel(
+                      title: _error!,
+                      detail: tr(
+                        context,
+                        'Потяните вниз или нажмите «Обновить».',
+                        'Pull down or tap refresh to retry.',
                       ),
                     ),
-                  ),
-                ),
+                  ] else if (dailyLessons.isEmpty) ...[
+                    _EmptyPanel(
+                      title: tr(context, 'Свободный день', 'A free day'),
+                      detail: tr(
+                        context,
+                        'В этот день занятий нет.',
+                        'No classes on this day.',
+                      ),
+                    ),
+                  ] else ...[
+                    for (
+                      var index = 0;
+                      index < dailyLessons.length;
+                      index++
+                    ) ...[
+                      if (index > 0) const SizedBox(height: 10),
+                      BrockmannFeather(
+                        index: index,
+                        child: _LessonRow(
+                          lesson: dailyLessons[index],
+                          confirmed: _confirmed(dailyLessons[index]),
+                          time: _time(dailyLessons[index].start),
+                          endTime: _time(dailyLessons[index].end),
+                          isCurrent:
+                              _sameDay(_day, today) &&
+                              !now.isBefore(dailyLessons[index].start) &&
+                              now.isBefore(dailyLessons[index].end),
+                          onTap: () =>
+                              _openLesson(dailyLessons[index], groupAccounts),
+                          onRoom: () => Navigator.of(context).push<void>(
+                            MaterialPageRoute(
+                              builder: (_) => CampusMapsPage(
+                                room: dailyLessons[index].location,
+                                lessons: dailyLessons,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                  if (dayConfirmations.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    Text(
+                      tr(context, 'Другие отметки', 'Other confirmations'),
+                      style: TextStyle(fontWeight: FontWeight.w400),
+                    ),
+                    const SizedBox(height: 7),
+                    Text(
+                      dayConfirmations
+                          .map((mark) => mark.accountLabel)
+                          .toSet()
+                          .join(', '),
+                      style: TextStyle(color: context.palette.muted),
+                    ),
+                  ],
+                ],
               ],
-            ],
-            if (dayConfirmations.isNotEmpty) ...[
-              const SizedBox(height: 24),
-              Text(
-                tr(context, 'Другие отметки', 'Other confirmations'),
-                style: TextStyle(fontWeight: FontWeight.w400),
+            ),
+          ),
+        ),
+        CampusCommandBar(
+          commands: [
+            CampusCommand(
+              icon: Icons.map_outlined,
+              label: tr(context, 'карты', 'maps'),
+              tooltip: tr(context, 'Карты кампусов', 'Campus maps'),
+              onPressed: () => Navigator.of(context).push<void>(
+                MaterialPageRoute(
+                  builder: (_) => CampusMapsPage(lessons: dailyLessons),
+                ),
               ),
-              const SizedBox(height: 7),
-              Text(
-                dayConfirmations
-                    .map((mark) => mark.accountLabel)
-                    .toSet()
-                    .join(', '),
-                style: TextStyle(color: context.palette.muted),
+            ),
+            CampusCommand(
+              icon: Icons.refresh_rounded,
+              label: tr(context, 'Обновить', 'Refresh'),
+              onPressed: groups.isEmpty || _loading
+                  ? null
+                  : () => _refresh(force: true),
+            ),
+            if (!_sameDay(_day, today))
+              CampusCommand(
+                icon: Icons.today_outlined,
+                label: tr(context, 'Сегодня', 'Today'),
+                onPressed: () => _selectDay(today),
               ),
-            ],
           ],
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

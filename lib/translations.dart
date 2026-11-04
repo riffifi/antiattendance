@@ -1,6 +1,9 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  'Expand app bar': ('Développer la barre', 'Expandir barra', '展开应用栏'),
+  'Collapse app bar': ('Réduire la barre', 'Recolher barra', '收起应用栏'),
+  'Minimize app bar': ('Masquer les commandes', 'Ocultar comandos', '隐藏命令'),
   'Source code': ('Code source', 'Código-fonte', '源代码'),
   'Account & sync': (
     'Compte et synchronisation',

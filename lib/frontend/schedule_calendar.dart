@@ -18,9 +18,6 @@ class ScheduleCalendar extends StatelessWidget {
     required this.lessonDays,
     required this.onDayChanged,
     required this.onGroupChanged,
-    required this.onMaps,
-    required this.onRefresh,
-    required this.loading,
   });
   final DateTime day, today;
   final Map<int, String> groups;
@@ -28,8 +25,6 @@ class ScheduleCalendar extends StatelessWidget {
   final Set<DateTime> lessonDays;
   final ValueChanged<DateTime> onDayChanged;
   final ValueChanged<int> onGroupChanged;
-  final VoidCallback onMaps, onRefresh;
-  final bool loading;
   bool _same(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
   @override
@@ -52,74 +47,20 @@ class ScheduleCalendar extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        LayoutBuilder(
-          builder: (context, bounds) {
-            final picker = groups.isEmpty
-                ? null
-                : AppPassPicker(
-                    enabled: true,
-                    hint: tr(context, 'Группа', 'Group'),
-                    items: [
-                      for (final group in groups.entries)
-                        PassPickerItem(
-                          value: '${group.key}',
-                          label: group.value,
-                          selected: groupId == group.key,
-                        ),
-                    ],
-                    onChanged: (items) =>
-                        onGroupChanged(int.parse(items.first.value)),
-                  );
-            final maps = CampusTextAction(
-              icon: Icons.map_outlined,
-              onPressed: onMaps,
-              tooltip: tr(context, 'Карты кампусов', 'Campus maps'),
-              label: tr(context, 'карты', 'maps'),
-            );
-            final refresh = CampusTextAction(
-              icon: Icons.refresh_rounded,
-              onPressed: groups.isEmpty || loading ? null : onRefresh,
-              tooltip: tr(context, 'Обновить', 'Refresh'),
-              label: tr(context, 'Обновить', 'Refresh'),
-            );
-            final todayAction = _same(day, today)
-                ? null
-                : CampusButton.text(
-                    onPressed: () => onDayChanged(today),
-                    child: Text(tr(context, 'Сегодня', 'Today')),
-                  );
-            if (picker != null &&
-                bounds.maxWidth >= 320 &&
-                MediaQuery.textScalerOf(context).scale(16) <= 22) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(child: picker),
-                      const SizedBox(width: 8),
-                      maps,
-                      refresh,
-                    ],
-                  ),
-                  if (todayAction != null)
-                    Align(alignment: Alignment.centerLeft, child: todayAction),
-                ],
-              );
-            }
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                ?picker,
-                Wrap(
-                  spacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [maps, refresh, ?todayAction],
+        if (groups.isNotEmpty)
+          AppPassPicker(
+            enabled: true,
+            hint: tr(context, 'Группа', 'Group'),
+            items: [
+              for (final group in groups.entries)
+                PassPickerItem(
+                  value: '${group.key}',
+                  label: group.value,
+                  selected: groupId == group.key,
                 ),
-              ],
-            );
-          },
-        ),
+            ],
+            onChanged: (items) => onGroupChanged(int.parse(items.first.value)),
+          ),
         if (groups.isNotEmpty) ...[
           const SizedBox(height: 12),
           Row(

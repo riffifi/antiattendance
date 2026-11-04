@@ -1,4 +1,6 @@
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:antiattendance/l10n.dart';
+import 'package:brockmann/brockmann.dart';
 import 'package:antiattendance/campus_design.dart';
 import 'package:antiattendance/accounts.dart';
 import 'package:antiattendance/app_theme.dart';
@@ -162,11 +164,19 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text(startLabel), findsOneWidget);
+      expect(find.byTooltip(startLabel).hitTestable(), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.drag(find.byType(ListView).first, const Offset(0, -1300));
       await tester.pumpAndSettle();
-      expect(find.text(startLabel), findsOneWidget);
+      expect(find.byTooltip(startLabel).hitTestable(), findsOneWidget);
+      final barContext = tester.element(find.byType(BrockmannCommandBar));
+      await tester.tap(
+        find.bySemanticsLabel(
+          tr(barContext, 'Развернуть панель', 'Expand app bar'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(startLabel).hitTestable(), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
       await tester.pumpAndSettle();

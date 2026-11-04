@@ -15,3 +15,4 @@ export 'src/motion.dart';
 export 'src/inputs.dart';
 export 'src/interaction.dart' show BrockmannInteractionRegion;
 export 'src/pickers.dart';
+export 'src/command_bar.dart';

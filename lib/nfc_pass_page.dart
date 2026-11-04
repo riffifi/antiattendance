@@ -1048,7 +1048,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
         enabled: enabled && enrolled,
         child: Material(
           animationDuration: Duration.zero,
-          color: context.palette.surface,
+          color: context.brockmann.background,
           shape: Border(
             bottom: BorderSide(color: context.palette.line, width: .5),
           ),
@@ -1056,7 +1056,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
           child: InkWell(
             onTap: enabled && enrolled ? () => _toggle(account) : null,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 14, 8, 14),
+              padding: const EdgeInsets.symmetric(vertical: 16),
               child: Row(
                 children: [
                   if (enrolled && _single)
@@ -1077,8 +1077,8 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                         Text(
                           account.label,
                           style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w400,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -1101,7 +1101,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                                   'Enroll a pass',
                                 ),
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 14,
                             color: own
                                 ? context.palette.blue
                                 : context.palette.muted,
@@ -1238,12 +1238,9 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
               Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      tr(context, 'Пропуска', 'Passes'),
-                      style: const TextStyle(
-                        fontSize: 21,
-                        fontWeight: FontWeight.w400,
-                      ),
+                    child: BrockmannText(
+                      tr(context, 'Пропуска', 'Passes').toLowerCase(),
+                      role: BrockmannType.heading,
                     ),
                   ),
                   if (_numbers.isNotEmpty && !_single)
@@ -1497,11 +1494,7 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
         ),
         BrockmannInteractionRegion(
           child: Container(
-            padding: const EdgeInsets.only(bottom: 8),
-            decoration: BoxDecoration(
-              color: context.brockmann.surface,
-              border: Border(top: BorderSide(color: context.brockmann.line)),
-            ),
+            decoration: BoxDecoration(color: context.brockmann.surface),
             child: Column(
               children: [
                 if (_message != null)
@@ -1541,6 +1534,27 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                     label: Text(tr(context, 'Настройки NFC', 'NFC settings')),
                     style: CampusButtonStyle.text,
                   ),
+                if (_running && _numbers.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    _single
+                        ? tr(
+                            context,
+                            'Не закрывайте вкладку, пока пропуск активен.',
+                            'Keep this tab open while the pass is active.',
+                          )
+                        : tr(
+                            context,
+                            'Не закрывайте вкладку, пока очередь работает.',
+                            'Keep this tab open while the queue runs.',
+                          ),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: context.palette.muted,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
                 CampusCommandBar(
                   commands: [
                     CampusCommand(
@@ -1588,27 +1602,6 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                     ),
                   ],
                 ),
-                if (_running && _numbers.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    _single
-                        ? tr(
-                            context,
-                            'Не закрывайте вкладку, пока пропуск активен.',
-                            'Keep this tab open while the pass is active.',
-                          )
-                        : tr(
-                            context,
-                            'Не закрывайте вкладку, пока очередь работает.',
-                            'Keep this tab open while the queue runs.',
-                          ),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: context.palette.muted,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
               ],
             ),
           ),

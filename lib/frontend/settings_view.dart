@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:brockmann/brockmann.dart';
 
 import '../campus_design.dart';
-import '../l10n.dart';
 import 'page_layout.dart';
 
 @immutable
@@ -25,8 +24,6 @@ class SettingsView extends StatelessWidget {
     child: ListView(
       padding: AaPageLayout.insets(context),
       children: [
-        if (embedded)
-          CampusHeader(title: tr(context, 'Параметры', 'Preferences')),
         for (final (sectionIndex, section) in sections.indexed) ...[
           Padding(
             padding: EdgeInsets.only(

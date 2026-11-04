@@ -97,3 +97,16 @@ use a small context label with 20 dp action text, independently of page headings
 Checks hold the pointer before release to verify both title and content movement,
 cancel gestures, preserve a keyed form through repeated changes and window resize,
 and scrub/cancel/commit predictive Back on an ordinary page route.
+
+## Application bar completion (0.3.2)
+
+The application bar now exposes its ellipsis in every state. Compact mode shows
+icons, expanded mode reveals labels, and a downward drag leaves the minimized
+strip. Drag progress is continuous; cancellation and Back preserve page state.
+The minimized strip keeps a 48 dp accessible handle on Android. The WP8 profile
+also aligns pivot headings with the content reading margin.
+
+Primary references:
+- [ApplicationBar.Mode, including mini/default resting sizes](https://learn.microsoft.com/en-us/previous-versions/windows/apps/hh312718%28v%3Dvs.105%29)
+- [ApplicationBar and its ellipsis expansion](https://learn.microsoft.com/en-us/previous-versions/windows/apps/ff402616%28v%3Dvs.105%29)
+- [Windows Phone drawer interaction: tap or drag the ellipsis](https://blogs.windows.com/windowsdeveloper/2014/04/18/winjs-on-windows-phone-8-1/)

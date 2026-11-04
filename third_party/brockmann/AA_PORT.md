@@ -1,4 +1,4 @@
-Vendored from Brockmann Flutter at commit 7960144 (0.3.1), including the shared app-integration controls and revised Metro application frame.
+Vendored from Brockmann Flutter at commit 6ba8cd1 (0.3.2), including the shared app-integration controls and revised Metro application frame.
 
 The framework includes rich button content, compact selection controls, native text input options, arbitrary dialog content, localized calendar actions, and descendant semantics. These APIs now live in the source framework as well as this vendored copy.
 
@@ -21,3 +21,7 @@ primitives. AA's schedule and settings use the revised spacing and hierarchy.
 AA selects the optional WP8 profile in 0.3.1: outlined square controls, readable
 light text fields, full-width message bands and faster pivot/route transitions.
 Geist remains the interface typeface.
+
+The 0.3.2 revision adds the shared three-state phone application bar with its
+ellipsis handle, continuous vertical dragging, cancellation and Back-to-collapse.
+The WP8 pivot margin now aligns with the page’s reading column.

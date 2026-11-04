@@ -116,3 +116,9 @@ own authentication, persistence, cancellation and service lifecycle callbacks.
 
 Use `BrockmannThemeData(style: BrockmannStyle.wp8)` for the WP8 control and motion
 profile. The default style remains available.
+
+`BrockmannCommandBar` supports up to four icon commands, compact / expanded /
+minimized presentations, an ellipsis handle, direct vertical gestures,
+keyboard and screen-reader actions, cancellation, and Back-to-collapse. Labels
+expand to fit large system text. The 48 dp minimized handle is an Android touch
+adaptation.

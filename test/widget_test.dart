@@ -221,7 +221,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('посещаемость'), findsOneWidget);
-    expect(find.text('Сканировать QR · 0'), findsOneWidget);
+    expect(find.byTooltip('Сканировать QR · 0'), findsOneWidget);
     expect(find.text('Режим очереди'), findsNothing);
     await tester.scrollUntilVisible(
       find.text('аккаунты'),
@@ -254,7 +254,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Сканировать QR · 2'));
+    await tester.tap(find.byTooltip('Сканировать QR · 2'));
     await tester.pumpAndSettle();
     expect(api.calls, containsAll(['abc:one', 'abc:two']));
     await tester.scrollUntilVisible(
@@ -311,7 +311,7 @@ void main() {
       -200,
       scrollable: bodyScroll(),
     );
-    expect(find.text('Scan QR · 1'), findsOneWidget);
+    expect(find.byTooltip('Scan QR · 1'), findsOneWidget);
     await tester.tap(find.text('Manage'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Assign group'));

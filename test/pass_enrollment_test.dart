@@ -214,7 +214,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Enroll passes'));
+      await tester.tap(find.byTooltip('Enroll passes'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Continue'));
       await tester.pump();

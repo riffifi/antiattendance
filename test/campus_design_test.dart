@@ -273,7 +273,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('v1.2.13'), findsOneWidget);
         expect(tester.takeException(), isNull);
-        final github = tester.getCenter(find.text('GitHub'));
+        final github = tester.getCenter(find.byTooltip('GitHub'));
         expect(github.dy, greaterThan(460));
         expect(github.dy, lessThan(568));
       },
@@ -443,6 +443,28 @@ void main() {
                 .writeAsBytes(bytes!.buffer.asUint8List());
             image.dispose();
           });
+          if (index == 4) {
+            for (final state in ['expanded', 'minimized']) {
+              if (state == 'expanded') {
+                await tester.tap(find.bySemanticsLabel('Expand app bar'));
+              } else {
+                await tester.drag(
+                  find.bySemanticsLabel('Collapse app bar'),
+                  const Offset(0, 60),
+                );
+              }
+              await tester.pumpAndSettle();
+              await tester.runAsync(() async {
+                final image = await render.toImage(pixelRatio: 2);
+                final bytes = await image.toByteData(
+                  format: ui.ImageByteFormat.png,
+                );
+                await File('$directory/${mode.name}-about-$state.png')
+                    .writeAsBytes(bytes!.buffer.asUint8List());
+                image.dispose();
+              });
+            }
+          }
         }
         await tester.pumpWidget(const SizedBox());
         await tester.pumpAndSettle();

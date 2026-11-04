@@ -186,10 +186,15 @@ class _BrockmannPivotState extends State<BrockmannPivot>
                   ? null
                   : const NeverScrollableScrollPhysics(),
               padding: EdgeInsets.only(
-                left: 12,
+                left: t.windowsPhone ? 24 : 12,
                 right: widget.compact || _widths.isEmpty
                     ? 12
-                    : math.max(12.0, bounds.maxWidth - _widths.last - 12),
+                    : math.max(
+                        12.0,
+                        bounds.maxWidth -
+                            _widths.last -
+                            (t.windowsPhone ? 24 : 12),
+                      ),
               ),
               child: AnimatedBuilder(
                 animation: _motion,

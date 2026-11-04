@@ -139,7 +139,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester.getRect(find.text('Student 0')).bottom,
-      lessThan(tester.getRect(find.text('Scan QR · 12')).top),
+      lessThan(tester.getRect(find.byTooltip('Scan QR · 12')).top),
     );
     await tester.scrollUntilVisible(
       find.text('Student 11'),
@@ -150,9 +150,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester.getRect(find.text('Student 11')).bottom,
-      lessThan(tester.getRect(find.text('Scan QR · 12')).top),
+      lessThan(tester.getRect(find.byTooltip('Scan QR · 12')).top),
     );
-    expect(find.text('Scan QR · 12'), findsOneWidget);
+    expect(find.byTooltip('Scan QR · 12'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

@@ -180,7 +180,7 @@ void main() {
         ),
       ),
     );
-    await tester.tap(find.text('GitHub'));
+    await tester.tap(find.byTooltip('GitHub'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(calls, 1);

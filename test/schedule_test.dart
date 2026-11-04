@@ -1,3 +1,5 @@
+import 'package:brockmann/brockmann.dart';
+
 import 'frontend_test_helpers.dart';
 
 import 'package:antiattendance/campus_design.dart';
@@ -115,22 +117,26 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      final refresh = find.byWidgetPredicate(
-        (w) => w is CampusTextAction && w.tooltip == 'Refresh',
-      );
-      await tester.tap(
-        find.byWidgetPredicate(
-          (w) => w is CampusTextAction && w.tooltip == 'Refresh',
-        ),
-      );
+      final refresh = find.byTooltip('Refresh');
+      await tester.tap(refresh);
       await tester.pump();
-      expect(tester.widget<CampusTextAction>(refresh).onPressed, isNull);
+      bool refreshEnabled() =>
+          tester
+              .widget<BrockmannPressable>(
+                find.descendant(
+                  of: refresh,
+                  matching: find.byType(BrockmannPressable),
+                ),
+              )
+              .onPressed !=
+          null;
+      expect(refreshEnabled(), isFalse);
       expect(find.byType(CampusProgress), findsOneWidget);
       await tester.pump(const Duration(milliseconds: 250));
-      expect(tester.widget<CampusTextAction>(refresh).onPressed, isNull);
+      expect(refreshEnabled(), isFalse);
       api.refreshDone.complete([]);
       await tester.pumpAndSettle();
-      expect(tester.widget<CampusTextAction>(refresh).onPressed, isNotNull);
+      expect(refreshEnabled(), isTrue);
       expect(find.byType(CampusProgress), findsNothing);
       api.close();
     },
@@ -246,7 +252,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('A free day'), findsOneWidget);
-    await tester.tap(find.text('Today').last);
+    await tester.tap(find.byTooltip('Today'));
     await tester.pumpAndSettle();
     expect(find.text('Mathematics'), findsWidgets);
     expect(tester.takeException(), isNull);

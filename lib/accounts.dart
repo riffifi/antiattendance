@@ -6,6 +6,7 @@ import 'session_expiry.dart';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+// Account storage
 class SavedAccount {
   const SavedAccount({
     required this.id,

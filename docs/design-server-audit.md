@@ -40,8 +40,8 @@ legacy cookie/group/pass upload logic when that contract is detected. Historical
 local workflows remain isolated from the production shell for compatibility;
 there is no raw Pulse RPC fallback from the new main screens.
 
-Attendance submissions use explicit authorized account IDs and the selected
-lesson_start. A context conflict refreshes the view without resubmitting. Lost
+Attendance submissions use explicit authorized account IDs from the visible
+group filter and the selected lesson_start. Hidden selections are not submitted. A context conflict refreshes the view without resubmitting. Lost
 mutation responses are never automatically retried. Per-person failures remain
 visible. Daily results and notifications index marks by both account and lesson;
 missing marks remain missing, and external journal strings are supported.

@@ -187,6 +187,10 @@ class _ServerWorkspaceState extends State<ServerWorkspace>
         } else {
           _selected.retainAll(eligible);
         }
+        if (_group != null &&
+            !serverRows(state['groups']).any((group) => group['id'] == _group)) {
+          _group = null;
+        }
         _state = state;
         _lessonStart = selectedLesson['lesson_start'] as int?;
         _loading = false;
@@ -296,7 +300,15 @@ class _ServerWorkspaceState extends State<ServerWorkspace>
       );
       return;
     }
-    final ids = _selected.toSet();
+    final ids = serverRows(_state?['people'])
+        .where(
+          (person) =>
+              _selected.contains(person['id']) &&
+              (_group == null || person['group_id'] == _group),
+        )
+        .map((person) => person['id'] as String)
+        .toSet();
+    if (ids.isEmpty) return;
     final lesson = _lessonStart;
     setState(() {
       _busy = true;
@@ -371,7 +383,7 @@ class _ServerWorkspaceState extends State<ServerWorkspace>
         !_busy &&
         !_refreshing &&
         _lessonStart != null &&
-        _selected.isNotEmpty &&
+        visible.any((person) => _selected.contains(person['id'])) &&
         _error == null;
     return Column(
       children: [

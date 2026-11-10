@@ -1,4 +1,8 @@
 import 'dart:io';
+import 'dart:convert';
+
+import 'package:antiattendance/campus_design.dart';
+
 import 'dart:ui' as ui;
 
 import 'package:antiattendance/aa_id.dart';
@@ -239,4 +243,65 @@ void main() {
     expect(find.text('—'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+  testWidgets(
+    'attendance submission excludes selected people hidden by group filter',
+    (tester) async {
+      Map<String, dynamic>? submitted;
+      final data = stateFixture();
+      (data['groups'] as List).add({'id': 43, 'name': 'Group B'});
+      final friend = (data['people'] as List)[1] as Map;
+      friend['session'] = 'valid';
+      friend['group_id'] = 43;
+      friend['group_name'] = 'Group B';
+      final client = SessionServerClient(
+        'https://aa.example',
+        client: MockClient((request) async {
+          if (request.url.path == '/api/accounts') {
+            return response(nativeSnapshot());
+          }
+          if (request.url.path == '/site/state') return response(data);
+          if (request.url.path == '/site/mark') {
+            submitted = jsonDecode(request.body) as Map<String, dynamic>;
+            return response({
+              'results': [
+                {'id': 'second', 'state': 'approved', 'message': 'Confirmed'},
+              ],
+            });
+          }
+          throw StateError('Unexpected request ${request.url}');
+        }),
+      );
+      addTearDown(client.close);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: ServerWorkspace(
+            client: client,
+            settings: AppSettingsStore(),
+            onLanguageChanged: (_) {},
+            themeMode: AppThemeMode.light,
+            onThemeModeChanged: (_) {},
+          ),
+        ),
+      );
+      await settleNetwork(tester);
+      await tester.tap(find.text('All groups'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Group B').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Paste'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byType(CampusTextField),
+        'https://attendance-app.mirea.ru/?token=lesson',
+      );
+      await tester.tap(find.text('Submit'));
+      await settleNetwork(tester);
+      expect(submitted?['account_ids'], ['second']);
+      expect(submitted?['lesson_start'], lesson['lesson_start']);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+    },
+  );
 }

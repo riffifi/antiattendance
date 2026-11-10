@@ -1,4 +1,4 @@
-package com.example.antiattendance
+package org.ytc.antiattendance
 
 /** Foreground-only test queue. Credentials never leave process memory. */
 internal object PassQueue {

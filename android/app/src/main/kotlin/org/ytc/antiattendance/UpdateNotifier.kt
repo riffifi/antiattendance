@@ -1,4 +1,4 @@
-package com.example.antiattendance
+package org.ytc.antiattendance
 
 import android.Manifest
 import android.app.NotificationChannel
@@ -17,7 +17,7 @@ import androidx.core.app.NotificationManagerCompat
 import java.util.Locale
 
 internal object UpdateNotifier {
-    const val ACTION_OPEN = "com.example.antiattendance.OPEN_UPDATES"
+    const val ACTION_OPEN = "org.ytc.antiattendance.OPEN_UPDATES"
     private const val CHANNEL = "app_updates"
     private const val JOB = 7301
     private const val NOTIFICATION = 7302

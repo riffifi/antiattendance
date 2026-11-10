@@ -1,4 +1,4 @@
-package com.example.antiattendance
+package org.ytc.antiattendance
 
 import android.Manifest
 import android.app.ActivityManager

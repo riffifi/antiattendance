@@ -1,4 +1,4 @@
-package com.example.antiattendance
+package org.ytc.antiattendance
 
 import android.content.ClipData
 import android.content.ComponentName
@@ -25,8 +25,8 @@ class MainActivity : FlutterActivity() {
     private class ObserveStartException(val code: String, message: String) : IllegalStateException(message)
 
     companion object {
-        const val ACTION_SCAN_ALL = "com.example.antiattendance.SCAN_ALL"
-        const val ACTION_NFC_PASSES = "com.example.antiattendance.NFC_PASSES"
+        const val ACTION_SCAN_ALL = "org.ytc.antiattendance.SCAN_ALL"
+        const val ACTION_NFC_PASSES = "org.ytc.antiattendance.NFC_PASSES"
     }
 
     private var updatesChannel: MethodChannel? = null

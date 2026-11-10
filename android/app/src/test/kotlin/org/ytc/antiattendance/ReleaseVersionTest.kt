@@ -1,4 +1,4 @@
-package com.example.antiattendance
+package org.ytc.antiattendance
 
 import org.junit.Assert.*
 import org.junit.Test

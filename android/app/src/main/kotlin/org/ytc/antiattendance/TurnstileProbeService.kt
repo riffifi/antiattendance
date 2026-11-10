@@ -1,4 +1,4 @@
-package com.example.antiattendance
+package org.ytc.antiattendance
 
 import android.nfc.cardemulation.HostApduService
 import android.nfc.cardemulation.PollingFrame

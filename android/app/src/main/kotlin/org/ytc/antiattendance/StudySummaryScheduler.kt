@@ -1,4 +1,4 @@
-package com.example.antiattendance
+package org.ytc.antiattendance
 
 import android.Manifest
 import android.app.AlarmManager
@@ -19,14 +19,14 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 internal object StudySummaryScheduler {
-    const val ACTION_OPEN = "com.example.antiattendance.OPEN_STUDY_SUMMARY"
+    const val ACTION_OPEN = "org.ytc.antiattendance.OPEN_STUDY_SUMMARY"
     const val JOB = 7401
     private fun today() = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
         .apply { timeZone = java.util.TimeZone.getTimeZone("Europe/Moscow") }.format(java.util.Date())
     private const val CHANNEL = "study_summary"
     fun prefs(context: Context) = context.getSharedPreferences("study_summary", Context.MODE_PRIVATE)
     private fun pending(context: Context, id: String) = PendingIntent.getBroadcast(context, 0,
-        Intent(context, StudySummaryReceiver::class.java).setAction("com.example.antiattendance.SUMMARY")
+        Intent(context, StudySummaryReceiver::class.java).setAction("org.ytc.antiattendance.SUMMARY")
             .setData(android.net.Uri.parse("antiattendance://summary/$id")).putExtra("id", id),
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 

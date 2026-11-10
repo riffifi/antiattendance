@@ -187,6 +187,10 @@ All local UI strings and known attendance results have Russian, English, French,
 
 ## Current server integration
 
+The application identifier is `org.ytc.antiattendance` from 3.8.4 onward.
+Android components, iOS bundle identifiers and the Linux application ID use
+that namespace. Android installs it separately from the former package.
+
 AA 3.8 uses the Go server’s shared application/website API. Defaults are
 `https://aa.ytc-srv.org` and `https://aaid.ytc-srv.org`; custom endpoints remain
 configurable. University QR sign-in runs on the server. Attendance uses the

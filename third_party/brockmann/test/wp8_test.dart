@@ -3,6 +3,52 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('WP8 tabs wrap at large text and retain selection semantics', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    var selected = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const BrockmannThemeData(style: BrockmannStyle.wp8).material,
+        home: MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+          child: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) => BrockmannSegmentedControl<bool>(
+                options: const [true, false],
+                value: selected,
+                labelFor: (own) => own ? 'My pass' : 'Shared with me',
+                onChanged: (value) => setState(() => selected = value),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    final semantics = tester.ensureSemantics();
+    await tester.tap(find.text('Shared with me'));
+    await tester.pumpAndSettle();
+    expect(selected, isFalse);
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Shared with me')),
+      matchesSemantics(
+        isButton: true,
+        isSelected: true,
+        hasSelectedState: true,
+        hasEnabledState: true,
+        isEnabled: true,
+        hasTapAction: true,
+        label: 'Shared with me',
+      ),
+    );
+    expect(find.byType(AnimatedContainer), findsNothing);
+    expect(tester.takeException(), isNull);
+    semantics.dispose();
+  });
   testWidgets(
     'WP8 profile keeps input readable in both themes and speeds pivots',
     (tester) async {

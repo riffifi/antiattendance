@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 
 import 'foundation.dart';
 import 'interaction.dart';
@@ -32,6 +33,7 @@ class BrockmannCommandBar extends StatefulWidget {
     super.key,
     required this.commands,
     this.initialMode = BrockmannCommandBarMode.compact,
+    this.active = true,
     this.expandLabel = 'Expand app bar',
     this.collapseLabel = 'Collapse app bar',
     this.minimizeLabel = 'Minimize app bar',
@@ -40,6 +42,7 @@ class BrockmannCommandBar extends StatefulWidget {
   /// Mini application bar: just enough for the corner ellipsis.
   static const minimizedExtent = 22.0;
   final List<BrockmannCommand> commands;
+  final bool active;
   final BrockmannCommandBarMode initialMode;
   final String expandLabel, collapseLabel, minimizeLabel;
   @override
@@ -62,7 +65,17 @@ class _BrockmannCommandBarState extends State<BrockmannCommandBar>
     BrockmannCommandBarMode.expanded => 1,
   };
 
+  @override
+  void didUpdateWidget(BrockmannCommandBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.active != widget.active) {
+      _mode = BrockmannCommandBarMode.compact;
+      _motion.value = .5;
+    }
+  }
+
   void _settle(BrockmannCommandBarMode mode) {
+    if (!mounted || !widget.active) return;
     setState(() => _mode = mode);
     if (mounted) {
       _motion.animateTo(
@@ -82,7 +95,7 @@ class _BrockmannCommandBarState extends State<BrockmannCommandBar>
   @override
   Widget build(BuildContext context) {
     final t = context.brockmann;
-    return BrockmannInteractionRegion(
+    final content = BrockmannInteractionRegion(
       child: LayoutBuilder(
         builder: (context, bounds) {
           final width = math.min(
@@ -119,9 +132,9 @@ class _BrockmannCommandBarState extends State<BrockmannCommandBar>
               final hidden = value < .05;
               final expanded = _mode == BrockmannCommandBarMode.expanded;
               return PopScope(
-                canPop: !expanded,
+                canPop: !widget.active || !expanded,
                 onPopInvokedWithResult: (popped, _) {
-                  if (!popped && expanded) {
+                  if (!popped && expanded && widget.active) {
                     _settle(BrockmannCommandBarMode.compact);
                   }
                 },
@@ -315,8 +328,11 @@ class _BrockmannCommandBarState extends State<BrockmannCommandBar>
                                         width: 48,
                                         height: 48,
                                         child: Align(
-                                          alignment: const Alignment(0, -.35),
+                                          alignment: const Alignment(0, -.8),
                                           child: Row(
+                                            key: const ValueKey(
+                                              'brockmann-appbar-ellipsis',
+                                            ),
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
                                               for (var i = 0; i < 3; i++)
@@ -356,6 +372,17 @@ class _BrockmannCommandBarState extends State<BrockmannCommandBar>
           );
         },
       ),
+    );
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        systemNavigationBarColor: t.surface,
+        systemNavigationBarDividerColor: t.surface,
+        systemNavigationBarIconBrightness: t.light
+            ? Brightness.dark
+            : Brightness.light,
+        systemNavigationBarContrastEnforced: false,
+      ),
+      child: content,
     );
   }
 }

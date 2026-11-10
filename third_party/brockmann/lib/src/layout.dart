@@ -784,6 +784,7 @@ class _BrockmannAdaptiveScaffoldState extends State<BrockmannAdaptiveScaffold>
       backgroundColor: t.background,
       resizeToAvoidBottomInset: true,
       body: SafeArea(
+        bottom: !t.windowsPhone,
         child: wide
             ? Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,

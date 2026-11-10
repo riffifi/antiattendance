@@ -83,6 +83,14 @@ abstract final class AppTheme {
     final brockmann = _AATheme(mode);
     final base = brockmann.material;
     final scheme = base.colorScheme.copyWith(
+      surface: brockmann.surface,
+      surfaceDim: brockmann.background,
+      surfaceBright: brockmann.surface,
+      surfaceContainerLowest: brockmann.background,
+      surfaceContainerLow: brockmann.surface,
+      surfaceContainer: brockmann.surface,
+      surfaceContainerHigh: brockmann.surface,
+      surfaceContainerHighest: brockmann.surface,
       onSurfaceVariant: brockmann.secondary,
       outline: brockmann.lineStrong,
       outlineVariant: brockmann.line,
@@ -189,9 +197,15 @@ class _AATheme extends BrockmannThemeData {
       );
   final AppThemeMode mode;
   @override
-  Color get background =>
-      mode == AppThemeMode.light ? super.background : Colors.black;
+  Color get background => switch (mode) {
+    AppThemeMode.light => super.background,
+    AppThemeMode.dark => const Color(0xff181818),
+    AppThemeMode.amoled => Colors.black,
+  };
   @override
-  Color get surface =>
-      mode == AppThemeMode.amoled ? Colors.black : super.surface;
+  Color get surface => switch (mode) {
+    AppThemeMode.light => super.surface,
+    AppThemeMode.dark => const Color(0xff292929),
+    AppThemeMode.amoled => Colors.black,
+  };
 }

@@ -103,7 +103,7 @@ packages:
       path: "third_party/brockmann"
       relative: true
     source: path
-    version: "0.3.3"
+    version: "0.3.4"
   characters:
     dependency: transitive
     description:

@@ -134,11 +134,7 @@ void main() {
     final location = TestLocation(reason: 'denied');
     addTearDown(location.changes.close);
     await showMap(tester, location: location);
-    await tester.tap(
-      find.byWidgetPredicate(
-        (w) => w is CampusTextAction && w.tooltip == 'My location',
-      ),
-    );
+    await tester.tap(find.bySemanticsLabel('My location'));
     await tester.pumpAndSettle();
     expect(
       find.text('Allow location access or choose a starting place manually.'),
@@ -165,11 +161,7 @@ void main() {
     );
     addTearDown(location.changes.close);
     await showMap(tester, location: location);
-    await tester.tap(
-      find.byWidgetPredicate(
-        (w) => w is CampusTextAction && w.tooltip == 'My location',
-      ),
-    );
+    await tester.tap(find.bySemanticsLabel('My location'));
     await tester.pumpAndSettle();
     expect(
       find.text('GPS cannot identify your floor. Select it manually.'),

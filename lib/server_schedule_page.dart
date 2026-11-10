@@ -236,6 +236,7 @@ class ServerSchedulePageState extends State<ServerSchedulePage> {
           ),
         ),
         CampusCommandBar(
+          active: widget.active,
           commands: [
             CampusCommand(
               icon: Icons.today_outlined,

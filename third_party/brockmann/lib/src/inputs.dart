@@ -148,6 +148,7 @@ class BrockmannRadioGroup<T> extends StatelessWidget {
   }
 }
 
+/// Typographic tabs on Windows Phone; boxed segments in the neutral style.
 /// Wraps on small screens instead of clipping destinations.
 class BrockmannSegmentedControl<T> extends StatelessWidget {
   const BrockmannSegmentedControl({
@@ -165,7 +166,7 @@ class BrockmannSegmentedControl<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.brockmann;
     return Wrap(
-      spacing: 4,
+      spacing: t.windowsPhone ? 24 : 4,
       runSpacing: 4,
       children: [
         for (final option in options)
@@ -174,23 +175,42 @@ class BrockmannSegmentedControl<T> extends StatelessWidget {
             child: BrockmannPressable(
               label: labelFor(option),
               onPressed: onChanged == null ? null : () => onChanged!(option),
-              builder: (c, p) => AnimatedContainer(
-                duration: t.duration(c, 180),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-                decoration: BoxDecoration(
-                  color: option == value ? t.foreground : t.surface,
-                  border: Border.all(
-                    color: option == value ? t.foreground : t.line,
-                  ),
-                ),
-                child: BrockmannText(
-                  labelFor(option),
-                  color: option == value ? t.background : t.foreground,
-                ),
-              ),
+              builder: (c, p) => t.windowsPhone
+                  ? ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        minHeight: 48,
+                        minWidth: 48,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: BrockmannText(
+                          labelFor(option),
+                          role: BrockmannType.heading,
+                          color: onChanged == null
+                              ? t.disabled
+                              : option == value
+                              ? t.foreground
+                              : t.secondary,
+                        ),
+                      ),
+                    )
+                  : AnimatedContainer(
+                      duration: t.duration(c, 180),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      decoration: BoxDecoration(
+                        color: option == value ? t.foreground : t.surface,
+                        border: Border.all(
+                          color: option == value ? t.foreground : t.line,
+                        ),
+                      ),
+                      child: BrockmannText(
+                        labelFor(option),
+                        color: option == value ? t.background : t.foreground,
+                      ),
+                    ),
             ),
           ),
       ],

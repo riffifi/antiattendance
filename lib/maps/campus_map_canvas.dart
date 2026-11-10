@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:brockmann/brockmann.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -160,9 +161,7 @@ class _CampusMapCanvasState extends State<CampusMapCanvas> {
         child: Stack(
           children: [
             ColoredBox(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Theme.of(context).colorScheme.surface
-                  : const Color(0xFFF9FBFE),
+              color: context.brockmann.background,
               child: InteractiveViewer(
                 transformationController: _transform,
                 constrained: false,
@@ -209,23 +208,28 @@ class _CampusMapCanvasState extends State<CampusMapCanvas> {
             Positioned(
               right: 12,
               bottom: 12,
-              child: Material(
-                color: Theme.of(context).colorScheme.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(22),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: context.brockmann.surface,
+                  border: Border.all(color: context.brockmann.line),
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     CampusTextAction(
+                      icon: Icons.add_rounded,
                       onPressed: () => _zoom(1.5),
                       tooltip: tr(context, 'Приблизить', 'Zoom in'),
                       label: tr(context, 'Приблизить', 'Zoom in'),
                     ),
                     CampusTextAction(
+                      icon: Icons.remove_rounded,
                       onPressed: () => _zoom(1 / 1.5),
                       tooltip: tr(context, 'Отдалить', 'Zoom out'),
                       label: tr(context, 'Отдалить', 'Zoom out'),
                     ),
                     CampusTextAction(
+                      icon: Icons.center_focus_strong_rounded,
                       onPressed: _focus,
                       tooltip: tr(context, 'Показать на карте', 'Focus map'),
                       label: tr(context, 'Показать на карте', 'Focus map'),

@@ -21,10 +21,16 @@ class CampusCommand {
 
 /// AA icons, localization and haptics on the shared phone application bar.
 class CampusCommandBar extends StatelessWidget {
-  const CampusCommandBar({super.key, required this.commands});
+  const CampusCommandBar({
+    super.key,
+    required this.commands,
+    this.active = true,
+  });
   final List<CampusCommand> commands;
+  final bool active;
   @override
   Widget build(BuildContext context) => BrockmannCommandBar(
+    active: active,
     expandLabel: tr(context, 'Развернуть панель', 'Expand app bar'),
     collapseLabel: tr(context, 'Свернуть панель', 'Collapse app bar'),
     minimizeLabel: tr(context, 'Скрыть команды', 'Minimize app bar'),

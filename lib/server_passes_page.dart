@@ -266,6 +266,7 @@ class ServerPassesPageState extends State<ServerPassesPage> {
         ),
       ),
       CampusCommandBar(
+        active: widget.active,
         commands: [
           CampusCommand(
             icon: Icons.person_add_rounded,

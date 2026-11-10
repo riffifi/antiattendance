@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import 'campus_design.dart';
 import 'expressive.dart';
+import 'frontend/command_bar.dart';
 import 'external_links.dart';
 import 'l10n.dart';
 import 'schedule_api.dart';
@@ -177,7 +178,11 @@ class _CampusMapsPageState extends State<CampusMapsPage>
           builder: (context) => CampusScaffold(
             appBar: CampusAppBar(
               title: Text(
-                tr(context, 'Откуда идём?', 'Choose starting place').toLowerCase(),
+                tr(
+                  context,
+                  'Откуда идём?',
+                  'Choose starting place',
+                ).toLowerCase(),
               ),
             ),
             body: _PlacePicker(
@@ -572,46 +577,43 @@ class _CampusMapsPageState extends State<CampusMapsPage>
       appBar: CampusAppBar(
         title: Text(tr(context, 'Карты кампусов', 'Campus maps')),
         compact: true,
-        actions: [
-          CampusTextAction(
+      ),
+      bottomNavigationBar: CampusCommandBar(
+        commands: [
+          CampusCommand(
             icon: Icons.my_location_rounded,
-            onPressed: _locating ? null : _locate,
-            tooltip: tr(context, 'Моё местоположение', 'My location'),
             label: tr(context, 'Моё местоположение', 'My location'),
+            onPressed: _locating ? null : _locate,
           ),
-          AppActionMenu(
-            title: tr(context, 'действия', 'actions'),
-            entries: [
-              CampusMenuEntry(
-                value: 'campus',
-                label: tr(
-                  context,
-                  'Как добраться до кампуса',
-                  'Directions to campus',
-                ),
-              ),
-              CampusMenuEntry(
-                value: 'pulse',
-                label: tr(context, 'Открыть в Пульсе', 'Open in Pulse'),
-              ),
-            ],
-            onSelected: (value) {
-              if (value == 'campus') {
-                _campusDirections();
-              } else {
-                _openSource();
-              }
-            },
-            anchorBuilder: (_, open) => CampusTextAction(
-              onPressed: open,
-              tooltip: tr(context, 'Действия', 'Actions'),
-              label: tr(context, 'ещё', 'more'),
+          CampusCommand(
+            icon: Icons.star_border_rounded,
+            label: tr(context, 'Избранное', 'Saved places'),
+            onPressed: () => setState(() {
+              _favoritesOnly = !_favoritesOnly;
+              _kind = null;
+              _search.clear();
+              _resultsVisible = false;
+            }),
+          ),
+          CampusCommand(
+            icon: Icons.directions_rounded,
+            label: tr(
+              context,
+              'Как добраться до кампуса',
+              'Directions to campus',
             ),
+            onPressed: _campusDirections,
+          ),
+          CampusCommand(
+            icon: Icons.layers_rounded,
+            label: tr(context, 'Действия', 'Actions'),
+            onPressed: _mapActions,
           ),
         ],
       ),
       body: SafeArea(
         top: false,
+        bottom: false,
         child: LayoutBuilder(
           builder: (context, bounds) => Column(
             children: [
@@ -621,7 +623,7 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                   child: Column(
                     children: [
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
                         child: CampusTextField(
                           controller: _search,
                           label: tr(
@@ -649,8 +651,8 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                           child: Row(
                             children: [
                               Expanded(
-                                child: CampusButton.action(
-                                  style: CampusButtonStyle.tonal,
+                                child: BrockmannButton.text(
+                                  label: _map.shortTitle,
                                   onPressed: () async {
                                     final value = await showChoicePage<int>(
                                       context,
@@ -677,13 +679,16 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                                       _invalidateRoute();
                                     });
                                   },
-                                  label: Text(_map.shortTitle),
+                                  child: BrockmannText(
+                                    _map.shortTitle,
+                                    role: BrockmannType.heading,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
-                                child: CampusButton.action(
-                                  style: CampusButtonStyle.tonal,
+                                child: BrockmannButton.text(
+                                  label: campusFloorLabel(context, _floor),
                                   onPressed: () async {
                                     final value = await showChoicePage<String>(
                                       context,
@@ -703,7 +708,10 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                                     if (!mounted || value == null) return;
                                     setState(() => _floorId = value);
                                   },
-                                  label: Text(campusFloorLabel(context, _floor)),
+                                  child: BrockmannText(
+                                    campusFloorLabel(context, _floor),
+                                    role: BrockmannType.heading,
+                                  ),
                                 ),
                               ),
                             ],
@@ -732,15 +740,6 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                               _tag(
                                 'medical',
                                 tr(context, 'Медпункт', 'Medical'),
-                              ),
-                              CampusButton.action(
-                                onPressed: () => setState(() {
-                                  _favoritesOnly = !_favoritesOnly;
-                                  _kind = null;
-                                }),
-                                label: Text(
-                                  tr(context, 'Избранное', 'Saved places'),
-                                ),
                               ),
                             ],
                           ),
@@ -796,17 +795,6 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                               setState(() => _resultsVisible = true),
                           child: Text(
                             '${tr(context, 'Список мест', 'Place list')} · ${results.length}',
-                          ),
-                        ),
-                      if (widget.lessons.isNotEmpty && !searching)
-                        CampusButton.action(
-                          onPressed: _lessonPlaces,
-                          label: Text(
-                            tr(
-                              context,
-                              'Аудитории из расписания',
-                              'Rooms from schedule',
-                            ),
                           ),
                         ),
                       const SizedBox(height: 6),
@@ -874,7 +862,7 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                     maxHeight: bounds.maxHeight * .38,
                   ),
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
                     child: _details(),
                   ),
                 ),
@@ -893,18 +881,53 @@ class _CampusMapsPageState extends State<CampusMapsPage>
     );
   }
 
+  Future<void> _mapActions() async {
+    final action = await showChoicePage<String>(
+      context,
+      title: tr(context, 'действия', 'actions'),
+      options: [
+        if (widget.lessons.isNotEmpty)
+          ChoiceOption(
+            value: 'lessons',
+            label: tr(
+              context,
+              'Аудитории из расписания',
+              'Rooms from schedule',
+            ),
+          ),
+        ChoiceOption(
+          value: 'pulse',
+          label: tr(context, 'Открыть в Пульсе', 'Open in Pulse'),
+        ),
+      ],
+    );
+    if (!mounted) return;
+    if (action == 'lessons') _lessonPlaces();
+    if (action == 'pulse') _openSource();
+  }
+
   Widget _tag(String? kind, String label) => Padding(
-    padding: const EdgeInsets.only(right: 6),
-    child: CampusButton.action(
-      style: _kind == kind && !_favoritesOnly
-          ? CampusButtonStyle.tonal
-          : CampusButtonStyle.text,
+    padding: const EdgeInsets.only(right: 24),
+    child: BrockmannPressable(
+      label: label,
+      selected: _kind == kind && !_favoritesOnly,
       onPressed: () => setState(() {
         _kind = kind;
         _favoritesOnly = false;
         _resultsVisible = false;
       }),
-      label: Text(label),
+      builder: (context, pressed) => ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: BrockmannText(
+            label,
+            color: _kind == kind && !_favoritesOnly
+                ? context.brockmann.foreground
+                : context.brockmann.secondary,
+          ),
+        ),
+      ),
     ),
   );
   Widget _details() => Column(

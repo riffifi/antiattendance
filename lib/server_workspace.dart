@@ -188,7 +188,8 @@ class _ServerWorkspaceState extends State<ServerWorkspace>
           _selected.retainAll(eligible);
         }
         if (_group != null &&
-            !serverRows(state['groups']).any((group) => group['id'] == _group)) {
+            !serverRows(state['groups'])
+                .any((group) => group['id'] == _group)) {
           _group = null;
         }
         _state = state;
@@ -521,6 +522,7 @@ class _ServerWorkspaceState extends State<ServerWorkspace>
           ),
         ),
         CampusCommandBar(
+          active: _tab == 0,
           commands: [
             CampusCommand(
               icon: Icons.qr_code_scanner_rounded,

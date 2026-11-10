@@ -4,6 +4,13 @@ AA 3.8.0+44 builds on the existing WP8 edits in this working tree. Geist,
 light/dark/AMOLED, the title/content gutter distinction, compact app-bar states,
 and the About Easter egg are retained.
 
+AA 3.8.1+45 distinguishes charcoal dark pages (#181818) and application bars
+(#292929) from pure-black AMOLED surfaces. Material surface tokens use the same
+neutral palette. WP8 section tabs use text hierarchy instead of filled segments.
+Maps use typographic campus/floor selectors and categories, square icon zoom
+controls, and the shared draggable application bar. The navigation inset belongs
+to that bar, with Android's automatic contrast scrim disabled.
+
 ## Design corrections
 
 - App-bar command groups stay centered, with dedicated space on both edges.

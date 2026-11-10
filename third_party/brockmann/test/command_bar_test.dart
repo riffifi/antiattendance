@@ -1,5 +1,6 @@
 import 'package:brockmann/brockmann.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -172,4 +173,109 @@ void main() {
     expect(glyph.right, lessThan(handle.left));
     expect(tester.takeException(), isNull);
   });
+  testWidgets('an inactive tab cannot retain an expanded bar Back guard', (
+    tester,
+  ) async {
+    var active = true;
+    late StateSetter update;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, set) {
+            update = set;
+            return Scaffold(
+              bottomNavigationBar: BrockmannCommandBar(
+                active: active,
+                commands: [
+                  BrockmannCommand(
+                    icon: const Icon(Icons.add),
+                    label: 'add',
+                    onPressed: () {},
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.tap(find.bySemanticsLabel('Expand app bar'));
+    await tester.pumpAndSettle();
+    expect(
+      ModalRoute.of(tester.element(find.byType(BrockmannCommandBar)))!
+          .popDisposition,
+      RoutePopDisposition.doNotPop,
+    );
+    update(() => active = false);
+    await tester.pumpAndSettle();
+    expect(
+      ModalRoute.of(tester.element(find.byType(BrockmannCommandBar)))!
+          .popDisposition,
+      RoutePopDisposition.bubble,
+    );
+    update(() => active = true);
+    await tester.pumpAndSettle();
+    expect(
+      ModalRoute.of(tester.element(find.byType(BrockmannCommandBar)))!
+          .popDisposition,
+      RoutePopDisposition.bubble,
+    );
+    expect(tester.getSize(find.byType(BrockmannCommandBar)).height, 64);
+  });
+  testWidgets(
+    'WP8 bar paints the bottom system inset and keeps dots near its top',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 700);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: const BrockmannThemeData(style: BrockmannStyle.wp8).material,
+          home: MediaQuery(
+            data: const MediaQueryData(
+              size: Size(320, 700),
+              padding: EdgeInsets.only(bottom: 24),
+            ),
+            child: BrockmannAdaptiveScaffold(
+              title: 'AA',
+              destinations: const ['people'],
+              selected: 0,
+              onChanged: (_) {},
+              body: Column(
+                children: [
+                  const Expanded(child: SizedBox()),
+                  BrockmannCommandBar(
+                    commands: [
+                      BrockmannCommand(
+                        icon: const Icon(Icons.add),
+                        label: 'add',
+                        onPressed: () {},
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final bar = tester.getRect(find.byType(BrockmannCommandBar));
+      final dots = tester.getRect(
+        find.byKey(const ValueKey('brockmann-appbar-ellipsis')),
+      );
+      expect(bar.bottom, 700);
+      expect(dots.top - bar.top, lessThanOrEqualTo(6));
+      expect(
+        SystemChrome.latestStyle?.systemNavigationBarColor,
+        const BrockmannThemeData(style: BrockmannStyle.wp8).surface,
+      );
+      expect(
+        SystemChrome.latestStyle?.systemNavigationBarContrastEnforced,
+        isFalse,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

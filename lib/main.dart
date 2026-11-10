@@ -247,6 +247,7 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
             : Brightness.dark,
         systemNavigationBarColor: Colors.transparent,
         systemNavigationBarDividerColor: Colors.transparent,
+        systemNavigationBarContrastEnforced: false,
         systemNavigationBarIconBrightness: _themeMode == AppThemeMode.light
             ? Brightness.dark
             : Brightness.light,

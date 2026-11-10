@@ -21,6 +21,10 @@ void main() {
     await (FontLoader(
       'Geist',
     )..addFont(rootBundle.load('font/Geist[wght].ttf'))).load();
+    await (FontLoader('packages/brockmann/Geist')..addFont(
+          rootBundle.load('packages/brockmann/assets/fonts/Geist.ttf'),
+        ))
+        .load();
     await (FontLoader(
       'MaterialIcons',
     )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();

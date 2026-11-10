@@ -52,7 +52,7 @@ void main() {
         .scaffoldBackgroundColor;
     await tester.tap(find.text('theme'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('dark'));
+    await tester.tap(find.text('Dark'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 120));
     expect(tester.takeException(), isNull);

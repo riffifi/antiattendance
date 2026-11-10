@@ -24,7 +24,9 @@ class _ServerProfilePageState extends State<ServerProfilePage> {
   String? _error, _group;
   String _savedName = '', _savedUsername = '';
   bool _connected = false, _hasAccount = false;
+  bool _usernameRefreshPending = false;
   bool get _dirty =>
+      _usernameRefreshPending ||
       (_hasAccount && _name.text.trim() != _savedName) ||
       _username.text.trim().replaceFirst(RegExp(r'^@'), '').toLowerCase() !=
           _savedUsername;
@@ -89,7 +91,11 @@ class _ServerProfilePageState extends State<ServerProfilePage> {
       if (username != _savedUsername) {
         await idApi.setUsername(await AaId.accessToken(), username);
         _savedUsername = username;
+        _usernameRefreshPending = true;
+      }
+      if (_usernameRefreshPending) {
         await AaId.refreshAccessToken();
+        _usernameRefreshPending = false;
       }
       if (_hasAccount && name != _savedName) {
         await widget.api.updateAccount(label: name);
@@ -267,6 +273,7 @@ class _ServerProfilePageState extends State<ServerProfilePage> {
             ),
             CampusListItem(
               headline: tr(context, 'Устройства', 'Devices'),
+              navigation: true,
               supportingText: tr(
                 context,
                 'Ваш аккаунт, устройства и выход',

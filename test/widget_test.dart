@@ -204,7 +204,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('theme'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('dark'));
+    await tester.tap(find.text('Dark'));
     await tester.pumpAndSettle();
     expect(find.text('Phone colors (Monet)'), findsNothing);
     expect(store.themeMode, AppThemeMode.dark);

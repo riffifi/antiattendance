@@ -77,6 +77,8 @@ class _SettingsPageState extends State<SettingsPage> {
   late AppThemeMode _themeMode = widget.themeMode;
   bool _saving = false;
   bool _sounds = true;
+  int _soundRevision = 0;
+  bool _chooserOpen = false, _pageOpen = false;
   bool _daySummary = false;
   bool _summarySaving = false;
   bool _summaryTouched = false;
@@ -88,7 +90,7 @@ class _SettingsPageState extends State<SettingsPage> {
     widget.store
         .interfaceSounds()
         .then((value) {
-          if (mounted) setState(() => _sounds = value);
+          if (mounted && _soundRevision == 0) setState(() => _sounds = value);
         })
         .catchError((Object _) {});
     widget.store
@@ -374,9 +376,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ..._languages,
             }.entries)
               _SettingsChoice(
-                title: entry.key == null
-                    ? entry.value.toLowerCase()
-                    : entry.value,
+                title: entry.value,
                 selected: entry.key == _language,
                 enabled: !_saving,
                 value: entry.key ?? 'system',
@@ -394,6 +394,8 @@ class _SettingsPageState extends State<SettingsPage> {
     AppThemeMode.amoled => tr(context, 'Чёрная (AMOLED)', 'Black (AMOLED)'),
   };
   Future<void> _openThemes() async {
+    if (_saving || _chooserOpen) return;
+    setState(() => _chooserOpen = true);
     final mode = await showChoicePage<AppThemeMode>(
       context,
       title: tr(context, 'Оформление', 'Appearance'),
@@ -401,16 +403,19 @@ class _SettingsPageState extends State<SettingsPage> {
         for (final mode in AppThemeMode.values)
           ChoiceOption(
             value: mode,
-            label: _themeLabel(mode).toLowerCase(),
+            label: _themeLabel(mode),
             selected: mode == _themeMode,
           ),
       ],
     );
-    if (mounted && mode != null) await _chooseTheme(mode);
+    if (!mounted) return;
+    setState(() => _chooserOpen = false);
+    if (mode != null) await _chooseTheme(mode);
   }
 
   Future<void> _chooseSounds(bool value) async {
     if (_saving) return;
+    ++_soundRevision;
     setState(() => _saving = true);
     try {
       await widget.store.saveInterfaceSounds(value);
@@ -428,12 +433,21 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _openPage(Widget page) async {
-    await Navigator.of(context)
-        .push<void>(MaterialPageRoute(builder: (_) => page));
+    if (_pageOpen) return;
+    _pageOpen = true;
+    try {
+      await Navigator.of(context)
+          .push<void>(MaterialPageRoute(builder: (_) => page));
+    } finally {
+      _pageOpen = false;
+    }
     if (!mounted) return;
+    final revision = _soundRevision;
     try {
       final sounds = await widget.store.interfaceSounds();
-      if (mounted) setState(() => _sounds = sounds);
+      if (mounted && revision == _soundRevision) {
+        setState(() => _sounds = sounds);
+      }
     } catch (_) {}
   }
 
@@ -453,6 +467,7 @@ class _SettingsPageState extends State<SettingsPage> {
           [
             if (widget.serverManaged && ServerSessions.active != null)
               CampusListItem(
+                navigation: true,
                 showDivider: false,
                 headline: tr(
                   context,
@@ -470,6 +485,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             if (!widget.serverManaged)
               CampusListItem(
+                navigation: true,
                 showDivider: false,
                 headline: 'AA ID',
                 supportingText: tr(
@@ -480,6 +496,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 onTap: () => _openPage(const AaIdAccountPage()),
               ),
             CampusListItem(
+              navigation: true,
               showDivider: false,
               headline: tr(
                 context,
@@ -495,6 +512,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             if (!widget.serverManaged) ...[
               CampusListItem(
+                navigation: true,
                 showDivider: false,
                 headline: tr(context, 'Моя группа', 'My group').toLowerCase(),
                 supportingText:
@@ -520,10 +538,12 @@ class _SettingsPageState extends State<SettingsPage> {
         SettingsSection(tr(context, 'Оформление', 'Appearance'), [
           CampusListItem(
             headline: tr(context, 'Тема', 'Theme').toLowerCase(),
+            navigation: true,
             supportingText: _themeLabel(_themeMode),
-            onTap: _saving ? null : _openThemes,
+            onTap: _saving || _chooserOpen ? null : _openThemes,
           ),
           CampusListItem(
+            navigation: true,
             showDivider: false,
             headline: tr(
               context,
@@ -571,6 +591,7 @@ class _SettingsPageState extends State<SettingsPage> {
               onTap: _summarySaving ? null : () => _chooseSummary(!_daySummary),
             ),
             CampusListItem(
+              navigation: true,
               showDivider: false,
               headline: tr(
                 context,
@@ -596,6 +617,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ]),
         SettingsSection(tr(context, 'Приложение', 'App'), [
           CampusListItem(
+            navigation: true,
             headline: tr(context, 'Как пользоваться', 'How to use'),
             onTap: () => _openPage(
               Builder(
@@ -622,6 +644,7 @@ class _SettingsPageState extends State<SettingsPage> {
             AnimatedBuilder(
               animation: widget.updates!,
               builder: (context, _) => CampusListItem(
+                navigation: true,
                 showDivider: false,
                 headline: tr(context, 'Обновления', 'Updates').toLowerCase(),
                 supportingText: widget.updates!.updateAvailable
@@ -642,6 +665,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
           CampusListItem(
+            navigation: true,
             showDivider: false,
             headline: tr(
               context,
@@ -654,6 +678,7 @@ class _SettingsPageState extends State<SettingsPage> {
         if (!widget.serverManaged)
           SettingsSection(tr(context, 'Тестирование', 'Testing'), [
             CampusListItem(
+              navigation: true,
               showDivider: false,
               headline: tr(
                 context,
@@ -668,6 +693,7 @@ class _SettingsPageState extends State<SettingsPage> {
               onTap: () => _openPage(const NfcDiagnosticsPage()),
             ),
             CampusListItem(
+              navigation: true,
               showDivider: false,
               headline: tr(
                 context,
@@ -740,8 +766,9 @@ class _SettingsChoicePageState extends State<_SettingsChoicePage> {
                             (ModalRoute.of(context)?.isCurrent ?? false)) {
                           Navigator.of(context).pop(option.value);
                         }
-                      } finally {
+                      } catch (_) {
                         if (mounted) setState(() => _choosing = false);
+                        rethrow;
                       }
                     }
                   : null,

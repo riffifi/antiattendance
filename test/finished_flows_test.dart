@@ -228,4 +228,56 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+  testWidgets(
+    'profile retry refreshes claims without repeating a saved username',
+    (tester) async {
+      await AaId.acceptLogin(
+        defaultAaIdUrl,
+        AaIdSession.fromServer(tokenGrant()),
+      );
+      var usernameWrites = 0, refreshes = 0;
+      AaId.httpClient = () => MockClient((r) async {
+        if (r.method == 'PUT') {
+          usernameWrites++;
+          return response({'username': 'alex_new'});
+        }
+        if (r.url.path.endsWith('/auth/refresh')) {
+          refreshes++;
+          if (refreshes == 1) {
+            return response({'message': 'Temporary failure'}, 503);
+          }
+          return response(tokenGrant());
+        }
+        return response({'username': 'alex', 'group_name': 'Group A'});
+      });
+      final client = SessionServerClient(
+        defaultSessionServerUrl,
+        client: MockClient(
+          (r) async =>
+              response({'label': 'Alex', 'account': true, 'connected': true}),
+        ),
+      );
+      addTearDown(client.close);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: ServerProfilePage(api: AaServerApi(client)),
+        ),
+      );
+      await settleNetwork(tester);
+      await tester.tap(find.text('Name and username'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(CampusTextField).last, 'alex_new');
+      await tester.pump();
+      await tester.tap(find.bySemanticsLabel('Save'));
+      await settleNetwork(tester);
+      expect(usernameWrites, 1);
+      expect(refreshes, 1);
+      await tester.tap(find.bySemanticsLabel('Save'));
+      await settleNetwork(tester);
+      expect(usernameWrites, 1);
+      expect(refreshes, 2);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

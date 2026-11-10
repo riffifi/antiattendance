@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:antiattendance/app_haptics.dart';
 import 'package:antiattendance/app_settings.dart';
 import 'package:antiattendance/app_theme.dart';
@@ -26,10 +28,66 @@ class _Audio implements BrockmannSoundBackend {
   Future<void> dispose() async {}
 }
 
+class _DelayedSounds extends AppSettingsStore {
+  final initialSounds = Completer<bool>();
+  bool? saved;
+  @override
+  Future<bool> interfaceSounds() => initialSounds.future;
+  @override
+  Future<void> saveInterfaceSounds(bool value) async => saved = value;
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
   tearDown(() => AppHaptics.controller = null);
+
+  testWidgets('late sound read cannot overwrite a new setup choice', (
+    tester,
+  ) async {
+    final store = _DelayedSounds();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.build(AppThemeMode.light),
+        home: AppTutorial(settings: store, onComplete: () async {}),
+      ),
+    );
+    tester.widget<CampusSwitch>(find.byType(CampusSwitch)).onChanged!(false);
+    await tester.pump();
+    store.initialSounds.complete(true);
+    await tester.pump();
+    expect(store.saved, false);
+    expect(tester.widget<CampusSwitch>(find.byType(CampusSwitch)).value, false);
+  });
+
+  testWidgets('setup completion remains locked during route dismissal', (
+    tester,
+  ) async {
+    var completed = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.build(AppThemeMode.light),
+        home: AppTutorial(
+          onComplete: () async {
+            completed++;
+          },
+        ),
+      ),
+    );
+    final skip = tester.widget<CampusTextAction>(
+      find.byType(CampusTextAction).first,
+    );
+    skip.onPressed!();
+    skip.onPressed!();
+    await tester.pump();
+    expect(completed, 1);
+    expect(
+      tester
+          .widget<CampusTextAction>(find.byType(CampusTextAction).first)
+          .onPressed,
+      isNull,
+    );
+  });
 
   test('AA actions use the shared sound controller and respect off', () async {
     final backend = _Audio();

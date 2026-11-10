@@ -320,6 +320,7 @@ class CampusListItem extends StatelessWidget {
     this.onTap,
     this.selected = false,
     this.showDivider = true,
+    this.navigation = false,
   });
   final String headline;
   final String? supportingText;
@@ -327,6 +328,7 @@ class CampusListItem extends StatelessWidget {
   final Widget? trailing;
   final VoidCallback? onTap;
   final bool selected, showDivider;
+  final bool navigation;
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, bounds) => Column(
@@ -343,6 +345,7 @@ class CampusListItem extends StatelessWidget {
                 label: headline,
                 secondary: supportingText,
                 selected: selected,
+                chevron: navigation,
                 onPressed: onTap == null
                     ? null
                     : () {

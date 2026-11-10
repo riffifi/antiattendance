@@ -34,3 +34,15 @@ Device delivery follows AGENTS.md and preserves installed app data.
 - [x] The server scanner has a following QR frame and an inline attendance queue. The selected class and people are frozen for each scan session, completed people are excluded, and uncertain submissions need explicit retry.
 - [x] The About Easter egg flips vertically as one face and springs back; the extra extrusion/plate is removed.
 - [x] Brockmann's feedback controller is mounted for UI audio and haptics, with a persisted sound switch. Android silent/vibrate modes suppress audio.
+
+## 3.8.6 interaction audit
+
+- [x] Use consistent, unobtrusive chevrons for Settings/setup rows that open another page; leave switches and immediate actions plain.
+- [x] Keep language and appearance choice labels consistently capitalized.
+- [x] Prevent rapid taps from stacking Settings pages or completing setup twice during dismissal.
+- [x] Accept late-loaded setup language/theme preferences without resetting a choice in progress.
+- [x] Prevent an older sound preference read from overriding a newly saved choice.
+- [x] Retry profile claim refresh independently after a successful username save.
+
+Regression coverage includes delayed preference reads, duplicate completion,
+profile partial failures, existing large-text layouts and the full app suite.

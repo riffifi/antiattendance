@@ -33,6 +33,7 @@ class _AppTutorialState extends State<AppTutorial> {
   int _step = 0;
   bool _finishing = false;
   bool _saving = false, _sounds = true;
+  int _soundRevision = 0;
   late String? _language = widget.language;
   late AppThemeMode _theme = widget.themeMode;
   AppSettingsStore get _store => widget.settings ?? AppSettingsStore();
@@ -49,9 +50,18 @@ class _AppTutorialState extends State<AppTutorial> {
     _store
         .interfaceSounds()
         .then((v) {
-          if (mounted) setState(() => _sounds = v);
+          if (mounted && _soundRevision == 0) setState(() => _sounds = v);
         })
         .catchError((Object _) {});
+  }
+
+  @override
+  void didUpdateWidget(AppTutorial oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_saving) {
+      if (oldWidget.language != widget.language) _language = widget.language;
+      if (oldWidget.themeMode != widget.themeMode) _theme = widget.themeMode;
+    }
   }
 
   String _themeLabel(AppThemeMode mode) => switch (mode) {
@@ -60,6 +70,8 @@ class _AppTutorialState extends State<AppTutorial> {
     AppThemeMode.amoled => tr(context, 'Чёрная (AMOLED)', 'Black (AMOLED)'),
   };
   Future<void> _chooseLanguage() async {
+    if (_saving || _finishing) return;
+    setState(() => _saving = true);
     final choice = await showChoicePage<String>(
       context,
       title: tr(context, 'Язык приложения', 'App language'),
@@ -77,7 +89,14 @@ class _AppTutorialState extends State<AppTutorial> {
           ),
       ],
     );
-    if (!mounted || choice == null) return;
+    if (!mounted) return;
+    if (choice == null) {
+      setState(() {
+        _saving = false;
+        _language = widget.language;
+      });
+      return;
+    }
     setState(() => _saving = true);
     try {
       final value = choice == 'system' ? null : choice;
@@ -103,6 +122,8 @@ class _AppTutorialState extends State<AppTutorial> {
   }
 
   Future<void> _chooseTheme() async {
+    if (_saving || _finishing) return;
+    setState(() => _saving = true);
     final mode = await showChoicePage<AppThemeMode>(
       context,
       title: tr(context, 'Оформление', 'Appearance'),
@@ -115,7 +136,14 @@ class _AppTutorialState extends State<AppTutorial> {
           ),
       ],
     );
-    if (!mounted || mode == null) return;
+    if (!mounted) return;
+    if (mode == null) {
+      setState(() {
+        _saving = false;
+        _theme = widget.themeMode;
+      });
+      return;
+    }
     setState(() => _saving = true);
     try {
       await _store.saveThemeMode(mode);
@@ -140,6 +168,8 @@ class _AppTutorialState extends State<AppTutorial> {
   }
 
   Future<void> _setSounds(bool value) async {
+    if (_saving || _finishing) return;
+    ++_soundRevision;
     setState(() => _saving = true);
     try {
       await _store.saveInterfaceSounds(value);
@@ -169,7 +199,7 @@ class _AppTutorialState extends State<AppTutorial> {
     setState(() => _finishing = true);
     try {
       await widget.onComplete();
-    } finally {
+    } catch (_) {
       if (mounted) setState(() => _finishing = false);
     }
   }
@@ -317,6 +347,7 @@ class _AppTutorialState extends State<AppTutorial> {
                     const SizedBox(height: 24),
                     CampusListItem(
                       key: const ValueKey('oobe-language'),
+                      navigation: true,
                       headline: tr(context, 'Язык приложения', 'App language'),
                       supportingText:
                           languages[_language] ??
@@ -325,6 +356,7 @@ class _AppTutorialState extends State<AppTutorial> {
                     ),
                     CampusListItem(
                       key: const ValueKey('oobe-theme'),
+                      navigation: true,
                       headline: tr(context, 'Тема', 'Theme'),
                       supportingText: _themeLabel(_theme),
                       onTap: _saving ? null : _chooseTheme,

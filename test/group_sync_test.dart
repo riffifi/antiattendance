@@ -193,14 +193,14 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('All groups'));
+    await tester.tap(find.text('my group'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Group B'));
     await tester.pumpAndSettle();
     expect((await settings.loadMyGroup())?.id, 43);
     await tester.tap(find.text('Group B'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('All groups'));
+    await tester.tap(find.text('all groups'));
     await tester.pumpAndSettle();
     expect(await settings.loadMyGroup(), isNull);
   });

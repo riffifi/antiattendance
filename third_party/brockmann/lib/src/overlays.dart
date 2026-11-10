@@ -366,7 +366,7 @@ Future<T?> showBrockmannActionSheet<T>(
     ),
     backgroundColor: t.surface,
     elevation: 0,
-    shape: Border(top: BorderSide(color: t.line)),
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
     builder: (c) => ConstrainedBox(
       constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(c).height * .8),
       child: SafeArea(
@@ -375,7 +375,9 @@ Future<T?> showBrockmannActionSheet<T>(
           padding: const EdgeInsets.symmetric(vertical: 24),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
+              constraints: BoxConstraints(
+                maxWidth: t.windowsPhone ? double.infinity : 560,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -384,8 +386,11 @@ Future<T?> showBrockmannActionSheet<T>(
                     padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
                     child: BrockmannText(
                       title,
-                      role: BrockmannType.label,
-                      color: t.secondary,
+                      role: t.windowsPhone
+                          ? BrockmannType.value
+                          : BrockmannType.label,
+                      weight: t.windowsPhone ? 400 : null,
+                      color: t.windowsPhone ? t.accent : t.secondary,
                     ),
                   ),
                   for (final entry in entries)
@@ -410,7 +415,9 @@ Future<T?> showBrockmannActionSheet<T>(
                               entry.leading!,
                               const SizedBox(width: 16),
                             ],
-                            if (entry.icon != null && showIcons) ...[
+                            if (entry.icon != null &&
+                                showIcons &&
+                                !t.windowsPhone) ...[
                               BrockmannGlyph(
                                 entry.icon!,
                                 color: !entry.enabled

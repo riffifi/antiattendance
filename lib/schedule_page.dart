@@ -201,7 +201,6 @@ class _SchedulePageState extends State<SchedulePage> {
     final confirmed = _confirmed(lesson);
     final action = await showExpressiveSheet<String>(
       context: context,
-      showDragHandle: true,
       builder: (context) => SafeArea(
         child: ConstrainedBox(
           constraints: BoxConstraints(
@@ -214,32 +213,28 @@ class _SchedulePageState extends State<SchedulePage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  BrockmannText(
                     '${_date(lesson.start)}  ${_time(lesson.start)}–${_time(lesson.end)}',
-                    style: TextStyle(
-                      color: context.palette.muted,
-                      fontSize: 13,
-                    ),
+                    role: BrockmannType.caption,
+                    color: context.brockmann.secondary,
                   ),
                   const SizedBox(height: 8),
-                  Text(
+                  BrockmannText(
                     lesson.subject,
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w400),
+                    role: BrockmannType.heading,
+                    weight: 400,
                   ),
                   if (lesson.type.isNotEmpty ||
                       lesson.location.isNotEmpty ||
                       lesson.teachers.isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    Text(
+                    BrockmannText(
                       [
                         lesson.type,
                         lesson.location,
                         lesson.teachers,
                       ].where((value) => value.isNotEmpty).join(' · '),
-                      style: TextStyle(
-                        color: context.palette.muted,
-                        height: 1.35,
-                      ),
+                      color: context.brockmann.secondary,
                     ),
                   ],
                   if (lesson.location.isNotEmpty)
@@ -255,28 +250,33 @@ class _SchedulePageState extends State<SchedulePage> {
                       label: Text(tr(context, 'Найти аудиторию', 'Find room')),
                     ),
                   const SizedBox(height: 22),
-                  Text(
-                    tr(context, 'Подтверждённые Пульсом', 'Confirmed by Pulse'),
-                    style: TextStyle(fontWeight: FontWeight.w400),
+                  BrockmannText(
+                    tr(
+                      context,
+                      'Подтверждённые Пульсом',
+                      'Confirmed by Pulse',
+                    ).toLowerCase(),
+                    role: BrockmannType.value,
+                    weight: 400,
+                    color: context.brockmann.accent,
                   ),
                   const SizedBox(height: 8),
                   if (confirmed.isEmpty)
-                    Text(
+                    BrockmannText(
                       tr(context, 'Пока нет отметок', 'Nobody yet'),
-                      style: TextStyle(color: context.palette.muted),
+                      role: BrockmannType.caption,
+                      color: context.brockmann.secondary,
                     )
                   else
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final mark in confirmed)
-                          BrockmannChip(
-                            label: mark.accountLabel,
-                            selected: true,
-                          ),
-                      ],
-                    ),
+                    for (final mark in confirmed)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: BrockmannText(
+                          mark.accountLabel,
+                          role: BrockmannType.value,
+                          weight: 400,
+                        ),
+                      ),
                   const SizedBox(height: 22),
                   SizedBox(
                     width: double.infinity,

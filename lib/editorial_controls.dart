@@ -3,6 +3,7 @@ import 'package:brockmann/brockmann.dart';
 
 import 'app_haptics.dart';
 import 'icons/campus_icon.dart';
+import 'l10n.dart';
 
 /// App callback/semantic adapter over Brockmann's shared input foundation.
 class EditorialAction extends StatelessWidget {
@@ -165,6 +166,8 @@ class CampusSwitch extends StatelessWidget {
   Widget build(BuildContext context) => BrockmannSwitch(
     label: '',
     compact: true,
+    onLabel: tr(context, 'Вкл', 'On'),
+    offLabel: tr(context, 'Выкл', 'Off'),
     value: value,
     sound: false,
     onChanged: onChanged == null

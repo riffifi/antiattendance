@@ -469,13 +469,15 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
             children: [
               Padding(
                 padding: const EdgeInsets.all(20),
-                child: Text(
+                child: BrockmannText(
                   tr(
                     context,
                     'Подключить пропуска вместе',
                     'Enroll passes together',
-                  ),
-                  style: Theme.of(context).textTheme.titleLarge,
+                  ).toLowerCase(),
+                  role: BrockmannType.value,
+                  weight: 400,
+                  color: context.brockmann.accent,
                 ),
               ),
               Flexible(
@@ -887,14 +889,17 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            BrockmannText(
               tr(context, 'Как пользоваться', 'How to use'),
-              style: Theme.of(context).textTheme.headlineSmall,
+              role: BrockmannType.heading,
+              weight: 400,
             ),
             const SizedBox(height: 20),
-            Text(
+            BrockmannText(
               tr(context, '1. Подключите пропуск', '1. Enroll a pass'),
-              style: Theme.of(context).textTheme.titleMedium,
+              role: BrockmannType.value,
+              weight: 400,
+              color: context.brockmann.accent,
             ),
             const SizedBox(height: 6),
             Text(
@@ -905,9 +910,11 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
               ),
             ),
             const SizedBox(height: 18),
-            Text(
+            BrockmannText(
               tr(context, '2. Выберите режим', '2. Choose a mode'),
-              style: Theme.of(context).textTheme.titleMedium,
+              role: BrockmannType.value,
+              weight: 400,
+              color: context.brockmann.accent,
             ),
             const SizedBox(height: 6),
             Text(
@@ -918,9 +925,11 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
               ),
             ),
             const SizedBox(height: 18),
-            Text(
+            BrockmannText(
               tr(context, '3. Поднесите телефон', '3. Tap at the gate'),
-              style: Theme.of(context).textTheme.titleMedium,
+              role: BrockmannType.value,
+              weight: 400,
+              color: context.brockmann.accent,
             ),
             const SizedBox(height: 6),
             Text(
@@ -1134,7 +1143,6 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
     final remove = await showExpressiveSheet<bool>(
       context: context,
       compact: true,
-      showDragHandle: true,
       builder: (context) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
@@ -1323,16 +1331,9 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                       .where((a) => a.label.toLowerCase().contains(_query)))
                 _accountCard(account, enabled),
               if (!_single && _numbers.isNotEmpty)
-                ExpansionTile(
-                  trailing: const Text(
-                    '+',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w300),
-                  ),
+                CampusDisclosure(
                   key: const PageStorageKey('nfc-queue-options'),
-                  tilePadding: EdgeInsets.zero,
-                  title: Text(
-                    tr(context, 'Настройка очереди', 'Queue settings'),
-                  ),
+                  title: tr(context, 'Настройка очереди', 'Queue settings'),
                   children: [
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16),
@@ -1393,13 +1394,6 @@ class NfcPassPageState extends State<NfcPassPage> with WidgetsBindingObserver {
                                 ),
                               ),
                             ],
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            child: Divider(
-                              height: 1,
-                              color: context.palette.line,
-                            ),
                           ),
                           AppPassPicker(
                             key: ValueKey(_ownId),
@@ -1630,7 +1624,11 @@ class _VerificationDialogState extends State<_VerificationDialog> {
   @override
   Widget build(BuildContext context) => BrockmannDialog(
     scrollable: true,
-    title: Text(widget.label),
+    title: BrockmannText(
+      widget.label,
+      role: BrockmannType.heading,
+      weight: 400,
+    ),
     content: Column(
       mainAxisSize: MainAxisSize.min,
       children: [

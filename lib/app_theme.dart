@@ -190,7 +190,7 @@ class _AATheme extends BrockmannThemeData {
   final AppThemeMode mode;
   @override
   Color get background =>
-      mode == AppThemeMode.dark ? const Color(0xff0a0a0a) : super.background;
+      mode == AppThemeMode.light ? super.background : Colors.black;
   @override
   Color get surface =>
       mode == AppThemeMode.amoled ? Colors.black : super.surface;

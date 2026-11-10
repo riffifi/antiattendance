@@ -289,14 +289,6 @@ class QueueScanOverlay extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
                 decoration: BoxDecoration(
                   color: context.palette.surface.withValues(alpha: .96),
-                  border: Border.all(
-                    color: cameraError
-                        ? const Color(0x99FFC16B)
-                        : queue.remaining == 0
-                        ? const Color(0x9995E6BD)
-                        : context.palette.line,
-                  ),
-                  borderRadius: BorderRadius.zero,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

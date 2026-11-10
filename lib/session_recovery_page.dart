@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:brockmann/brockmann.dart';
 import 'package:flutter/material.dart';
 
 import 'accounts.dart';
@@ -303,14 +304,15 @@ class _SessionRecoveryPageState extends State<SessionRecoveryPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          BrockmannText(
                             trf(
                               context,
                               'Готовы: {valid} · Требуют входа: {expired}',
                               'Ready: {valid} · Need sign-in: {expired}',
                               {'valid': valid, 'expired': expired},
                             ),
-                            style: Theme.of(context).textTheme.titleMedium,
+                            role: BrockmannType.value,
+                            weight: 400,
                           ),
                           const SizedBox(height: 8),
                           Text(

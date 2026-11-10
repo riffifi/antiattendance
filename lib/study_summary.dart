@@ -4,6 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'accounts.dart';
+import 'aa_id.dart';
+import 'server_api.dart';
+import 'server_sessions.dart';
 import 'app_settings.dart';
 import 'attendance_log.dart';
 import 'schedule_api.dart';
@@ -135,6 +138,60 @@ List<Map<String, Object?>> buildStudySummaries({
   return result;
 }
 
+List<Map<String, Object?>> buildServerStudySummary(
+  Map<String, dynamic> data, {
+  String language = 'en',
+}) {
+  final lessons = serverRows(data['lessons']);
+  if (lessons.isEmpty) return [];
+  final date = '${data['date']}'.split('.');
+  if (date.length != 3) throw const FormatException('Invalid study date');
+  final day = DateTime.utc(
+    int.parse(date[2]),
+    int.parse(date[1]),
+    int.parse(date[0]),
+  );
+  DateTime endOf(Map<String, dynamic> lesson) {
+    final parts = '${lesson['end']}'.split(':');
+    return DateTime.utc(
+      day.year,
+      day.month,
+      day.day,
+      int.parse(parts[0]),
+      int.parse(parts[1]),
+    );
+  }
+
+  final end = lessons.map(endOf).reduce((a, b) => a.isAfter(b) ? a : b);
+  return [
+    {
+      'id': day.toIso8601String().substring(0, 10),
+      'at': moscowInstant(end).millisecondsSinceEpoch,
+      'title': summaryText(language, 'Study day summary', 'Итоги учебного дня'),
+      'recorded': summaryText(language, 'Confirmed', 'Подтверждено'),
+      'sessionReminder': summaryText(
+        language,
+        'Sign-in needed',
+        'Нужно войти снова',
+      ),
+      'people': [
+        for (final person in serverRows(data['people']))
+          {
+            'name': person['label'] ?? person['username'] ?? '—',
+            'accountId': person['id'],
+            'sessionExpired': person['session'] == 'expired',
+            'counts':
+                '${lessons.where((l) => dayMark(l, '${person['id']}')?['state'] == 'approved').length}/${lessons.length}',
+            'lines': [
+              for (final lesson in lessons)
+                '${lesson['start']} ${lesson['subject']} · ${dayMark(lesson, '${person['id']}')?['message'] ?? dayMark(lesson, '${person['id']}')?['state'] ?? '—'}',
+            ],
+          },
+      ],
+    },
+  ];
+}
+
 class StudySummaryService {
   StudySummaryService({
     ScheduleApi? api,
@@ -158,6 +215,31 @@ class StudySummaryService {
     if (!enabled) {
       await studySummaryChannel.invokeMethod('configure', {'enabled': false});
       return;
+    }
+    if (_ownsApi) {
+      await AaId.initialize();
+      await ServerSessions.initialize();
+      final server = ServerSessions.active;
+      if (server != null) {
+        await server.fetch();
+        if (server.serverManaged) {
+          final data = await AaServerApi(server).today();
+          if (data['schedule_error'] != null) {
+            throw StateError('Schedule unavailable');
+          }
+          final language =
+              await _settings.loadLanguage() ??
+              Platform.localeName.split('_').first;
+          final tasks = buildServerStudySummary(data, language: language);
+          if (await _settings.loadDaySummaryEnabled()) {
+            await studySummaryChannel.invokeMethod('configure', {
+              'enabled': true,
+              'tasks': tasks,
+            });
+          }
+          return;
+        }
+      }
     }
     final accounts = await _accounts.load();
     final marks = await _log.load();

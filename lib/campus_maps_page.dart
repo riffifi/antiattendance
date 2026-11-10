@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:brockmann/brockmann.dart';
 import 'package:flutter/material.dart';
 
 import 'campus_design.dart';
@@ -171,15 +172,24 @@ class _CampusMapsPageState extends State<CampusMapsPage>
     final destination = _selected;
     if (destination == null) return;
     if (_start == null) {
-      final origin = await showExpressiveSheet<CampusPlace>(
-        context: context,
-        builder: (context) => _PlacePicker(
-          campus: _map,
-          title: tr(context, 'Откуда идём?', 'Choose starting place'),
-          position: _positionCampus == _map.id && _position?.usable == true
-              ? _position
-              : null,
-          floorId: _positionFloor,
+      final origin = await Navigator.of(context).push<CampusPlace>(
+        MaterialPageRoute(
+          builder: (context) => CampusScaffold(
+            appBar: CampusAppBar(
+              title: Text(
+                tr(context, 'Откуда идём?', 'Choose starting place').toLowerCase(),
+              ),
+            ),
+            body: _PlacePicker(
+              campus: _map,
+              title: tr(context, 'Откуда идём?', 'Choose starting place'),
+              position: _positionCampus == _map.id && _position?.usable == true
+                  ? _position
+                  : null,
+              floorId: _positionFloor,
+              page: true,
+            ),
+          ),
         ),
       );
       if (!mounted || origin == null) return;
@@ -252,40 +262,22 @@ class _CampusMapsPageState extends State<CampusMapsPage>
       }
       final campus = _campuses[nearest];
       setState(() => _locating = false);
-      final floor = await showExpressiveSheet<String>(
-        context: context,
-        builder: (context) => ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.sizeOf(context).height * .7,
-          ),
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  '${campus.shortTitle} · ${tr(context, 'На каком вы этаже?', 'Which floor are you on?')}',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  tr(
-                    context,
-                    'GPS не определяет этаж. Выберите его вручную.',
-                    'GPS cannot identify your floor. Select it manually.',
-                  ),
-                ),
-              ),
-              for (final floor in campus.floors)
-                CampusListItem(
-                  headline: campusFloorLabel(context, floor),
-                  onTap: () => Navigator.pop(context, floor.id),
-                ),
-            ],
-          ),
+      final floor = await showChoicePage<String>(
+        context,
+        title:
+            '${campus.shortTitle} · ${tr(context, 'На каком вы этаже?', 'Which floor are you on?')}',
+        detail: tr(
+          context,
+          'GPS не определяет этаж. Выберите его вручную.',
+          'GPS cannot identify your floor. Select it manually.',
         ),
+        options: [
+          for (final floor in campus.floors)
+            ChoiceOption(
+              value: floor.id,
+              label: campusFloorLabel(context, floor),
+            ),
+        ],
       );
       if (!mounted || generation != _locationGeneration || floor == null) {
         return;
@@ -380,9 +372,10 @@ class _CampusMapsPageState extends State<CampusMapsPage>
           children: [
             Padding(
               padding: const EdgeInsets.all(16),
-              child: Text(
+              child: BrockmannText(
                 tr(context, 'Аудитории из расписания', 'Rooms from schedule'),
-                style: Theme.of(context).textTheme.titleLarge,
+                role: BrockmannType.heading,
+                weight: 400,
               ),
             ),
             for (final lesson in widget.lessons.where(
@@ -451,9 +444,10 @@ class _CampusMapsPageState extends State<CampusMapsPage>
           shrinkWrap: true,
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
           children: [
-            Text(
+            BrockmannText(
               '${_start!.label} → ${_selected!.label}',
-              style: Theme.of(context).textTheme.titleLarge,
+              role: BrockmannType.heading,
+              weight: 400,
             ),
             const SizedBox(height: 8),
             Text(
@@ -586,6 +580,7 @@ class _CampusMapsPageState extends State<CampusMapsPage>
             label: tr(context, 'Моё местоположение', 'My location'),
           ),
           AppActionMenu(
+            title: tr(context, 'действия', 'actions'),
             entries: [
               CampusMenuEntry(
                 value: 'campus',
@@ -608,10 +603,9 @@ class _CampusMapsPageState extends State<CampusMapsPage>
               }
             },
             anchorBuilder: (_, open) => CampusTextAction(
-              icon: Icons.more_horiz_rounded,
               onPressed: open,
               tooltip: tr(context, 'Действия', 'Actions'),
-              label: tr(context, 'Действия', 'Actions'),
+              label: tr(context, 'ещё', 'more'),
             ),
           ),
         ],
@@ -655,50 +649,61 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                           child: Row(
                             children: [
                               Expanded(
-                                child: AppActionMenu(
-                                  entries: [
-                                    for (var c = 0; c < _campuses.length; c++)
-                                      CampusMenuEntry(
-                                        value: c,
-                                        label: _campuses[c].title,
-                                      ),
-                                  ],
-                                  onSelected: (value) => setState(() {
-                                    _campus = value as int;
-                                    _floorId = _map.floors.first.id;
-                                    _selected = null;
-                                    _start = null;
-                                    _invalidateRoute();
-                                  }),
-                                  anchorBuilder: (_, open) =>
-                                      CampusButton.action(
-                                        style: CampusButtonStyle.tonal,
-                                        onPressed: open,
-                                        label: Text(_map.shortTitle),
-                                      ),
+                                child: CampusButton.action(
+                                  style: CampusButtonStyle.tonal,
+                                  onPressed: () async {
+                                    final value = await showChoicePage<int>(
+                                      context,
+                                      title: tr(context, 'кампус', 'campus'),
+                                      options: [
+                                        for (
+                                          var c = 0;
+                                          c < _campuses.length;
+                                          c++
+                                        )
+                                          ChoiceOption(
+                                            value: c,
+                                            label: _campuses[c].title,
+                                            selected: c == _campus,
+                                          ),
+                                      ],
+                                    );
+                                    if (!mounted || value == null) return;
+                                    setState(() {
+                                      _campus = value;
+                                      _floorId = _map.floors.first.id;
+                                      _selected = null;
+                                      _start = null;
+                                      _invalidateRoute();
+                                    });
+                                  },
+                                  label: Text(_map.shortTitle),
                                 ),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
-                                child: AppActionMenu(
-                                  entries: [
-                                    for (final floor in _map.floors)
-                                      CampusMenuEntry(
-                                        value: floor.id,
-                                        label: campusFloorLabel(context, floor),
-                                      ),
-                                  ],
-                                  onSelected: (value) => setState(
-                                    () => _floorId = value as String,
-                                  ),
-                                  anchorBuilder: (_, open) =>
-                                      CampusButton.action(
-                                        style: CampusButtonStyle.tonal,
-                                        onPressed: open,
-                                        label: Text(
-                                          campusFloorLabel(context, _floor),
-                                        ),
-                                      ),
+                                child: CampusButton.action(
+                                  style: CampusButtonStyle.tonal,
+                                  onPressed: () async {
+                                    final value = await showChoicePage<String>(
+                                      context,
+                                      title: tr(context, 'этаж', 'floor'),
+                                      options: [
+                                        for (final floor in _map.floors)
+                                          ChoiceOption(
+                                            value: floor.id,
+                                            label: campusFloorLabel(
+                                              context,
+                                              floor,
+                                            ),
+                                            selected: floor.id == _floor.id,
+                                          ),
+                                      ],
+                                    );
+                                    if (!mounted || value == null) return;
+                                    setState(() => _floorId = value);
+                                  },
+                                  label: Text(campusFloorLabel(context, _floor)),
                                 ),
                               ),
                             ],
@@ -875,9 +880,10 @@ class _CampusMapsPageState extends State<CampusMapsPage>
                 ),
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
-                child: Text(
+                child: BrockmannText(
                   'Пульс РТУ МИРЭА · 12.09.2026',
-                  style: Theme.of(context).textTheme.labelSmall,
+                  role: BrockmannType.caption,
+                  color: context.brockmann.secondary,
                 ),
               ),
             ],
@@ -927,9 +933,10 @@ class _CampusMapsPageState extends State<CampusMapsPage>
         Row(
           children: [
             Expanded(
-              child: Text(
+              child: BrockmannText(
                 '${place.label} · ${campusFloorLabel(context, _map.floor(place.floorId))}',
-                style: Theme.of(context).textTheme.titleMedium,
+                role: BrockmannType.value,
+                weight: 400,
               ),
             ),
             CampusTextAction(
@@ -1045,11 +1052,13 @@ class _PlacePicker extends StatefulWidget {
     required this.title,
     this.position,
     this.floorId,
+    this.page = false,
   });
   final CampusMap campus;
   final String title;
   final CampusPosition? position;
   final String? floorId;
+  final bool page;
   @override
   State<_PlacePicker> createState() => _PlacePickerState();
 }
@@ -1080,54 +1089,60 @@ class _PlacePickerState extends State<_PlacePicker> {
             .compareTo(math.pow(b.x - point.x, 2) + math.pow(b.y - point.y, 2));
       });
     }
-    return SizedBox(
-      height: MediaQuery.sizeOf(context).height * .7,
-      child: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
+    final list = CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (!widget.page) ...[
+                  BrockmannText(
                     widget.title,
-                    style: Theme.of(context).textTheme.titleLarge,
+                    role: BrockmannType.value,
+                    weight: 400,
+                    color: context.brockmann.accent,
                   ),
                   const SizedBox(height: 16),
-                  CampusTextField(
-                    controller: _search,
-                    label: tr(context, 'Аудитория или место', 'Room or place'),
-                    onChanged: (_) => setState(() {}),
-                  ),
-                  if (widget.position != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      tr(
-                        context,
-                        'Ближайшие места по приблизительной позиции. Подтвердите, где вы находитесь.',
-                        'Nearby places use approximate location. Confirm where you are.',
-                      ),
-                    ),
-                  ],
                 ],
-              ),
+                CampusTextField(
+                  controller: _search,
+                  label: tr(context, 'Аудитория или место', 'Room or place'),
+                  onChanged: (_) => setState(() {}),
+                ),
+                if (widget.position != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    tr(
+                      context,
+                      'Ближайшие места по приблизительной позиции. Подтвердите, где вы находитесь.',
+                      'Nearby places use approximate location. Confirm where you are.',
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          SliverList.builder(
-            itemCount: places.length,
-            itemBuilder: (context, index) {
-              final place = places[index];
-              return CampusListItem(
-                headline: place.label,
-                supportingText:
-                    '${campusFloorLabel(context, widget.campus.floor(place.floorId))} · ${placeKindLabel(context, place.kind)}',
-                onTap: () => Navigator.pop(context, place),
-              );
-            },
-          ),
-        ],
-      ),
+        ),
+        SliverList.builder(
+          itemCount: places.length,
+          itemBuilder: (context, index) {
+            final place = places[index];
+            return CampusListItem(
+              headline: place.label,
+              supportingText:
+                  '${campusFloorLabel(context, widget.campus.floor(place.floorId))} · ${placeKindLabel(context, place.kind)}',
+              onTap: () => Navigator.pop(context, place),
+            );
+          },
+        ),
+      ],
+    );
+    if (widget.page) return list;
+    return SizedBox(
+      height: MediaQuery.sizeOf(context).height * .7,
+      child: list,
     );
   }
 }

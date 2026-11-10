@@ -476,26 +476,15 @@ class _DebugMenuPageState extends State<DebugMenuPage> {
           if (_report != null)
             for (final section in _report!.entries) ...[
               const SizedBox(height: 16),
-              CampusPanel(
-                padding: EdgeInsets.zero,
-                child: ExpansionTile(
-                  trailing: const Text(
-                    '+',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w300),
-                  ),
-                  key: PageStorageKey('debug-${section.key}'),
-                  title: Text(
-                    section.key,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  expandedCrossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Align(
+              CampusDisclosure(
+                key: PageStorageKey('debug-${section.key}'),
+                title: section.key,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(0, 0, 0, 16),
+                    child: Align(
                       alignment: Alignment.centerLeft,
                       child: SelectableText(
-                        // ExpansionTile stores a bool in PageStorage; the text's
-                        // internal scroll position needs a separate entry.
                         key: PageStorageKey('debug-content-${section.key}'),
                         const JsonEncoder.withIndent('  ')
                             .convert(section.value),
@@ -506,8 +495,8 @@ class _DebugMenuPageState extends State<DebugMenuPage> {
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ],
           const SizedBox(height: 24),
@@ -588,7 +577,11 @@ class _PassTestingDialogState extends State<_PassTestingDialog> {
   @override
   Widget build(BuildContext context) => BrockmannDialog(
     scrollable: true,
-    title: Text(tr(context, 'Тестирование пропусков', 'Pass testing')),
+    title: BrockmannText(
+      tr(context, 'Тестирование пропусков', 'Pass testing').toLowerCase(),
+      role: BrockmannType.heading,
+      weight: 400,
+    ),
     content: CampusTextField(
       controller: _password,
       autofocus: true,

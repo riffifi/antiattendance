@@ -7,6 +7,7 @@ import 'app_haptics.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import 'app_theme.dart';
+import 'frontend/page_layout.dart';
 import 'l10n.dart';
 import 'editorial_controls.dart';
 export 'editorial_controls.dart';
@@ -73,6 +74,8 @@ class CampusHeader extends StatelessWidget {
         BrockmannNavigationScope.of(context)?.headingVisible ?? false;
     return Padding(
       padding: EdgeInsets.only(
+        left: AaPageLayout.titleNudge(context),
+        right: AaPageLayout.titleNudge(context),
         bottom: sharedHeading
             ? (subtitle.isEmpty && trailing == null ? 0 : 20)
             : 32,
@@ -145,15 +148,86 @@ class CampusPanel extends StatelessWidget {
   );
 }
 
+class CampusDisclosure extends StatefulWidget {
+  const CampusDisclosure({
+    super.key,
+    required this.title,
+    required this.children,
+  });
+  final String title;
+  final List<Widget> children;
+  @override
+  State<CampusDisclosure> createState() => _CampusDisclosureState();
+}
+
+class _CampusDisclosureState extends State<CampusDisclosure> {
+  bool? _open;
+  bool get _expanded {
+    if (_open != null) return _open!;
+    return PageStorage.maybeOf(context)?.readState(context) == true;
+  }
+
+  void _toggle() {
+    final next = !_expanded;
+    setState(() => _open = next);
+    PageStorage.maybeOf(context)?.writeState(context, next);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final open = _expanded;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        BrockmannPressable(
+          label: widget.title,
+          onPressed: _toggle,
+          builder: (context, pressed) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: BrockmannText(
+                    widget.title,
+                    role: BrockmannType.value,
+                    weight: 400,
+                    color: pressed
+                        ? context.brockmann.accent
+                        : context.brockmann.foreground,
+                  ),
+                ),
+                Text(
+                  open ? '−' : '+',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w300,
+                    color: context.brockmann.foreground,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (open) ...widget.children,
+      ],
+    );
+  }
+}
+
 class CampusSectionTitle extends StatelessWidget {
   const CampusSectionTitle(this.title, {super.key});
   final String title;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: 8, bottom: 16),
+    padding: const EdgeInsets.only(top: 20, bottom: 8),
     child: Semantics(
       header: true,
-      child: BrockmannText(title.toLowerCase(), role: BrockmannType.heading),
+      child: BrockmannText(
+        title.toLowerCase(),
+        role: BrockmannType.value,
+        weight: 400,
+        color: context.brockmann.accent,
+      ),
     ),
   );
 }
@@ -273,7 +347,7 @@ class CampusListItem extends StatelessWidget {
               ),
           ],
         ),
-        if (showDivider)
+        if (showDivider && !context.brockmann.windowsPhone)
           Divider(height: .5, thickness: .5, color: context.brockmann.line),
       ],
     ),
@@ -444,7 +518,6 @@ class _CampusRouteHeader extends StatelessWidget {
   final CampusAppBar bar;
   @override
   Widget build(BuildContext context) {
-    final t = context.brockmann;
     final title = bar.title;
     if (bar.compact) {
       return Padding(
@@ -498,13 +571,7 @@ class _CampusRouteHeader extends StatelessWidget {
                     onPressed: () => Navigator.of(context).maybePop(),
                   ),
                 ),
-              Expanded(
-                child: BrockmannText(
-                  'ANTIATTENDANCE',
-                  role: BrockmannType.label,
-                  color: t.secondary,
-                ),
-              ),
+              const Spacer(),
               if (bar.actions != null)
                 Flexible(
                   child: BrockmannButtonBar(

@@ -184,3 +184,15 @@ Keep the Passes tab open. Switching tabs or opening Settings stops the queue. It
 The native protocol was independently implemented from inspection of the installed Pulse 2.1.0+253 APK: AID `F222222222`, variable-length little-endian pass number followed by `9000`. The enrollment client is vendored from the MIT-licensed `/home/leo/university-app` repository, whose private native module is absent. See [NFC findings](docs/nfc-protocol.md) for evidence and test limits. Live enrollment and gate acceptance require testing with the university's accounts and reader.
 
 All local UI strings and known attendance results have Russian, English, French, Portuguese and Simplified Chinese copy. `tool/check_translations.dart` audits literal UI calls and attendance-result messages; the test suite also checks translated placeholders. NFC verification retry dates follow the app language and the phone's clock format.
+
+## Current server integration
+
+AA 3.8 uses the Go server’s shared application/website API. Defaults are
+`https://aa.ytc-srv.org` and `https://aaid.ytc-srv.org`; custom endpoints remain
+configurable. University QR sign-in runs on the server. Attendance uses the
+server-selected class and authorized people, and daily results preserve each
+class’s separate marks.
+
+The current server exposes pass permissions, not digital NFC issuance or
+activation. See [the design and migration audit](docs/design-server-audit.md)
+for compatibility details and validation.

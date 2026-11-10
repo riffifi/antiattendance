@@ -96,7 +96,7 @@ class AttendanceAccountRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  BrockmannText(account.label, role: BrockmannType.value),
+                  BrockmannText(account.label, role: BrockmannType.value, weight: 400),
                   if (account.groupName != null) ...[
                     const SizedBox(height: 4),
                     BrockmannText(
@@ -183,12 +183,13 @@ class AttendanceAccountRow extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            BrockmannText(
                               account.label,
-                              style: Theme.of(context).textTheme.titleLarge,
+                              role: BrockmannType.heading,
+                              weight: 400,
                             ),
                             const SizedBox(height: 12),
-                            Text(sessionStatus),
+                            BrockmannText(sessionStatus),
                             const SizedBox(height: 16),
                             Wrap(
                               spacing: 16,

@@ -1,16 +1,12 @@
-import 'package:brockmann/brockmann.dart';
-
 import 'dart:async';
-import 'dart:io';
 
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:brockmann/brockmann.dart';
 import 'package:flutter/material.dart';
 
 import 'aa_id.dart';
-import 'accounts.dart';
 import 'campus_design.dart';
 import 'l10n.dart';
-import 'pulse_login.dart';
+import 'server_login_page.dart';
 
 /// Shows [child] only to a phone signed in to AA ID.
 class AaIdGate extends StatefulWidget {
@@ -67,16 +63,6 @@ class _AaIdSignInPageState extends State<AaIdSignInPage> {
 
   Future<void> _signIn() async {
     if (_busy) return;
-    if (!Platform.isAndroid && !Platform.isIOS) {
-      setState(
-        () => _error = tr(
-          context,
-          'Вход через МИРЭА доступен на Android и iOS.',
-          'MIREA sign-in is available on Android and iOS.',
-        ),
-      );
-      return;
-    }
     final String address;
     try {
       address = AaIdClient.validateAddress(_url.text).toString();
@@ -95,18 +81,9 @@ class _AaIdSignInPageState extends State<AaIdSignInPage> {
       _error = null;
     });
     try {
-      final session = await Navigator.of(context).push<SavedAccount>(
-        MaterialPageRoute(builder: (_) => const PulseLoginPage()),
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(builder: (_) => ServerLoginPage(address: address)),
       );
-      if (!mounted || session == null) return;
-      try {
-        await AaId.signIn(address, session.cookie);
-      } finally {
-        // The MIREA session only proved who you are; do not leave it on the phone.
-        await CookieManager.instance().deleteAllCookies().catchError(
-          (Object _) => false,
-        );
-      }
     } catch (error) {
       if (!mounted) return;
       final status = error is AaIdException ? error.status : null;
@@ -160,31 +137,14 @@ class _AaIdSignInPageState extends State<AaIdSignInPage> {
                 'One account per person',
               ),
             ),
-            BrockmannSection(
-              title: tr(
-                context,
-                'Ваша учёба. Ваш день.',
-                'Your university. Your day.',
-              ),
-              children: [
-                Text(
-                  tr(
-                    context,
-                    'Войдите через МИРЭА, чтобы подтвердить, что это вы. AA ID привязывается к вашему аккаунту МИРЭА навсегда, и без него приложение не работает. Пароль и сессия МИРЭА не сохраняются.',
-                    'Sign in with MIREA to confirm it is you. AA ID is permanently bound to your MIREA account, and the app does not work without it. Your MIREA password and session are not saved.',
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
+            BrockmannText(
               tr(
                 context,
-                'Не входите чужим аккаунтом МИРЭА и не давайте свой: вход на новом телефоне выводит из AA ID самый давний.',
-                'Do not sign in with someone else’s MIREA account or share yours: signing in on a new phone signs out the oldest one.',
+                'Войдите с помощью QR-кода МИРЭА. Сессия университета хранится на сервере, на телефоне — только токены AA ID.',
+                'Sign in with a MIREA QR code. Your university session stays on the server; this phone keeps only AA ID tokens.',
               ),
-              style: Theme.of(context).textTheme.bodySmall,
             ),
+            const SizedBox(height: 12),
             if (_customServer) ...[
               const SizedBox(height: 20),
               CampusTextField(
@@ -297,26 +257,24 @@ class _AaIdAccountPageState extends State<AaIdAccountPage> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
           children: [
-            CampusPanel(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    tr(
-                      context,
-                      'Привязан к аккаунту МИРЭА',
-                      'Bound to a MIREA account',
-                    ),
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  if (session?.groupName != null) ...[
-                    const SizedBox(height: 8),
-                    Text(session!.groupName!),
-                  ],
-                  const SizedBox(height: 8),
-                  Text(AaId.url, style: Theme.of(context).textTheme.bodySmall),
-                ],
+            BrockmannText(
+              tr(
+                context,
+                'Привязан к аккаунту МИРЭА',
+                'Bound to a MIREA account',
               ),
+              role: BrockmannType.value,
+              weight: 400,
+            ),
+            if (session?.groupName != null) ...[
+              const SizedBox(height: 8),
+              BrockmannText(session!.groupName!),
+            ],
+            const SizedBox(height: 8),
+            BrockmannText(
+              AaId.url,
+              role: BrockmannType.caption,
+              color: context.brockmann.secondary,
             ),
             const SizedBox(height: 20),
             CampusSectionTitle(tr(context, 'Устройства', 'Devices')),

@@ -1,8 +1,8 @@
 import 'dart:convert';
 
+import 'package:brockmann/brockmann.dart';
 import 'package:flutter/material.dart';
 
-import 'app_theme.dart';
 import 'campus_design.dart';
 import 'l10n.dart';
 import 'study_summary.dart';
@@ -55,17 +55,18 @@ class _StudySummaryPageState extends State<StudySummaryPage> {
           : ListView(
               padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
               children: [
-                Text(
+                BrockmannText(
                   tr(
                     context,
                     'Это подтверждения, записанные этим приложением.',
                     'These are confirmations recorded by this app.',
                   ),
-                  style: TextStyle(color: context.palette.muted),
+                  role: BrockmannType.caption,
+                  color: context.brockmann.secondary,
                 ),
                 const SizedBox(height: 16),
                 if (_summary == null)
-                  Text(
+                  BrockmannText(
                     _failed
                         ? tr(
                             context,
@@ -79,54 +80,48 @@ class _StudySummaryPageState extends State<StudySummaryPage> {
                           ),
                   ),
                 if (_summary != null) ...[
-                  Text(
+                  BrockmannText(
                     '${_summary!['id']}',
-                    style: Theme.of(context).textTheme.titleLarge,
+                    role: BrockmannType.value,
+                    weight: 400,
                   ),
                   const SizedBox(height: 12),
                   for (final person in _summary!['people'] as List)
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: CampusPanel(
-                        padding: const EdgeInsets.symmetric(vertical: 24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${person['name']}',
-                              style: Theme.of(context).textTheme.titleMedium,
+                      padding: const EdgeInsets.only(bottom: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          BrockmannText(
+                            '${person['name']}',
+                            role: BrockmannType.value,
+                            weight: 400,
+                          ),
+                          const SizedBox(height: 4),
+                          BrockmannText(
+                            '${person['counts']}',
+                            role: BrockmannType.monoValue,
+                            color: context.brockmann.secondary,
+                          ),
+                          const SizedBox(height: 8),
+                          for (final line in person['lines'] as List)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: BrockmannText('$line'),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${person['counts']}',
-                              style: Theme.of(context).textTheme.labelLarge
-                                  ?.copyWith(
-                                    fontFamily: 'GeistMono',
-                                    color: context.palette.muted,
-                                  ),
+                          if (person['sessionExpired'] == true ||
+                              person['sessionExpiresAt'] is int &&
+                                  (person['sessionExpiresAt'] as int) <=
+                                      (_summary!['at'] as int))
+                            BrockmannText(
+                              tr(
+                                context,
+                                'Нужно войти снова',
+                                'Sign-in needed',
+                              ),
+                              color: context.brockmann.danger,
                             ),
-                            const SizedBox(height: 8),
-                            for (final line in person['lines'] as List)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 6),
-                                child: Text('$line'),
-                              ),
-                            if (person['sessionExpired'] == true ||
-                                person['sessionExpiresAt'] is int &&
-                                    (person['sessionExpiresAt'] as int) <=
-                                        (_summary!['at'] as int))
-                              Text(
-                                tr(
-                                  context,
-                                  'Нужно войти снова',
-                                  'Sign-in needed',
-                                ),
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.error,
-                                ),
-                              ),
-                          ],
-                        ),
+                        ],
                       ),
                     ),
                 ],

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:brockmann/brockmann.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
@@ -123,10 +124,11 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
+              BrockmannText(
                 widget.accountLabel ??
                     tr(context, 'Вход по QR-коду', 'Sign in with QR'),
-                style: Theme.of(context).textTheme.headlineSmall,
+                role: BrockmannType.heading,
+                weight: 400,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
@@ -295,9 +297,11 @@ class _PulseLoginPageState extends State<PulseLoginPage> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            tr(context, 'Проверка входа', 'Sign-in check'),
-            style: Theme.of(context).textTheme.titleLarge,
+          BrockmannText(
+            tr(context, 'Проверка входа', 'Sign-in check').toLowerCase(),
+            role: BrockmannType.heading,
+            weight: 400,
+            color: context.brockmann.accent,
           ),
           const SizedBox(height: 12),
           Text('GetMeInfo: ${_sessionState?.name ?? 'waiting'}'),

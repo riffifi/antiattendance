@@ -329,9 +329,13 @@ class _BatchLoginPageState extends State<BatchLoginPage> {
         builder: (context) => BrockmannDialog(
           scrollable: true,
           title: Text(
-            tr(context, 'Закончить добавление?', 'Finish adding accounts?'),
+            tr(
+              context,
+              'Закончить добавление?',
+              'Finish adding accounts?',
+            ).toLowerCase(),
           ),
-          content: Text(
+          content: BrockmannText(
             tr(
               context,
               'Сохранённые аккаунты останутся. Незавершённые входы будут закрыты.',
@@ -355,15 +359,8 @@ class _BatchLoginPageState extends State<BatchLoginPage> {
     if (mounted) Navigator.pop(context);
   }
 
-  Widget _card(BatchLoginEntry entry, int index) => Container(
+  Widget _card(BatchLoginEntry entry, int index) => Padding(
     padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: context.palette.surface,
-      borderRadius: BorderRadius.zero,
-      border: Border.all(
-        color: entry.approved ? context.palette.success : context.palette.line,
-      ),
-    ),
     child: Column(
       children: [
         CampusTextField(
@@ -380,9 +377,11 @@ class _BatchLoginPageState extends State<BatchLoginPage> {
             child: SizedBox.expand(
               child: Center(
                 child: entry.approved
-                    ? Text(
+                    ? BrockmannText(
                         tr(context, 'Готово', 'Done'),
-                        style: Theme.of(context).textTheme.headlineLarge,
+                        role: BrockmannType.display,
+                        weight: 400,
+                        color: context.brockmann.accent,
                       )
                     : entry.qr != null
                     ? Container(
@@ -566,9 +565,10 @@ class _BatchLoginPageState extends State<BatchLoginPage> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
+                            BrockmannText(
                               tr(context, 'Вход по QR-коду', 'Sign in with QR'),
-                              style: Theme.of(context).textTheme.headlineSmall,
+                              role: BrockmannType.heading,
+                              weight: 400,
                             ),
                             const SizedBox(height: 24),
                             if (active.qr != null)

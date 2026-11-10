@@ -117,6 +117,8 @@ class _BrockmannPivotState extends State<BrockmannPivot>
   Widget build(BuildContext context) {
     final t = context.brockmann;
     final role = widget.compact ? BrockmannType.body : BrockmannType.title;
+    final edge = t.windowsPhone ? 24.0 : 12.0;
+    const gap = 24.0; // Keep the preceding title outside the leading gutter.
     _offsets = [];
     _widths = [];
     var nextOffset = 0.0, height = 48.0;
@@ -128,7 +130,7 @@ class _BrockmannPivotState extends State<BrockmannPivot>
       )..layout();
       _offsets.add(nextOffset);
       _widths.add(math.max(48, painter.width));
-      nextOffset += _widths.last + 24;
+      nextOffset += _widths.last + gap;
       height = math.max(height, painter.height + 20);
       painter.dispose();
     }
@@ -155,7 +157,7 @@ class _BrockmannPivotState extends State<BrockmannPivot>
                             .toInt();
                     final span = _widths.isEmpty
                         ? _viewportWidth
-                        : _widths[interval] + 24;
+                        : _widths[interval] + gap;
                     _motion.dragBy(
                       event.delta.dx,
                       width: span,
@@ -186,15 +188,10 @@ class _BrockmannPivotState extends State<BrockmannPivot>
                   ? null
                   : const NeverScrollableScrollPhysics(),
               padding: EdgeInsets.only(
-                left: t.windowsPhone ? 24 : 12,
+                left: edge,
                 right: widget.compact || _widths.isEmpty
                     ? 12
-                    : math.max(
-                        12.0,
-                        bounds.maxWidth -
-                            _widths.last -
-                            (t.windowsPhone ? 24 : 12),
-                      ),
+                    : math.max(12.0, bounds.maxWidth - _widths.last - edge),
               ),
               child: AnimatedBuilder(
                 animation: _motion,
@@ -206,7 +203,7 @@ class _BrockmannPivotState extends State<BrockmannPivot>
                         for (var i = 0; i < widget.options.length; i++)
                           Padding(
                             padding: EdgeInsets.only(
-                              right: i == widget.options.length - 1 ? 0 : 24,
+                              right: i == widget.options.length - 1 ? 0 : gap,
                             ),
                             child: SizedBox(
                               width: _widths[i],
@@ -254,7 +251,9 @@ class _BrockmannPivotState extends State<BrockmannPivot>
                                               : t.secondary)
                                         : Color.lerp(
                                             t.foreground,
-                                            t.disabled,
+                                            t.windowsPhone
+                                                ? t.secondary
+                                                : t.disabled,
                                             (i - _motion.position).abs().clamp(
                                               0.0,
                                               1.0,
@@ -267,7 +266,9 @@ class _BrockmannPivotState extends State<BrockmannPivot>
                           ),
                       ],
                     ),
-                    if (widget.compact && widget.options.isNotEmpty)
+                    if (widget.compact &&
+                        !t.windowsPhone &&
+                        widget.options.isNotEmpty)
                       AnimatedPositioned(
                         duration: t.duration(context, 180),
                         curve: brockmannEaseOut,
@@ -1338,14 +1339,28 @@ class _PickerListState extends State<_PickerList> {
                               ? c.brockmann.line.withValues(alpha: .3)
                               : null,
                           alignment: Alignment.centerLeft,
-                          child: BrockmannText(
-                            widget.options[i],
-                            role: widget.fullPage
-                                ? BrockmannType.heading
-                                : BrockmannType.value,
-                            color: i == widget.selected
-                                ? c.brockmann.accentText
-                                : c.brockmann.foreground,
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: BrockmannText(
+                                  widget.options[i],
+                                  role: widget.fullPage
+                                      ? BrockmannType.heading
+                                      : BrockmannType.value,
+                                  weight: c.brockmann.windowsPhone ? 400 : null,
+                                  color: i == widget.selected
+                                      ? c.brockmann.accentText
+                                      : c.brockmann.foreground,
+                                ),
+                              ),
+                              if (i == widget.selected &&
+                                  c.brockmann.windowsPhone)
+                                BrockmannGlyph(
+                                  BrockmannIcon.check,
+                                  size: 20,
+                                  color: c.brockmann.accent,
+                                ),
+                            ],
                           ),
                         ),
                       ),

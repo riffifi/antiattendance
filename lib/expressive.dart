@@ -1,5 +1,6 @@
 import 'campus_design.dart';
 import 'app_haptics.dart';
+import 'frontend/page_layout.dart';
 import 'l10n.dart';
 
 import 'package:flutter/material.dart';
@@ -26,7 +27,7 @@ Future<T?> showExpressiveDialog<T>({
 Future<T?> showExpressiveSheet<T>({
   required BuildContext context,
   required WidgetBuilder builder,
-  bool showDragHandle = true,
+  bool showDragHandle = false,
   bool compact = false,
 }) => showModalBottomSheet<T>(
   context: context,
@@ -36,7 +37,7 @@ Future<T?> showExpressiveSheet<T>({
   constraints: const BoxConstraints(maxWidth: double.infinity),
   backgroundColor: context.brockmann.surface,
   elevation: 0,
-  shape: Border(top: BorderSide(color: context.brockmann.line)),
+  shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
   sheetAnimationStyle: AnimationStyle(
     duration: context.brockmann.duration(context, 220),
     reverseDuration: context.brockmann.duration(context, 200),
@@ -53,26 +54,13 @@ Future<T?> showExpressiveSheet<T>({
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
-              children: [
-                const SizedBox(width: 48),
-                Expanded(
-                  child: Center(
-                    child: showDragHandle
-                        ? Container(
-                            width: 32,
-                            height: 2,
-                            color: Theme.of(context).dividerColor,
-                          )
-                        : const SizedBox.shrink(),
-                  ),
-                ),
-                CampusTextAction(
-                  icon: Icons.close_rounded,
-                  label: tr(context, 'Закрыть', 'Close'),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
+            if (showDragHandle) const SizedBox.shrink(),
+            Align(
+              alignment: Alignment.centerRight,
+              child: CampusTextAction(
+                label: tr(context, 'Закрыть', 'Close'),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
             ),
             Flexible(
               child: Center(
@@ -87,6 +75,59 @@ Future<T?> showExpressiveSheet<T>({
             ),
           ],
         ),
+      ),
+    ),
+  ),
+);
+
+class ChoiceOption<T> {
+  const ChoiceOption({
+    required this.value,
+    required this.label,
+    this.supporting,
+    this.selected = false,
+    this.enabled = true,
+  });
+  final T value;
+  final String label;
+  final String? supporting;
+  final bool selected, enabled;
+}
+
+/// Full-page Windows Phone choice list. Back returns null.
+Future<T?> showChoicePage<T>(
+  BuildContext context, {
+  required String title,
+  String? detail,
+  required List<ChoiceOption<T>> options,
+}) => Navigator.of(context).push<T>(
+  MaterialPageRoute(
+    builder: (context) => CampusScaffold(
+      appBar: CampusAppBar(title: Text(title.toLowerCase())),
+      body: ListView(
+        padding: AaPageLayout.insets(context),
+        children: [
+          if (detail != null) ...[
+            BrockmannText(detail),
+            const SizedBox(height: 12),
+          ],
+          for (final option in options)
+            CampusListItem(
+              showDivider: false,
+              headline: option.label,
+              supportingText: option.supporting,
+              trailing: option.selected
+                  ? BrockmannGlyph(
+                      BrockmannIcon.check,
+                      size: 20,
+                      color: context.brockmann.accent,
+                    )
+                  : null,
+              onTap: option.enabled
+                  ? () => Navigator.pop(context, option.value)
+                  : null,
+            ),
+        ],
       ),
     ),
   ),
@@ -125,6 +166,13 @@ class AppPassPicker extends StatelessWidget {
                             value: item,
                             label: item.label,
                             enabled: !item.disabled,
+                            trailing: item.selected
+                                ? BrockmannGlyph(
+                                    BrockmannIcon.check,
+                                    size: 20,
+                                    color: context.brockmann.accent,
+                                  )
+                                : null,
                           ),
                       ],
                     );
@@ -169,22 +217,39 @@ class AppActionMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => anchorBuilder(context, () async {
-    final selected = await showBrockmannActionSheet<CampusMenuEntry>(
-      context,
-      title: title ?? tr(context, 'Управление', 'Manage'),
-      entries: [
-        for (final entry in entries)
-          BrockmannMenuEntry(
-            value: entry,
-            label: entry.label,
-            enabled: entry.enabled,
-            leading: entry.leading,
-            trailing: entry.trailing,
-            secondary: entry.supportingText,
-            destructive: entry.value == 'remove' || entry.value == 'delete',
-          ),
-      ],
-    );
+    final options = [
+      for (final entry in entries)
+        ChoiceOption(
+          value: entry,
+          label: entry.label,
+          supporting: entry.supportingText,
+          enabled: entry.enabled,
+        ),
+    ];
+    final selected = context.brockmann.windowsPhone
+        ? await showChoicePage<CampusMenuEntry>(
+            context,
+            title: title ?? tr(context, 'управление', 'manage'),
+            options: options,
+          )
+        : await showBrockmannActionSheet<CampusMenuEntry>(
+            context,
+            title: title ?? tr(context, 'управление', 'manage'),
+            entries: [
+              for (final entry in options)
+                BrockmannMenuEntry(
+                  value: entry.value,
+                  label: entry.label,
+                  enabled: entry.enabled,
+                  leading: entry.value.leading,
+                  trailing: entry.value.trailing,
+                  secondary: entry.supporting,
+                  destructive:
+                      entry.value.value == 'remove' ||
+                      entry.value.value == 'delete',
+                ),
+            ],
+          );
     if (selected != null && context.mounted) {
       selected.onPressed?.call();
       onSelected(selected.value);

@@ -48,15 +48,19 @@ class BrockmannListItem extends StatelessWidget {
         milliseconds: 240,
         builder: (c, value) => Stack(
           children: [
-            Positioned.fill(
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: FractionallySizedBox(
-                  heightFactor: value.clamp(0, 1),
-                  child: SizedBox(width: 4, child: ColoredBox(color: t.accent)),
+            if (!t.windowsPhone)
+              Positioned.fill(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: FractionallySizedBox(
+                    heightFactor: value.clamp(0, 1),
+                    child: SizedBox(
+                      width: 4,
+                      child: ColoredBox(color: t.accent),
+                    ),
+                  ),
                 ),
               ),
-            ),
             AnimatedContainer(
               duration: t.duration(c, 180),
               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -74,6 +78,7 @@ class BrockmannListItem extends StatelessWidget {
                         BrockmannText(
                           label,
                           role: BrockmannType.value,
+                          weight: t.windowsPhone ? 400 : null,
                           color: Color.lerp(
                             t.foreground,
                             t.accentText,

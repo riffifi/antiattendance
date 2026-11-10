@@ -2,6 +2,7 @@ import 'package:brockmann/brockmann.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'aa_id_page.dart';
+import 'server_workspace.dart';
 import 'frontend/attendance_page.dart';
 import 'debug_menu_page.dart';
 import 'server_sessions.dart';
@@ -250,13 +251,7 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
             ? Brightness.dark
             : Brightness.light,
       ),
-      child: ThemeCrossfade(
-        mode: _themeMode,
-        child: TickerMode(
-          enabled: !MediaQuery.disableAnimationsOf(context),
-          child: child!,
-        ),
-      ),
+      child: ThemeCrossfade(mode: _themeMode, child: child!),
     ),
     locale: _language == null ? null : Locale(_language!),
     supportedLocales: const [
@@ -268,11 +263,8 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
     ],
     localizationsDelegates: GlobalMaterialLocalizations.delegates,
     home: AaIdGate(
-      child: HomePage(
-        useAdaptiveNavigation: true,
-        legacyMode: false,
-        store: ServerAccountStore(),
-        settingsStore: _settingsStore,
+      child: ServerWorkspace(
+        settings: _settingsStore,
         language: _language,
         onLanguageChanged: (language) {
           setState(() => _language = language);
@@ -807,39 +799,24 @@ class _HomePageState extends State<HomePage> {
       await _openServerLogin();
       return;
     }
-    final batch = await showExpressiveSheet<bool>(
-      context: context,
-      compact: true,
-      builder: (context) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              tr(context, 'Добавить аккаунты', 'Add accounts'),
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              title: Text(tr(context, 'Один пользователь', 'Single user')),
-              onTap: () => Navigator.pop(context, false),
-            ),
-            ListTile(
-              title: Text(
-                tr(context, 'Несколько пользователей', 'Multiple users'),
-              ),
-              subtitle: Text(
-                tr(
-                  context,
-                  'До 10 QR-кодов одновременно',
-                  'Up to 10 QR codes at once',
-                ),
-              ),
-              onTap: () => Navigator.pop(context, true),
-            ),
-          ],
+    final batch = await showChoicePage<bool>(
+      context,
+      title: tr(context, 'Добавить аккаунты', 'Add accounts'),
+      options: [
+        ChoiceOption(
+          value: false,
+          label: tr(context, 'Один пользователь', 'Single user'),
         ),
-      ),
+        ChoiceOption(
+          value: true,
+          label: tr(context, 'Несколько пользователей', 'Multiple users'),
+          supporting: tr(
+            context,
+            'До 10 QR-кодов одновременно',
+            'Up to 10 QR codes at once',
+          ),
+        ),
+      ],
     );
     if (!mounted || batch == null) return;
     if (!batch) {
@@ -865,7 +842,15 @@ class _HomePageState extends State<HomePage> {
       builder: (context) => StatefulBuilder(
         builder: (context, update) => BrockmannDialog(
           scrollable: true,
-          title: Text(tr(context, 'Сколько пользователей?', 'How many users?')),
+          title: BrockmannText(
+            tr(
+              context,
+              'Сколько пользователей?',
+              'How many users?',
+            ).toLowerCase(),
+            role: BrockmannType.heading,
+            weight: 400,
+          ),
           content: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -878,9 +863,10 @@ class _HomePageState extends State<HomePage> {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
-                    child: Text(
+                    child: BrockmannText(
                       '$count',
-                      style: Theme.of(context).textTheme.headlineLarge,
+                      role: BrockmannType.display,
+                      weight: 400,
                     ),
                   ),
                 ),
@@ -1075,12 +1061,14 @@ class _HomePageState extends State<HomePage> {
       context: context,
       builder: (context) => BrockmannDialog(
         scrollable: true,
-        title: Text(
+        title: BrockmannText(
           trf(context, 'Удалить {name}?', 'Delete {name}?', {
             'name': account.label,
           }),
+          role: BrockmannType.heading,
+          weight: 400,
         ),
-        content: Text(
+        content: BrockmannText(
           tr(
             context,
             'Сохранённый вход будет удалён с устройства.',
@@ -1254,29 +1242,24 @@ class _HomePageState extends State<HomePage> {
       );
       return;
     }
-    final method = await showExpressiveSheet<String>(
-      context: context,
-      compact: true,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CampusListItem(
-              headline: (tr(context, 'Передать рядом', 'Share nearby')),
-              supportingText: (tr(
-                context,
-                'Несколько телефонов в одной Wi‑Fi сети',
-                'Multiple phones on the same Wi‑Fi',
-              )),
-              onTap: () => Navigator.pop(context, 'nearby'),
-            ),
-            CampusListItem(
-              headline: (tr(context, 'Передать через QR', 'Share by QR')),
-              onTap: () => Navigator.pop(context, 'qr'),
-            ),
-          ],
+    final method = await showChoicePage<String>(
+      context,
+      title: tr(context, 'Передать сессии', 'Share sessions'),
+      options: [
+        ChoiceOption(
+          value: 'nearby',
+          label: tr(context, 'Передать рядом', 'Share nearby'),
+          supporting: tr(
+            context,
+            'Несколько телефонов в одной Wi‑Fi сети',
+            'Multiple phones on the same Wi‑Fi',
+          ),
         ),
-      ),
+        ChoiceOption(
+          value: 'qr',
+          label: tr(context, 'Передать через QR', 'Share by QR'),
+        ),
+      ],
     );
     if (!mounted || method == null) return;
     await Navigator.of(context).push<void>(
@@ -1292,33 +1275,24 @@ class _HomePageState extends State<HomePage> {
     if (_busy) return;
     await _nfcPageKey.currentState?.deactivateQueue();
     if (!mounted) return;
-    final method = await showExpressiveSheet<String>(
-      context: context,
-      compact: true,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CampusListItem(
-              headline: (tr(context, 'Получить рядом', 'Receive nearby')),
-              supportingText: (tr(
-                context,
-                'Откройте этот экран на каждом получателе',
-                'Open this on each receiving phone',
-              )),
-              onTap: () => Navigator.pop(context, 'nearby'),
-            ),
-            CampusListItem(
-              headline: (tr(
-                context,
-                'Сканировать QR передачи',
-                'Scan transfer QR',
-              )),
-              onTap: () => Navigator.pop(context, 'qr'),
-            ),
-          ],
+    final method = await showChoicePage<String>(
+      context,
+      title: tr(context, 'Получить сессии', 'Receive sessions'),
+      options: [
+        ChoiceOption(
+          value: 'nearby',
+          label: tr(context, 'Получить рядом', 'Receive nearby'),
+          supporting: tr(
+            context,
+            'Откройте этот экран на каждом получателе',
+            'Open this on each receiving phone',
+          ),
         ),
-      ),
+        ChoiceOption(
+          value: 'qr',
+          label: tr(context, 'Сканировать QR передачи', 'Scan transfer QR'),
+        ),
+      ],
     );
     if (!mounted || method == null) return;
     if (method == 'qr' && !Platform.isAndroid && !Platform.isIOS) {
@@ -1687,7 +1661,7 @@ class _HomePageState extends State<HomePage> {
             onPressed: _openSettings,
             child: Badge(
               isLabelVisible: available,
-              child: Text(tr(context, 'Настройки', 'Settings').toUpperCase()),
+              child: Text(tr(context, 'Настройки', 'Settings')),
             ),
           )
         : CampusTextAction(
@@ -1959,7 +1933,11 @@ class _TextInputDialogState extends State<_TextInputDialog> {
   @override
   Widget build(BuildContext context) => BrockmannDialog(
     scrollable: true,
-    title: Text(widget.title),
+    title: BrockmannText(
+      widget.title.toLowerCase(),
+      role: BrockmannType.heading,
+      weight: 400,
+    ),
     content: CampusTextField(
       controller: _controller,
       autofocus: true,

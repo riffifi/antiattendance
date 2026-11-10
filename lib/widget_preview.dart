@@ -1,3 +1,4 @@
+import 'package:brockmann/brockmann.dart';
 import 'package:flutter/material.dart';
 
 import 'app_theme.dart';
@@ -17,9 +18,12 @@ Future<bool?> showWidgetPreview(BuildContext context, {required bool nfc}) =>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  tr(context, 'Предпросмотр виджета', 'Widget preview'),
-                  style: Theme.of(context).textTheme.titleLarge,
+                BrockmannText(
+                  tr(context, 'Предпросмотр виджета', 'Widget preview')
+                      .toLowerCase(),
+                  role: BrockmannType.value,
+                  weight: 400,
+                  color: context.brockmann.accent,
                 ),
                 const SizedBox(height: 20),
                 for (final small in [false, true])
@@ -78,8 +82,6 @@ class WidgetPreview extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 10),
     decoration: BoxDecoration(
       color: context.palette.paper,
-      borderRadius: BorderRadius.zero,
-      border: Border.all(color: context.palette.line),
     ),
     child: Row(
       mainAxisAlignment: compact

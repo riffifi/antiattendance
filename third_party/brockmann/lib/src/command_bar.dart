@@ -36,6 +36,9 @@ class BrockmannCommandBar extends StatefulWidget {
     this.collapseLabel = 'Collapse app bar',
     this.minimizeLabel = 'Minimize app bar',
   }) : assert(commands.length <= 4);
+
+  /// Mini application bar: just enough for the corner ellipsis.
+  static const minimizedExtent = 22.0;
   final List<BrockmannCommand> commands;
   final BrockmannCommandBarMode initialMode;
   final String expandLabel, collapseLabel, minimizeLabel;
@@ -86,7 +89,7 @@ class _BrockmannCommandBarState extends State<BrockmannCommandBar>
             112.0,
             math.max(
               1.0,
-              (bounds.maxWidth - 56) / math.max(1, widget.commands.length),
+              (bounds.maxWidth - 96) / math.max(1, widget.commands.length),
             ),
           );
           var labelHeight = 0.0;
@@ -107,8 +110,9 @@ class _BrockmannCommandBarState extends State<BrockmannCommandBar>
             animation: _motion,
             builder: (context, _) {
               final value = _motion.value;
+              const mini = BrockmannCommandBar.minimizedExtent;
               final height = value <= .5
-                  ? 48 + 32 * value
+                  ? mini + (64 - mini) * value * 2
                   : 64 + (expandedHeight - 64) * (value - .5) * 2;
               final icons = (value * 2).clamp(0.0, 1.0);
               final labels = ((value - .5) * 2).clamp(0.0, 1.0);
@@ -139,7 +143,9 @@ class _BrockmannCommandBarState extends State<BrockmannCommandBar>
                       _drag += event.delta.dy;
                       _motion.value =
                           (_motion.value -
-                                  event.delta.dy / (expandedHeight - 48))
+                                  event.delta.dy /
+                                      (expandedHeight -
+                                          BrockmannCommandBar.minimizedExtent))
                               .clamp(0.0, 1.0);
                     },
                     onVerticalDragCancel: () => _settle(_mode),
@@ -165,7 +171,7 @@ class _BrockmannCommandBarState extends State<BrockmannCommandBar>
                               children: [
                                 Positioned(
                                   top: 0,
-                                  left: 0,
+                                  left: 48,
                                   right: 48,
                                   child: ExcludeSemantics(
                                     excluding: hidden,

@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'package:antiattendance/accounts.dart';
 import 'package:antiattendance/app_settings.dart';
 import 'package:antiattendance/app_theme.dart';
+import 'package:antiattendance/campus_design.dart';
 import 'package:antiattendance/debug_menu_page.dart';
 import 'package:antiattendance/main.dart';
 import 'package:antiattendance/nfc_pass.dart';
@@ -266,7 +267,8 @@ void main() {
       for (final section in report.keys) {
         final tile = find.byWidgetPredicate(
           (w) =>
-              w is ExpansionTile && w.key == PageStorageKey('debug-$section'),
+              w is CampusDisclosure &&
+              w.key == PageStorageKey('debug-$section'),
         );
         for (var cycle = 0; cycle < 2; cycle++) {
           await tester.scrollUntilVisible(tile, 180, scrollable: bodyScroll());

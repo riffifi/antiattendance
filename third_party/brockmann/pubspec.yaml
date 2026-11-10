@@ -1,6 +1,6 @@
 name: brockmann
 description: Flat, typographic, touch-first Brockmann UI components and motion, with optional Android sound.
-version: 0.3.2
+version: 0.3.3
 publish_to: none
 environment:
   sdk: '>=3.13.0 <4.0.0'

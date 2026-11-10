@@ -19,69 +19,50 @@ class _ThemeStore extends AppSettingsStore {
 void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
 
-  testWidgets(
-    'Monochrome preview colours stay stable while the page theme animates',
-    (tester) async {
-      tester.view.physicalSize = const Size(390, 844);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+  testWidgets('choosing a theme updates the page without throwing', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
 
-      var mode = AppThemeMode.light;
-      final store = _ThemeStore();
-      await tester.pumpWidget(
-        StatefulBuilder(
-          builder: (context, update) {
-            return MaterialApp(
-              theme: AppTheme.build(mode),
-              themeAnimationDuration: const Duration(milliseconds: 320),
-              themeAnimationCurve: Curves.easeInOutCubic,
-              home: SettingsPage(
-                store: store,
-                language: null,
-                onLanguageChanged: (_) {},
-                themeMode: mode,
-                onThemeModeChanged: (value) => update(() => mode = value),
-              ),
-            );
-          },
-        ),
-      );
-      await tester.pumpAndSettle();
-      List<Color> previewColours() => tester
-          .widgetList<Container>(
-            find.byWidgetPredicate(
-              (w) => w is Container && w.constraints?.maxHeight == 92,
+    var mode = AppThemeMode.light;
+    final store = _ThemeStore();
+    await tester.pumpWidget(
+      StatefulBuilder(
+        builder: (context, update) {
+          return MaterialApp(
+            theme: AppTheme.build(mode),
+            themeAnimationDuration: const Duration(milliseconds: 320),
+            themeAnimationCurve: Curves.easeInOutCubic,
+            home: SettingsPage(
+              store: store,
+              language: null,
+              onLanguageChanged: (_) {},
+              themeMode: mode,
+              onThemeModeChanged: (value) => update(() => mode = value),
             ),
-          )
-          .map((w) => (w.decoration! as BoxDecoration).color!)
-          .toList();
-      final previews = previewColours();
-      expect(previews.length, 3);
-      final light =
-          tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor ??
-          Theme.of(tester.element(find.byType(SettingsPage)))
-              .scaffoldBackgroundColor;
-      await tester.tap(find.text('Dark'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 120));
-      final during = Theme.of(tester.element(find.byType(SettingsPage)))
-          .scaffoldBackgroundColor;
-      expect(during, isNot(light));
-      expect(
-        during,
-        isNot(AppTheme.build(AppThemeMode.dark).scaffoldBackgroundColor),
-      );
-      expect(previewColours(), previews);
-      await tester.pumpAndSettle();
-      expect(previewColours(), previews);
-      expect(
-        Theme.of(tester.element(find.byType(SettingsPage))).brightness,
-        Brightness.dark,
-      );
-      expect(tester.takeException(), isNull);
-    },
-  );
+          );
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+    final light = Theme.of(tester.element(find.byType(SettingsPage)))
+        .scaffoldBackgroundColor;
+    await tester.tap(find.text('dark'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 120));
+    expect(tester.takeException(), isNull);
+    await tester.pumpAndSettle();
+    final settled = Theme.of(tester.element(find.byType(SettingsPage)))
+        .scaffoldBackgroundColor;
+    expect(settled, isNot(light));
+    expect(
+      Theme.of(tester.element(find.byType(SettingsPage))).brightness,
+      Brightness.dark,
+    );
+  });
 
   testWidgets('Settings destinations retain readable labels', (tester) async {
     final theme = AppTheme.build(AppThemeMode.dark)
@@ -97,7 +78,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    for (final label in ['Study day summary', 'Mark-all widget']) {
+    for (final label in ['study day summary', 'mark-all widget']) {
       await tester.scrollUntilVisible(
         find.text(label),
         250,

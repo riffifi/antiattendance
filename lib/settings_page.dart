@@ -2,9 +2,11 @@ import 'package:brockmann/brockmann.dart';
 
 import 'updates_page.dart';
 import 'frontend/settings_view.dart';
+import 'frontend/page_layout.dart';
 import 'session_server_page.dart';
 import 'aa_id_page.dart';
-import 'expressive.dart';
+import 'server_api.dart';
+import 'server_profile_page.dart';
 import 'campus_design.dart';
 
 import 'dart:async';
@@ -39,6 +41,7 @@ class SettingsPage extends StatefulWidget {
     this.themeMode = AppThemeMode.light,
     this.onThemeModeChanged,
     this.embedded = false,
+    this.serverManaged = false,
     this.updates,
     this.downloadApk,
     this.installApk,
@@ -47,6 +50,7 @@ class SettingsPage extends StatefulWidget {
   });
 
   final bool embedded;
+  final bool serverManaged;
   final ScheduleApi? scheduleApi;
   final List<SavedAccount> accounts;
   final AppSettingsStore store;
@@ -114,32 +118,26 @@ class _SettingsPageState extends State<SettingsPage> {
       /* Local groups and university search remain available offline. */
     }
     if (!mounted) return;
-    final result = await showExpressiveSheet<Object>(
-      context: context,
-      compact: true,
-      builder: (context) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CampusSectionTitle(tr(context, 'Моя группа', 'My group')),
-            CampusListItem(
-              showDivider: false,
-              headline: tr(context, 'Все группы', 'All groups'),
+    final result = await Navigator.of(context).push<Object>(
+      MaterialPageRoute(
+        builder: (_) => _SettingsChoicePage(
+          title: tr(context, 'Моя группа', 'My group'),
+          options: [
+            _SettingsChoice(
+              title: tr(context, 'Все группы', 'All groups').toLowerCase(),
               selected: _myGroup == null,
-              onTap: () => Navigator.pop(context, 'all'),
+              value: 'all',
             ),
             for (final group in groups.values)
-              CampusListItem(
-                showDivider: false,
-                headline: group.name,
+              _SettingsChoice(
+                title: group.name,
                 selected: group.id == _myGroup?.id,
-                onTap: () => Navigator.pop(context, group),
+                value: group,
               ),
-            CampusListItem(
-              showDivider: false,
-              headline: tr(context, 'Найти группу', 'Find a group'),
-              onTap: () => Navigator.pop(context, 'search'),
+            _SettingsChoice(
+              title: tr(context, 'Найти группу', 'Find a group').toLowerCase(),
+              selected: false,
+              value: 'search',
             ),
           ],
         ),
@@ -357,33 +355,23 @@ class _SettingsPageState extends State<SettingsPage> {
   };
 
   Future<void> _openLanguages() async {
-    await showExpressiveSheet<void>(
-      context: context,
-      compact: true,
-      builder: (sheetContext) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: CampusSectionTitle(
-                tr(context, 'Язык приложения', 'App language'),
-              ),
-            ),
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => _SettingsChoicePage(
+          title: tr(context, 'Язык приложения', 'App language'),
+          options: [
             for (final entry in <String?, String>{
               null: tr(context, 'Как на телефоне', 'Use phone language'),
               ..._languages,
             }.entries)
-              _Choice(
-                title: entry.value,
+              _SettingsChoice(
+                title: entry.key == null
+                    ? entry.value.toLowerCase()
+                    : entry.value,
                 selected: entry.key == _language,
-                onTap: _saving
-                    ? null
-                    : () async {
-                        await _choose(entry.key);
-                        if (sheetContext.mounted) Navigator.pop(sheetContext);
-                      },
+                enabled: !_saving,
+                value: entry.key ?? 'system',
+                onSelected: () => _choose(entry.key),
               ),
           ],
         ),
@@ -408,6 +396,23 @@ class _SettingsPageState extends State<SettingsPage> {
         SettingsSection(
           tr(context, 'Аккаунт и синхронизация', 'Account & sync'),
           [
+            if (widget.serverManaged && ServerSessions.active != null)
+              CampusListItem(
+                showDivider: false,
+                headline: tr(
+                  context,
+                  'Мой профиль',
+                  'My profile',
+                ).toLowerCase(),
+                supportingText: tr(
+                  context,
+                  'Имя и username',
+                  'Name and username',
+                ),
+                onTap: () => _openPage(
+                  ServerProfilePage(api: AaServerApi(ServerSessions.active!)),
+                ),
+              ),
             CampusListItem(
               showDivider: false,
               headline: 'AA ID',
@@ -420,7 +425,11 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             CampusListItem(
               showDivider: false,
-              headline: tr(context, 'Сервер сессий', 'Session server'),
+              headline: tr(
+                context,
+                'Сервер сессий',
+                'Session server',
+              ).toLowerCase(),
               supportingText: tr(
                 context,
                 'Адрес сервера и автоматическая синхронизация',
@@ -428,51 +437,58 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               onTap: () => _openPage(const SessionServerPage()),
             ),
-            CampusListItem(
-              showDivider: false,
-              headline: tr(context, 'Моя группа', 'My group'),
-              supportingText:
-                  _myGroup?.name ?? tr(context, 'Все группы', 'All groups'),
-              onTap: _saving ? null : _chooseMyGroup,
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                tr(
-                  context,
-                  'С сервера загружаются только аккаунты и пропуска выбранной группы.',
-                  'Only the selected group’s accounts and passes are fetched from the server.',
-                ),
-                style: TextStyle(color: context.palette.muted, fontSize: 13),
+            if (!widget.serverManaged) ...[
+              CampusListItem(
+                showDivider: false,
+                headline: tr(context, 'Моя группа', 'My group').toLowerCase(),
+                supportingText:
+                    _myGroup?.name ??
+                    tr(context, 'Все группы', 'All groups').toLowerCase(),
+                onTap: _saving ? null : _chooseMyGroup,
               ),
-            ),
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: BrockmannText(
+                  tr(
+                    context,
+                    'С сервера загружаются только аккаунты и пропуска выбранной группы.',
+                    'Only the selected group’s accounts and passes are fetched from the server.',
+                  ),
+                  role: BrockmannType.caption,
+                  color: context.brockmann.secondary,
+                ),
+              ),
+            ],
           ],
         ),
         SettingsSection(tr(context, 'Оформление', 'Appearance'), [
-          BrockmannGrid(
-            minItemWidth: 96,
-            maxColumns: 3,
-            children: [
-              for (final (mode, title) in [
-                (AppThemeMode.light, tr(context, 'Светлая', 'Light')),
-                (AppThemeMode.dark, tr(context, 'Тёмная', 'Dark')),
-                (
-                  AppThemeMode.amoled,
-                  tr(context, 'Чёрная (AMOLED)', 'Black (AMOLED)'),
-                ),
-              ])
-                _ThemePreview(
-                  mode: mode,
-                  title: title,
-                  selected: mode == _themeMode,
-                  onTap: _saving ? null : () => _chooseTheme(mode),
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
+          for (final (mode, title) in [
+            (AppThemeMode.light, tr(context, 'Светлая', 'Light')),
+            (AppThemeMode.dark, tr(context, 'Тёмная', 'Dark')),
+            (
+              AppThemeMode.amoled,
+              tr(context, 'Чёрная (AMOLED)', 'Black (AMOLED)'),
+            ),
+          ])
+            CampusListItem(
+              showDivider: false,
+              headline: title.toLowerCase(),
+              trailing: mode == _themeMode
+                  ? BrockmannGlyph(
+                      BrockmannIcon.check,
+                      size: 20,
+                      color: context.brockmann.accent,
+                    )
+                  : null,
+              onTap: _saving ? null : () => _chooseTheme(mode),
+            ),
           CampusListItem(
             showDivider: false,
-            headline: tr(context, 'Язык приложения', 'App language'),
+            headline: tr(
+              context,
+              'Язык приложения',
+              'App language',
+            ).toLowerCase(),
             supportingText:
                 _languages[_language] ??
                 tr(context, 'Как на телефоне', 'Use phone language'),
@@ -483,7 +499,11 @@ class _SettingsPageState extends State<SettingsPage> {
           SettingsSection(tr(context, 'Каждый день', 'Daily tools'), [
             CampusListItem(
               showDivider: false,
-              headline: tr(context, 'Итоги учебного дня', 'Study day summary'),
+              headline: tr(
+                context,
+                'Итоги учебного дня',
+                'Study day summary',
+              ).toLowerCase(),
               supportingText: tr(
                 context,
                 'После последнего занятия: подтверждения каждого человека и истёкшие сессии.',
@@ -497,12 +517,20 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             CampusListItem(
               showDivider: false,
-              headline: tr(context, 'Последние итоги', 'Last summary'),
+              headline: tr(
+                context,
+                'Последние итоги',
+                'Last summary',
+              ).toLowerCase(),
               onTap: _saving ? null : () => _openPage(const StudySummaryPage()),
             ),
             CampusListItem(
               showDivider: false,
-              headline: tr(context, 'Виджет отметки всех', 'Mark-all widget'),
+              headline: tr(
+                context,
+                'Виджет отметки всех',
+                'Mark-all widget',
+              ).toLowerCase(),
               supportingText: tr(
                 context,
                 'Предпросмотр виджета',
@@ -517,7 +545,7 @@ class _SettingsPageState extends State<SettingsPage> {
               animation: widget.updates!,
               builder: (context, _) => CampusListItem(
                 showDivider: false,
-                headline: tr(context, 'Обновления', 'Updates'),
+                headline: tr(context, 'Обновления', 'Updates').toLowerCase(),
                 supportingText: widget.updates!.updateAvailable
                     ? trf(
                         context,
@@ -537,158 +565,98 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           CampusListItem(
             showDivider: false,
-            headline: tr(context, 'О AntiAttendance', 'About AntiAttendance'),
+            headline: tr(
+              context,
+              'О AntiAttendance',
+              'About AntiAttendance',
+            ).toLowerCase(),
             onTap: () => _openPage(const AboutPage()),
           ),
         ]),
-        SettingsSection(tr(context, 'Тестирование', 'Testing'), [
-          CampusListItem(
-            showDivider: false,
-            headline: tr(context, 'Проверка NFC', 'NFC diagnostics'),
-            supportingText: tr(
-              context,
-              'Посмотреть сведения о найденном NFC-устройстве',
-              'View detected NFC connection details',
+        if (!widget.serverManaged)
+          SettingsSection(tr(context, 'Тестирование', 'Testing'), [
+            CampusListItem(
+              showDivider: false,
+              headline: tr(
+                context,
+                'Проверка NFC',
+                'NFC diagnostics',
+              ).toLowerCase(),
+              supportingText: tr(
+                context,
+                'Посмотреть сведения о найденном NFC-устройстве',
+                'View detected NFC connection details',
+              ),
+              onTap: () => _openPage(const NfcDiagnosticsPage()),
             ),
-            onTap: () => _openPage(const NfcDiagnosticsPage()),
-          ),
-          CampusListItem(
-            showDivider: false,
-            headline: tr(context, 'Сигнал турникета', 'Turnstile signal'),
-            supportingText: tr(
-              context,
-              'Посмотреть опрос NFC-считывателя',
-              'Observe NFC reader polling',
+            CampusListItem(
+              showDivider: false,
+              headline: tr(
+                context,
+                'Сигнал турникета',
+                'Turnstile signal',
+              ).toLowerCase(),
+              supportingText: tr(
+                context,
+                'Посмотреть опрос NFC-считывателя',
+                'Observe NFC reader polling',
+              ),
+              onTap: () => _openPage(const TurnstileProbePage()),
             ),
-            onTap: () => _openPage(const TurnstileProbePage()),
-          ),
-        ]),
+          ]),
       ],
     ),
   );
 }
 
-class _Choice extends StatelessWidget {
-  const _Choice({
+class _SettingsChoice {
+  const _SettingsChoice({
     required this.title,
     required this.selected,
-    required this.onTap,
+    required this.value,
+    this.enabled = true,
+    this.onSelected,
   });
   final String title;
-  final bool selected;
-  final VoidCallback? onTap;
+  final bool selected, enabled;
+  final Object value;
+  final Future<void> Function()? onSelected;
+}
+
+class _SettingsChoicePage extends StatelessWidget {
+  const _SettingsChoicePage({required this.title, required this.options});
+  final String title;
+  final List<_SettingsChoice> options;
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: AnimatedContainer(
-      duration: MediaQuery.disableAnimationsOf(context)
-          ? Duration.zero
-          : const Duration(milliseconds: 160),
-      decoration: BoxDecoration(
-        color: selected ? context.palette.selected : context.palette.surface,
-        borderRadius: BorderRadius.zero,
-        border: Border.all(
-          color: selected
-              ? context.palette.blue.withValues(alpha: .4)
-              : context.palette.line,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.zero,
-        child: CampusListItem(
-          showDivider: false,
-          selected: selected,
-          headline: title,
-          trailing: AnimatedSwitcher(
-            duration: MediaQuery.disableAnimationsOf(context)
-                ? Duration.zero
-                : const Duration(milliseconds: 140),
-            child: Text(selected ? '×' : '', key: ValueKey(selected)),
-          ),
-          onTap: onTap,
-        ),
+  Widget build(BuildContext context) => CampusScaffold(
+    appBar: CampusAppBar(title: Text(title)),
+    body: SingleChildScrollView(
+      padding: AaPageLayout.insets(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final option in options)
+            CampusListItem(
+              showDivider: false,
+              headline: option.title,
+              trailing: option.selected
+                  ? BrockmannGlyph(
+                      BrockmannIcon.check,
+                      size: 20,
+                      color: context.brockmann.accent,
+                    )
+                  : null,
+              onTap: option.enabled
+                  ? () async {
+                      await option.onSelected?.call();
+                      if (context.mounted) {
+                        Navigator.of(context).pop(option.value);
+                      }
+                    }
+                  : null,
+            ),
+        ],
       ),
     ),
   );
-}
-
-class _ThemePreview extends StatelessWidget {
-  const _ThemePreview({
-    required this.mode,
-    required this.title,
-    required this.selected,
-    required this.onTap,
-  });
-  final AppThemeMode mode;
-  final String title;
-  final bool selected;
-  final VoidCallback? onTap;
-  @override
-  Widget build(BuildContext context) {
-    final preview = AppTheme.build(mode);
-    return Semantics(
-      selected: selected,
-      child: EditorialAction(
-        onPressed: onTap,
-        padding: EdgeInsets.zero,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ExcludeSemantics(
-              child: Container(
-                height: 92,
-                decoration: BoxDecoration(
-                  color: preview.scaffoldBackgroundColor,
-                  border: Border.all(
-                    color: selected
-                        ? context.brockmann.accent
-                        : context.palette.line,
-                    width: selected ? 1.5 : .5,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 24,
-                      decoration: BoxDecoration(
-                        border: Border(
-                          right: BorderSide(
-                            color: preview.colorScheme.outlineVariant,
-                            width: .5,
-                          ),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Center(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            'Aa',
-                            style: TextStyle(
-                              fontFamily: 'Geist',
-                              fontSize: 32,
-                              fontWeight: FontWeight.w300,
-                              color: preview.colorScheme.onSurface,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.only(left: 2),
-              child: Text(title, style: Theme.of(context).textTheme.bodySmall),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
 }

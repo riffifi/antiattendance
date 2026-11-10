@@ -132,8 +132,9 @@ class _AboutPageState extends State<AboutPage> {
               children: [
                 BrockmannText(
                   tr(context, 'Исходный код', 'Source code'),
-                  role: BrockmannType.caption,
-                  color: context.brockmann.secondary,
+                  role: BrockmannType.value,
+                  weight: 400,
+                  color: context.brockmann.accent,
                 ),
                 const SizedBox(height: 8),
                 BrockmannPressable(

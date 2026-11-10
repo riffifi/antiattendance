@@ -34,7 +34,7 @@ Keep safe areas, Android Back cancellation, native IME/clipboard, screen-reader 
 
 A deliberate physical gesture can have one tactile response. Essential mode covers committed switches, deliberate date/time detents, reorder pickup/landing and explicit outcomes. Slider and range handles get one pickup response after a 160 ms hold or initial drag; never repeat that impact during a gesture. Use a brief double tick for confirmation and three spaced ticks for rejection. Subtle mode can add selections and opening/closing. Never repeat pulses throughout a continuous gesture. Sound and haptics have independent preferences; honor Android's system touch-feedback choice. Do not let a rhythm substitute for readable outcome text. Details and API: [haptics](haptics.md).
 
-The optional `BrockmannStyle.wp8` profile selects square outlined buttons, light
+The optional `BrockmannStyle.wp8` profile selects accent-filled primary buttons, square transparent borders for secondary buttons, light
 text-entry surfaces with black ink, full-width message bands, and shorter route
 and pivot timings. The default Brockmann profile is unchanged. Both profiles
 retain gesture tracking, predictive Back, reduced motion, and Geist.

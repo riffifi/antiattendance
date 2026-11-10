@@ -4,10 +4,19 @@ import 'package:flutter/material.dart';
 /// A single reading column and spacing rhythm for feature screens.
 abstract final class AaPageLayout {
   static const maxWidth = 960.0;
+  static double gutter(BuildContext context, {bool title = false}) {
+    if (MediaQuery.sizeOf(context).width >= 600) return 40;
+    // Windows Phone: titles align to 24, lists and other content to 12.
+    return title ? 24 : 12;
+  }
+
+  static double titleNudge(BuildContext context) =>
+      gutter(context, title: true) - gutter(context);
+
   static EdgeInsets insets(BuildContext context) => EdgeInsets.fromLTRB(
-    MediaQuery.sizeOf(context).width < 600 ? 24 : 40,
+    gutter(context),
     12,
-    MediaQuery.sizeOf(context).width < 600 ? 24 : 40,
+    gutter(context),
     MediaQuery.paddingOf(context).bottom + 32,
   );
 }

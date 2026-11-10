@@ -40,11 +40,15 @@ void main() {
       expect(tester.getSize(bar).height, lessThan(64));
       await gesture.up();
       await tester.pumpAndSettle();
-      expect(tester.getSize(bar).height, 48);
+      expect(tester.getSize(bar).height, BrockmannCommandBar.minimizedExtent);
       expect(find.byTooltip('add account').hitTestable(), findsNothing);
       expect(actions, 0);
-      await tester.drag(
+      final minimized = tester.getRect(bar);
+      final handleRect = tester.getRect(
         find.bySemanticsLabel('Expand app bar'),
+      );
+      await tester.dragFrom(
+        Offset(handleRect.center.dx, minimized.center.dy),
         const Offset(0, -90),
       );
       await tester.pumpAndSettle();
@@ -101,4 +105,71 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('commands stay centered while the ellipsis sits in the corner', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const BrockmannThemeData(style: BrockmannStyle.wp8).material,
+        home: Scaffold(
+          bottomNavigationBar: BrockmannCommandBar(
+            commands: [
+              BrockmannCommand(
+                icon: const Icon(Icons.add),
+                label: 'left',
+                onPressed: () {},
+              ),
+              BrockmannCommand(
+                icon: const Icon(Icons.remove),
+                label: 'right',
+                onPressed: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final bar = tester.getRect(find.byType(BrockmannCommandBar));
+    final left = tester.getCenter(find.byTooltip('left'));
+    final right = tester.getCenter(find.byTooltip('right'));
+    final ellipsis = tester.getCenter(find.bySemanticsLabel('Expand app bar'));
+    expect((left.dx + right.dx) / 2, closeTo(bar.center.dx, 1));
+    expect(left.dy, closeTo(right.dy, 1));
+    expect(ellipsis.dy, lessThan(left.dy));
+    expect(ellipsis.dx, greaterThan(right.dx));
+  });
+  testWidgets('four command glyphs do not collide with the ellipsis', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          bottomNavigationBar: BrockmannCommandBar(
+            commands: [
+              for (var i = 0; i < 4; i++)
+                BrockmannCommand(
+                  icon: const Icon(Icons.add),
+                  label: 'action $i',
+                  onPressed: () {},
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    final glyph = tester.getRect(find.byIcon(Icons.add).last);
+    final handle = tester.getRect(find.bySemanticsLabel('Expand app bar'));
+    expect(glyph.right, lessThan(handle.left));
+    expect(tester.takeException(), isNull);
+  });
 }

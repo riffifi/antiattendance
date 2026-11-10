@@ -41,9 +41,11 @@ choices retain their normal tap and keyboard interaction.
 ## Context actions
 
 `showBrockmannContextMenu`, `BrockmannContextMenu`, and `BrockmannOverflowMenu`
-all use the existing bottom action sheet. The legacy `position` argument remains
+all use the existing bottom action sheet. App choice lists in the Windows Phone
+profile open a full page instead. The legacy `position` argument remains
 accepted for source compatibility; it no longer positions a floating menu.
-The context title uses the secondary label style. Actions use 20 dp content typography in rows at least 56 dp tall, with a shared 24 dp text inset. This keeps the menu readable without treating every row and the context label as equal headings. Options wrap when needed and retain disabled and
+On the WP8 profile the sheet title is lowercase accent text. Outside that
+profile the context title uses the secondary label style. Actions use 20 dp content typography in rows at least 56 dp tall, with a shared 24 dp text inset. This keeps the menu readable without treating every row and the context label as equal headings. Options wrap when needed and retain disabled and
 destructive states. Sheets scroll and respect system insets.
 
 This bottom-sheet presentation and the hold-and-drag choice shortcut are explicit

@@ -11,6 +11,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
 
+const defaultSessionServerUrl = 'https://aa.ytc-srv.org';
+
 const _referencePrefix = 'server-session:';
 String serverSessionReference(String id) => '$_referencePrefix$id';
 String? serverAccountId(String value) =>
@@ -55,6 +57,14 @@ class SessionServerClient {
 
   /// When the server last answered; the pass is used only while it is recent.
   DateTime? fetchedAt;
+  bool get serverManaged =>
+      snapshot.isNotEmpty && !snapshot.containsKey('passes');
+
+  Future<Map<String, dynamic>> requestJson(
+    String path, {
+    String method = 'GET',
+    Object? body,
+  }) => _json(path, method: method, body: body);
   String? _passClientKey;
   Future<void>? _passClientLoading;
   String get _passClientStorageKey =>
@@ -179,12 +189,13 @@ class SessionServerClient {
     if (snapshot.isEmpty) return {};
     return {
       ...snapshot,
-      'pass_testing_expires_at': null,
-      'pass_access_expires_at': null,
-      'passes': [
-        for (final row in snapshot['passes'] as List? ?? [])
-          {...(row as Map).cast<String, dynamic>(), 'number': null},
-      ],
+      if (!serverManaged) 'pass_testing_expires_at': null,
+      if (!serverManaged) 'pass_access_expires_at': null,
+      if (!serverManaged)
+        'passes': [
+          for (final row in snapshot['passes'] as List? ?? [])
+            {...(row as Map).cast<String, dynamic>(), 'number': null},
+        ],
     };
   }
 
@@ -254,11 +265,7 @@ class SessionServerClient {
   /// calls without it once AA ID is enforced.
   Future<Map<String, String>> _aaIdHeaders() async {
     if (!AaId.signedIn) return const {};
-    try {
-      return {'authorization': 'Bearer ${await AaId.accessToken()}'};
-    } catch (_) {
-      return const {};
-    }
+    return {'authorization': 'Bearer ${await AaId.accessToken()}'};
   }
 
   Future<void> _checkAaId(
@@ -338,7 +345,7 @@ class SessionServerClient {
       );
     }
     if (result['accounts'] is! List ||
-        result['passes'] is! List ||
+        (result.containsKey('passes') && result['passes'] is! List) ||
         result['cursor'] is! int) {
       throw const FormatException('Invalid server account list.');
     }
@@ -362,7 +369,7 @@ class SessionServerClient {
       }
     }
     final accountIds = (result['accounts'] as List).map((a) => a['id']).toSet();
-    for (final record in result['passes'] as List) {
+    for (final record in result['passes'] as List? ?? []) {
       if (record is! Map<String, dynamic> ||
           !accountIds.contains(record['account_id']) ||
           record['version'] is! int) {
@@ -618,7 +625,9 @@ abstract final class ServerSessions {
     if (config == null) return;
     final data = jsonDecode(config) as Map<String, dynamic>;
     active = SessionServerClient(
-      data['url'] as String,
+      Uri.tryParse(data['url'] as String)?.host == 'aa.yellowteacrew.ru'
+          ? defaultSessionServerUrl
+          : data['url'] as String,
       groupId: (await AppSettingsStore().loadMyGroup())?.id,
     );
     // Migrate old URL/key configurations without keeping a device credential.

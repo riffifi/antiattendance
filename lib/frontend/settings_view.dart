@@ -27,15 +27,18 @@ class SettingsView extends StatelessWidget {
         for (final (sectionIndex, section) in sections.indexed) ...[
           Padding(
             padding: EdgeInsets.only(
-              top: sectionIndex == 0 ? 8 : 24,
-              bottom: 8,
+              left: AaPageLayout.titleNudge(context),
+              right: AaPageLayout.titleNudge(context),
+              top: sectionIndex == 0 ? 4 : 28,
+              bottom: 2,
             ),
             child: Semantics(
               header: true,
               child: BrockmannText(
-                section.title.toUpperCase(),
-                role: BrockmannType.label,
-                color: context.brockmann.secondary,
+                section.title.toLowerCase(),
+                role: BrockmannType.value,
+                weight: 400,
+                color: context.brockmann.accent,
               ),
             ),
           ),

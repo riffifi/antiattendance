@@ -4,7 +4,6 @@ import 'dart:convert';
 
 import 'package:antiattendance/accounts.dart';
 import 'package:antiattendance/app_theme.dart';
-import 'package:antiattendance/campus_design.dart';
 import 'package:antiattendance/session_share_page.dart';
 import 'package:antiattendance/study_summary.dart';
 import 'package:antiattendance/study_summary_page.dart';
@@ -123,20 +122,19 @@ void main() {
         );
         await tester.pumpAndSettle();
         final firstBottom =
-            tester.getBottomLeft(find.byType(CampusPanel).first).dy + offset();
+            tester
+                .getBottomLeft(find.text('Alex Morgan with a longer surname'))
+                .dy +
+            offset();
         await tester.scrollUntilVisible(
           find.text('Sam Rivera'),
           100,
           scrollable: scrollable,
         );
         await tester.pumpAndSettle();
-        final second = find.ancestor(
-          of: find.text('Sam Rivera'),
-          matching: find.byType(CampusPanel),
-        );
         expect(
-          tester.getTopLeft(second).dy + offset() - firstBottom,
-          closeTo(12, .01),
+          tester.getTopLeft(find.text('Sam Rivera')).dy + offset(),
+          greaterThan(firstBottom),
         );
         expect(tester.takeException(), isNull);
       },

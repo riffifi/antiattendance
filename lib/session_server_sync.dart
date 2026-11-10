@@ -72,7 +72,7 @@ abstract final class SessionAutoSync {
 
   static Future<void> groupChanges(List<SavedAccount> accounts) async {
     final client = ServerSessions.active;
-    if (client == null) return;
+    if (client == null || client.serverManaged) return;
     await _journal(() async {
       final journal = await _read(client);
       for (final account in accounts) {
@@ -183,6 +183,12 @@ abstract final class SessionAutoSync {
     var pending = 0;
     try {
       await client.fetch();
+      if (client.serverManaged) {
+        status.value = SessionSyncStatus(lastSuccess: DateTime.now());
+        if (before != _view(client)) ServerSessions.notify();
+        return; // The server owns sessions, groups and passes; there is no outbox.
+      }
+
       final local = await AccountStore().loadLocal();
       for (final account in local) {
         if (!identical(ServerSessions.active, client)) return;

@@ -196,13 +196,13 @@ void main() {
       ),
     );
     await tester.scrollUntilVisible(
-      find.text('Dark'),
+      find.text('dark'),
       200,
       scrollable: bodyScroll(),
     );
-    await tester.ensureVisible(find.text('Dark'));
+    await tester.ensureVisible(find.text('dark'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Dark'));
+    await tester.tap(find.text('dark'));
     await tester.pumpAndSettle();
     expect(find.text('Phone colors (Monet)'), findsNothing);
     expect(store.themeMode, AppThemeMode.dark);
@@ -425,25 +425,25 @@ void main() {
     expect(chosen, 'ru');
     expect(settings.language, 'ru');
     await tester.scrollUntilVisible(
-      find.text('NFC diagnostics'),
+      find.text('nfc diagnostics'),
       300,
       scrollable: bodyScroll(),
     );
-    await tester.ensureVisible(find.text('NFC diagnostics'));
+    await tester.ensureVisible(find.text('nfc diagnostics'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('NFC diagnostics'));
+    await tester.tap(find.text('nfc diagnostics'));
     await tester.pumpAndSettle();
     expect(find.text('Available on Android only.'), findsOneWidget);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.text('About AntiAttendance'),
+      find.text('about antiattendance'),
       300,
       scrollable: bodyScroll(),
     );
-    await tester.ensureVisible(find.text('About AntiAttendance'));
+    await tester.ensureVisible(find.text('about antiattendance'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('About AntiAttendance'));
+    await tester.tap(find.text('about antiattendance'));
     await tester.pumpAndSettle();
     expect(find.text('AntiAttendance'), findsOneWidget);
     expect(find.textContaining('Pulse and your schedule'), findsOneWidget);

@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:brockmann/brockmann.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'apk_update.dart';
-import 'app_theme.dart';
 import 'campus_design.dart';
 import 'external_links.dart';
 import 'l10n.dart';
@@ -201,167 +201,114 @@ class _UpdatesPageState extends State<UpdatesPage> {
             ),
           ],
         ),
-        bottomNavigationBar: SafeArea(
-          top: false,
-          child: Center(
-            heightFactor: 1,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 960),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_downloading) ...[
-                      CampusProgress.linear(value: _downloadProgress),
-                      const SizedBox(height: 12),
-                    ],
-                    if (_downloadError != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Semantics(
-                          liveRegion: true,
-                          child: Text(
-                            _downloadError!,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
-                            ),
-                          ),
-                        ),
-                      ),
-                    SizedBox(
-                      width: double.infinity,
-                      child: CampusButton.action(
-                        onPressed: _downloading || updates.checking
-                            ? null
-                            : available
-                            ? (Platform.isAndroid ||
-                                          widget.downloadApk != null) &&
-                                      release.apk != null
-                                  ? () => _downloadAndInstall(release)
-                                  : () => _openRelease(release.page)
-                            : () => updates.check(),
-                        label: Text(
-                          _downloading
-                              ? _downloadProgress == null
-                                    ? tr(context, 'Скачиваем…', 'Downloading…')
-                                    : trf(
-                                        context,
-                                        'Скачиваем: {percent}%',
-                                        'Downloading {percent}%',
-                                        {
-                                          'percent': (_downloadProgress! * 100)
-                                              .round(),
-                                        },
-                                      )
-                              : available
-                              ? (Platform.isAndroid ||
-                                            widget.downloadApk != null) &&
-                                        release.apk != null
-                                    ? tr(
-                                        context,
-                                        'Установить обновление',
-                                        'Install update',
-                                      )
-                                    : tr(
-                                        context,
-                                        'Открыть релиз',
-                                        'Open release',
-                                      )
-                              : tr(context, 'Проверить', 'Check now'),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
         body: SafeArea(
           top: false,
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 960),
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
                 children: [
-                  AnimatedContainer(
-                    duration: MediaQuery.disableAnimationsOf(context)
-                        ? Duration.zero
-                        : const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: available
-                          ? context.palette.selected
-                          : context.palette.surface,
-                      borderRadius: BorderRadius.zero,
-                      border: Border.all(color: context.palette.line),
+                  if (updates.checking)
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: CampusProgress.compact(strokeWidth: 2),
+                      ),
+                    )
+                  else if (available)
+                    BrockmannText(release.tag, role: BrockmannType.heading),
+                  if (!updates.checking) ...[
+                    const SizedBox(height: 8),
+                    BrockmannText(_updateStatus(updates)),
+                  ],
+                  if (updates.installedVersion != null) ...[
+                    const SizedBox(height: 8),
+                    BrockmannText(
+                      trf(
+                        context,
+                        'Установлена версия {version}',
+                        'Installed: {version}',
+                        {'version': updates.installedVersion!},
+                      ),
+                      role: BrockmannType.caption,
+                      color: context.brockmann.secondary,
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (updates.checking)
-                          const SizedBox(
-                            width: 32,
-                            height: 32,
-                            child: CampusProgress.compact(strokeWidth: 2),
-                          )
-                        else if (available) ...[
-                          Text(
-                            release.tag,
-                            style: Theme.of(context).textTheme.headlineLarge,
-                          ),
-                          const SizedBox(height: 10),
-                        ],
-                        Text(
-                          _updateStatus(updates),
-                          style: available
-                              ? Theme.of(context).textTheme.bodyLarge
-                              : Theme.of(context).textTheme.titleLarge,
+                  ],
+                  if (release?.publishedAt != null) ...[
+                    const SizedBox(height: 4),
+                    BrockmannText(
+                      MaterialLocalizations.of(context)
+                          .formatMediumDate(release!.publishedAt!.toLocal()),
+                      role: BrockmannType.caption,
+                      color: context.brockmann.secondary,
+                    ),
+                  ],
+                  if (_downloading) ...[
+                    const SizedBox(height: 16),
+                    CampusProgress.linear(value: _downloadProgress),
+                  ],
+                  if (_downloadError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Semantics(
+                        liveRegion: true,
+                        child: BrockmannText(
+                          _downloadError!,
+                          color: context.brockmann.danger,
                         ),
-                        if (updates.installedVersion != null) ...[
-                          const SizedBox(height: 12),
-                          Text(
-                            trf(
-                              context,
-                              'Установлена версия {version}',
-                              'Installed: {version}',
-                              {'version': updates.installedVersion!},
-                            ),
-                            style: TextStyle(color: context.palette.muted),
-                          ),
-                        ],
-                        if (release?.publishedAt != null) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            MaterialLocalizations.of(
-                              context,
-                            ).formatMediumDate(release!.publishedAt!.toLocal()),
-                            style: TextStyle(
-                              color: context.palette.muted,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ],
+                      ),
+                    ),
+                  const SizedBox(height: 20),
+                  CampusButton.action(
+                    onPressed: _downloading || updates.checking
+                        ? null
+                        : available
+                        ? (Platform.isAndroid || widget.downloadApk != null) &&
+                                  release.apk != null
+                              ? () => _downloadAndInstall(release)
+                              : () => _openRelease(release.page)
+                        : () => updates.check(),
+                    label: Text(
+                      _downloading
+                          ? _downloadProgress == null
+                                ? tr(context, 'Скачиваем…', 'Downloading…')
+                                : trf(
+                                    context,
+                                    'Скачиваем: {percent}%',
+                                    'Downloading {percent}%',
+                                    {
+                                      'percent': (_downloadProgress! * 100)
+                                          .round(),
+                                    },
+                                  )
+                          : available
+                          ? (Platform.isAndroid ||
+                                        widget.downloadApk != null) &&
+                                    release.apk != null
+                                ? tr(
+                                    context,
+                                    'Установить обновление',
+                                    'Install update',
+                                  )
+                                : tr(context, 'Открыть релиз', 'Open release')
+                          : tr(context, 'Проверить', 'Check now'),
                     ),
                   ),
                   if (release != null) ...[
-                    const SizedBox(height: 28),
                     CampusSectionTitle(tr(context, 'Что нового', 'What’s new')),
-                    CampusPanel(
-                      child: ReleaseNotes(
-                        notes: release.notes.isEmpty
-                            ? tr(
-                                context,
-                                'В этом релизе нет описания изменений.',
-                                'No release notes were provided.',
-                              )
-                            : release.notes,
-                      ),
+                    ReleaseNotes(
+                      notes: release.notes.isEmpty
+                          ? tr(
+                              context,
+                              'В этом релизе нет описания изменений.',
+                              'No release notes were provided.',
+                            )
+                          : release.notes,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     CampusButton.action(
                       onPressed: () => _openRelease(release.page),
                       label: Text(
@@ -397,13 +344,11 @@ class ReleaseNotes extends StatelessWidget {
                 .replaceAll(RegExp(r'^[-*]\s+', multiLine: true), '• ')
                 .replaceAll('**', ''),
             style: block.startsWith('#')
-                ? Theme.of(context).textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w700)
-                : TextStyle(
-                    fontSize: 14,
-                    height: 1.65,
-                    color: context.palette.ink,
-                  ),
+                ? BrockmannType.value.style(
+                    color: context.brockmann.foreground,
+                    weight: 400,
+                  )
+                : BrockmannType.body.style(color: context.brockmann.foreground),
           ),
         ),
     ],

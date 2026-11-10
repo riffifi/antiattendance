@@ -74,8 +74,13 @@ class BrockmannButton extends StatelessWidget {
       final t = c.brockmann;
       final enabled = onPressed != null;
       if (t.windowsPhone && style != BrockmannButtonStyle.text) {
+        final filled = style == BrockmannButtonStyle.primary;
+        final fill = destructive ? t.danger : t.accent;
+        final onFill = destructive ? Colors.white : t.onAccent;
         final ink = !enabled
             ? t.disabled
+            : filled
+            ? onFill
             : p
             ? t.background
             : destructive
@@ -87,17 +92,23 @@ class BrockmannButton extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 48),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: p && enabled ? t.foreground : Colors.transparent,
-            border: Border.all(
-              color: !enabled
-                  ? t.disabled
-                  : p
-                  ? t.foreground
-                  : destructive
-                  ? t.danger
-                  : t.foreground,
-              width: 2,
-            ),
+            color: !enabled
+                ? Colors.transparent
+                : filled
+                ? (p ? Color.lerp(fill, Colors.black, .12)! : fill)
+                : (p ? t.foreground : Colors.transparent),
+            border: filled
+                ? null
+                : Border.all(
+                    color: !enabled
+                        ? t.disabled
+                        : p
+                        ? t.foreground
+                        : destructive
+                        ? t.danger
+                        : t.foreground,
+                    width: 2,
+                  ),
           ),
           child: Align(
             alignment: alignment,
@@ -204,9 +215,12 @@ class BrockmannSwitch extends StatefulWidget {
     this.onChanged,
     this.sound = true,
     this.compact = false,
+    this.onLabel = 'On',
+    this.offLabel = 'Off',
   });
   final String label;
   final bool value, sound, compact;
+  final String onLabel, offLabel;
   final ValueChanged<bool>? onChanged;
   @override
   State<BrockmannSwitch> createState() => _BrockmannSwitchState();
@@ -253,6 +267,20 @@ class _BrockmannSwitchState extends State<BrockmannSwitch> {
                   ? MainAxisSize.min
                   : MainAxisSize.max,
               children: [
+                if (widget.compact && t.windowsPhone) ...[
+                  Flexible(
+                    child: BrockmannText(
+                      progress >= .5 ? widget.onLabel : widget.offLabel,
+                      role: BrockmannType.caption,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      color: widget.onChanged == null
+                          ? t.disabled
+                          : t.foreground,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 if (!widget.compact) ...[
                   Expanded(
                     child: Column(
@@ -286,7 +314,7 @@ class _BrockmannSwitchState extends State<BrockmannSwitch> {
                                 ),
                               ),
                           child: BrockmannText(
-                            progress >= .5 ? 'On' : 'Off',
+                            progress >= .5 ? widget.onLabel : widget.offLabel,
                             key: ValueKey(progress >= .5),
                             role: BrockmannType.value,
                             color: widget.onChanged == null

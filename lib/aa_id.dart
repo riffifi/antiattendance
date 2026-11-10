@@ -7,7 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 /// AA ID runs next to the session server, behind its Nginx at `/id`.
-const defaultAaIdUrl = 'https://aa.yellowteacrew.ru/id';
+const defaultAaIdUrl = 'https://aaid.ytc-srv.org';
 
 class AaIdException implements Exception {
   const AaIdException(this.message, {this.status});
@@ -26,6 +26,7 @@ class AaIdSession {
     required this.userId,
     this.groupId,
     this.groupName,
+    this.linked = true,
   });
 
   final String accessToken;
@@ -35,6 +36,7 @@ class AaIdSession {
   final String userId;
   final int? groupId;
   final String? groupName;
+  final bool linked;
 
   factory AaIdSession.fromServer(Map<String, dynamic> data) {
     final user = data['user'];
@@ -57,6 +59,7 @@ class AaIdSession {
       sessionId: data['session_id'] as String,
       userId: user['id'] as String,
       groupId: user['group_id'] is int ? user['group_id'] as int : null,
+      linked: data['linked'] != false,
       groupName: user['group_name'] is String
           ? user['group_name'] as String
           : null,
@@ -68,6 +71,7 @@ class AaIdSession {
     'access_expires_at': accessExpiresAt.millisecondsSinceEpoch / 1000,
     'refresh_token': refreshToken,
     'session_id': sessionId,
+    'linked': linked,
     'user': {'id': userId, 'group_id': groupId, 'group_name': groupName},
   };
 }
@@ -113,11 +117,14 @@ class AaIdClient {
     String method = 'GET',
     Object? body,
     String? accessToken,
+    String? loginToken,
   }) async {
     final request = http.Request(method, base.resolve(path))
       ..followRedirects = false
       ..headers.addAll({
         'content-type': 'application/json',
+        'user-agent': 'AntiAttendance/${deviceName()}',
+        'x-login-token': ?loginToken,
         'authorization': ?(accessToken == null ? null : 'Bearer $accessToken'),
       });
     if (body != null) request.body = jsonEncode(body);
@@ -143,6 +150,21 @@ class AaIdClient {
     return result;
   }
 
+  Future<Map<String, dynamic>> startLogin() =>
+      _json('v1/auth/logins', method: 'POST');
+
+  Future<Map<String, dynamic>> loginState(String id, String token) =>
+      _json('v1/auth/logins/${Uri.encodeComponent(id)}', loginToken: token);
+
+  Future<AaIdSession> claimLogin(String id, String token) async =>
+      AaIdSession.fromServer(
+        await _json(
+          'v1/auth/logins/${Uri.encodeComponent(id)}/claim',
+          method: 'POST',
+          loginToken: token,
+        ),
+      );
+
   /// Proves MIREA ownership with a fresh Pulse session. AA ID asks Pulse who the
   /// session belongs to and drops the cookie; it is never stored there.
   Future<AaIdSession> signInWithPulse(String cookie, {String? device}) async =>
@@ -153,6 +175,18 @@ class AaIdClient {
           body: {'pulse_cookie': cookie, 'device': device ?? deviceName()},
         ),
       );
+
+  Future<Map<String, dynamic>> profile(String accessToken) =>
+      _json('web/me', accessToken: accessToken);
+  Future<Map<String, dynamic>> setUsername(
+    String accessToken,
+    String username,
+  ) => _json(
+    'web/username',
+    method: 'PUT',
+    accessToken: accessToken,
+    body: {'username': username},
+  );
 
   Future<AaIdSession> refresh(String refreshToken) async =>
       AaIdSession.fromServer(
@@ -225,6 +259,10 @@ abstract final class AaId {
 
   static Future<void> _restore() async {
     url = await _storage.read(key: _urlKey) ?? defaultAaIdUrl;
+    if (Uri.tryParse(url)?.host == 'aa.yellowteacrew.ru') {
+      url = defaultAaIdUrl;
+      await _storage.write(key: _urlKey, value: url);
+    }
     final saved = await _storage.read(key: _sessionKey);
     if (saved == null) return;
     try {
@@ -251,6 +289,12 @@ abstract final class AaId {
     }
   }
 
+  static Future<void> acceptLogin(String address, AaIdSession grant) async {
+    url = AaIdClient.validateAddress(address).toString();
+    await _storage.write(key: _urlKey, value: url);
+    await _save(grant);
+  }
+
   static Future<void> _save(AaIdSession value) async {
     session = value;
     await _storage.write(
@@ -273,6 +317,16 @@ abstract final class AaId {
       DateTime.now().add(const Duration(seconds: 60)),
     )) {
       return current.accessToken;
+    }
+    return _refreshing ??= _refresh(current)
+        .whenComplete(() => _refreshing = null);
+  }
+
+  static Future<String> refreshAccessToken() async {
+    await initialize();
+    final current = session;
+    if (current == null) {
+      throw const AaIdException('Sign in to AA ID.', status: 401);
     }
     return _refreshing ??= _refresh(current)
         .whenComplete(() => _refreshing = null);

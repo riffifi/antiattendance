@@ -3,6 +3,7 @@ import 'campus_design.dart';
 import 'dart:async';
 import 'dart:io';
 
+import 'package:brockmann/brockmann.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -140,12 +141,10 @@ class _NfcDiagnosticsPageState extends State<NfcDiagnosticsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      BrockmannText(
                         _status(context),
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w400,
-                        ),
+                        role: BrockmannType.heading,
+                        weight: 400,
                       ),
                       if (_scanning && tag == null) ...[
                         const SizedBox(height: 16),
@@ -156,15 +155,13 @@ class _NfcDiagnosticsPageState extends State<NfcDiagnosticsPage> {
                 ),
                 if (tag != null) ...[
                   const SizedBox(height: 20),
-                  Text(
+                  CampusSectionTitle(
                     tr(
                       context,
                       'Что увидел телефон',
                       'What this phone detected',
                     ),
-                    style: TextStyle(fontSize: 21, fontWeight: FontWeight.w400),
                   ),
-                  const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(

@@ -1,6 +1,274 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  "University sessions stay on the server. This phone uses AA ID to synchronize your permitted data.":
+      (
+        "Les sessions universitaires restent sur le serveur. AA ID synchronise uniquement les données qui vous sont autorisées.",
+        "As sessões universitárias ficam no servidor. Este telefone usa AA ID para sincronizar os dados permitidos.",
+        "大学会话保存在服务器上，此手机通过 AA ID 同步您有权访问的数据。",
+      ),
+  "Your AA ID determines which accounts and pass permissions are available.": (
+    "Votre AA ID détermine les comptes et les accès aux badges disponibles.",
+    "Seu AA ID determina quais contas e permissões de passe estão disponíveis.",
+    "您的 AA ID 决定可用的账户和通行证权限。",
+  ),
+  "Open website": ("Ouvrir le site", "Abrir site", "打开网站"),
+
+  "My profile": ("Mon profil", "Meu perfil", "我的资料"),
+  "Name and username": (
+    "Nom et identifiant",
+    "Nome e nome de usuário",
+    "姓名和用户名",
+  ),
+  "Enter a name and a username: 3–24 Latin letters, digits or underscores, starting with a letter.":
+      (
+        "Saisissez un nom et un identifiant de 3 à 24 lettres latines, chiffres ou tirets bas, commençant par une lettre.",
+        "Digite um nome e um usuário de 3 a 24 letras latinas, dígitos ou sublinhados, começando com uma letra.",
+        "请输入姓名和用户名：3–24 个拉丁字母、数字或下划线，且以字母开头。",
+      ),
+  "This username is already taken.": (
+    "Cet identifiant est déjà utilisé.",
+    "Este nome de usuário já está em uso.",
+    "此用户名已被使用。",
+  ),
+  "Name": ("Nom", "Nome", "姓名"),
+  "Friends can find you by this username.": (
+    "Vos amis peuvent vous trouver avec cet identifiant.",
+    "Seus amigos podem encontrar você por este nome de usuário.",
+    "朋友可以通过此用户名找到您。",
+  ),
+
+  "Sign in with a MIREA QR code. Your university session stays on the server; this phone keeps only AA ID tokens.":
+      (
+        "Connectez-vous avec un QR MIREA. La session universitaire reste sur le serveur ; seuls les jetons AA ID sont conservés sur ce téléphone.",
+        "Entre com um QR MIREA. A sessão universitária fica no servidor; este telefone guarda apenas os tokens AA ID.",
+        "使用 MIREA 二维码登录。大学会话保存在服务器上，此手机仅保存 AA ID 令牌。",
+      ),
+  "Could not start sign-in. Try again.": (
+    "Impossible de lancer la connexion. Réessayez.",
+    "Não foi possível iniciar a sessão. Tente novamente.",
+    "无法开始登录，请重试。",
+  ),
+  "Sign in to your own MIREA account.": (
+    "Connectez-vous à votre propre compte MIREA.",
+    "Entre na sua própria conta MIREA.",
+    "请登录您自己的 MIREA 账户。",
+  ),
+  "AA ID sign-in succeeded, but the MIREA session did not connect. Create a new code to retry.":
+      (
+        "Connexion AA ID réussie, mais la session MIREA n’est pas connectée. Créez un nouveau code pour réessayer.",
+        "O login AA ID foi concluído, mas a sessão MIREA não foi conectada. Crie um novo código para tentar novamente.",
+        "AA ID 登录成功，但 MIREA 会话未连接。请创建新二维码重试。",
+      ),
+  "This sign-in ended. Create a new code.": (
+    "Cette connexion a expiré. Créez un nouveau code.",
+    "Esta tentativa terminou. Crie um novo código.",
+    "本次登录已结束，请创建新二维码。",
+  ),
+  "Could not claim sign-in. Create a new code.": (
+    "Impossible de finaliser la connexion. Créez un nouveau code.",
+    "Não foi possível concluir o login. Crie um novo código.",
+    "无法完成登录，请创建新二维码。",
+  ),
+  "Connection interrupted. Checking again…": (
+    "Connexion interrompue. Nouvelle vérification…",
+    "Conexão interrompida. Verificando novamente…",
+    "连接中断，正在重新检查…",
+  ),
+  "Sign in": ("Connexion", "Entrar", "登录"),
+  "Approve sign-in with MIREA": (
+    "Confirmez la connexion avec MIREA",
+    "Confirme o login com MIREA",
+    "通过 MIREA 确认登录",
+  ),
+  "Scan the QR code and approve sign-in. The server will finish connecting automatically.":
+      (
+        "Scannez le QR et confirmez la connexion. Le serveur terminera automatiquement.",
+        "Leia o QR e confirme o login. O servidor concluirá a conexão automaticamente.",
+        "扫描二维码并确认登录，服务器将自动完成连接。",
+      ),
+  "Completing sign-in on the server…": (
+    "Finalisation de la connexion sur le serveur…",
+    "Concluindo o login no servidor…",
+    "正在服务器上完成登录…",
+  ),
+  "New code": ("Nouveau code", "Novo código", "新二维码"),
+  "No class available now.": (
+    "Aucun cours disponible actuellement.",
+    "Nenhuma aula disponível agora.",
+    "当前没有可用课程。",
+  ),
+  "Class link": ("Lien du cours", "Link da aula", "课程链接"),
+  "Link": ("Lien", "Link", "链接"),
+  "Check the attendance QR link.": (
+    "Vérifiez le lien QR de présence.",
+    "Verifique o link QR de presença.",
+    "请检查考勤二维码链接。",
+  ),
+  "MIREA sign-in needed": (
+    "Connexion MIREA requise",
+    "Login MIREA necessário",
+    "需要登录 MIREA",
+  ),
+  "AA ID is signed in, but the server has no connected MIREA session.": (
+    "AA ID est connecté, mais le serveur n’a pas de session MIREA active.",
+    "AA ID está conectado, mas o servidor não tem uma sessão MIREA ativa.",
+    "AA ID 已登录，但服务器上没有已连接的 MIREA 会话。",
+  ),
+  "Class": ("Cours", "Aula", "课程"),
+  "No class available now": (
+    "Aucun cours disponible actuellement",
+    "Nenhuma aula disponível agora",
+    "当前没有可用课程",
+  ),
+  "Attendance opens 30 minutes before class and closes 30 minutes after it.": (
+    "La présence est ouverte de 30 minutes avant à 30 minutes après le cours.",
+    "A presença abre 30 minutos antes da aula e fecha 30 minutos após o fim.",
+    "考勤在上课前 30 分钟开放，下课后 30 分钟关闭。",
+  ),
+  "People": ("Personnes", "Pessoas", "人员"),
+  "People appear for the selected class.": (
+    "Les personnes s’affichent pour le cours choisi.",
+    "As pessoas aparecem para a aula selecionada.",
+    "人员列表将显示所选课程的人员。",
+  ),
+  "Scan": ("Scanner", "Ler QR", "扫描"),
+  "Paste": ("Coller", "Colar", "粘贴"),
+  "On campus": ("Sur le campus", "No campus", "在校"),
+  "Off campus": ("Hors du campus", "Fora do campus", "离校"),
+  "Server unavailable": (
+    "Serveur indisponible",
+    "Servidor indisponível",
+    "服务器不可用",
+  ),
+  "Sign in to AA ID again.": (
+    "Reconnectez-vous à AA ID.",
+    "Entre no AA ID novamente.",
+    "请重新登录 AA ID。",
+  ),
+  "The server did not allow this action.": (
+    "Le serveur a refusé cette action.",
+    "O servidor não permitiu esta ação.",
+    "服务器未允许此操作。",
+  ),
+  "This record is unavailable.": (
+    "Cette entrée est indisponible.",
+    "Este registro está indisponível.",
+    "此记录不可用。",
+  ),
+  "The context changed. Refresh and choose again.": (
+    "Le contexte a changé. Actualisez et choisissez à nouveau.",
+    "O contexto mudou. Atualize e escolha novamente.",
+    "内容已变化，请刷新后重新选择。",
+  ),
+  "Too many requests. Please wait.": (
+    "Trop de demandes. Veuillez patienter.",
+    "Muitas solicitações. Aguarde.",
+    "请求过多，请稍候。",
+  ),
+  "Could not get a response. Check your connection.": (
+    "Aucune réponse reçue. Vérifiez votre connexion.",
+    "Não foi possível obter uma resposta. Verifique sua conexão.",
+    "无法获取响应，请检查连接。",
+  ),
+  "On": ("Activé", "Ativado", "开"),
+  "Off": ("Désactivé", "Desativado", "关"),
+  "My pass": ("Mon badge", "Meu passe", "我的通行证"),
+  "Shared with me": ("Partagés avec moi", "Compartilhados comigo", "与我共享"),
+  "Pass access management": (
+    "Gestion d’accès aux badges",
+    "Gerenciar acesso aos passes",
+    "通行证访问管理",
+  ),
+  "Digital NFC pass activation is currently unavailable.": (
+    "L’activation des badges NFC numériques est actuellement indisponible.",
+    "A ativação de passes NFC digitais está indisponível no momento.",
+    "数字 NFC 通行证激活功能目前不可用。",
+  ),
+  "Allow pass access": (
+    "Autoriser l’accès au badge",
+    "Permitir acesso ao passe",
+    "允许访问通行证",
+  ),
+  "Master switch for your pass": (
+    "Interrupteur général de votre badge",
+    "Controle principal do seu passe",
+    "通行证总开关",
+  ),
+  "Requests": ("Demandes", "Solicitações", "请求"),
+  "Allow": ("Autoriser", "Permitir", "允许"),
+  "Deny": ("Refuser", "Recusar", "拒绝"),
+  "No pending requests": (
+    "Aucune demande en attente",
+    "Nenhuma solicitação pendente",
+    "没有待处理请求",
+  ),
+  "People with access": (
+    "Personnes autorisées",
+    "Pessoas com acesso",
+    "有访问权限的人员",
+  ),
+  "Revoke": ("Révoquer", "Revogar", "撤销"),
+  "No access granted yet": (
+    "Aucun accès accordé",
+    "Nenhum acesso concedido ainda",
+    "尚未授予访问权限",
+  ),
+  "Shared passes": ("Badges partagés", "Passes compartilhados", "共享的通行证"),
+  "Allowed": ("Autorisé", "Permitido", "已允许"),
+  "Disabled by owner": (
+    "Désactivé par le propriétaire",
+    "Desativado pelo proprietário",
+    "所有者已禁用",
+  ),
+  "No passes shared with you yet": (
+    "Aucun badge partagé avec vous",
+    "Nenhum passe compartilhado com você",
+    "尚未与您共享通行证",
+  ),
+  "Your requests": ("Vos demandes", "Suas solicitações", "您的请求"),
+  "Waiting for the owner": (
+    "En attente du propriétaire",
+    "Aguardando o proprietário",
+    "等待所有者处理",
+  ),
+  "Grant access": ("Accorder l’accès", "Conceder acesso", "授予访问权限"),
+  "Find a person": ("Trouver une personne", "Encontrar uma pessoa", "查找人员"),
+  "Exact username": (
+    "Nom d’utilisateur exact",
+    "Nome de usuário exato",
+    "完整用户名",
+  ),
+  "No matches found": ("Aucun résultat", "Nenhum resultado", "未找到匹配结果"),
+  "Choose which schedule to view": (
+    "Choisissez l’emploi du temps à afficher",
+    "Escolha o horário que deseja ver",
+    "选择要查看的课程表",
+  ),
+  "Day": ("Jour", "Dia", "日期"),
+  "Maps": ("Plans", "Mapas", "地图"),
+  "Receive sessions": ("Recevoir des sessions", "Receber sessões", "接收会话"),
+  "manage": ("gérer", "gerenciar", "管理"),
+  "No classes": ("Aucun cours", "Sem aulas", "无课程"),
+  "No classes were found for today.": (
+    "Aucun cours trouvé pour aujourd’hui.",
+    "Nenhuma aula encontrada para hoje.",
+    "未找到今天的课程。",
+  ),
+  "Scan an attendance QR code.": (
+    "Scannez un QR de présence.",
+    "Leia um QR de presença.",
+    "请扫描考勤二维码。",
+  ),
+  "Camera unavailable. Go back and paste the link.": (
+    "Caméra indisponible. Revenez et collez le lien.",
+    "Câmera indisponível. Volte e cole o link.",
+    "相机不可用，请返回并粘贴链接。",
+  ),
+  "more": ("plus", "mais", "更多"),
+  "campus": ("campus", "campus", "校区"),
+  "floor": ("étage", "andar", "楼层"),
+
   'Expand app bar': ('Développer la barre', 'Expandir barra', '展开应用栏'),
   'Collapse app bar': ('Réduire la barre', 'Recolher barra', '收起应用栏'),
   'Minimize app bar': ('Masquer les commandes', 'Ocultar comandos', '隐藏命令'),

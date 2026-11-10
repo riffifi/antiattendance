@@ -9,6 +9,8 @@ import 'aa_id.dart';
 import 'campus_design.dart';
 import 'frontend/page_layout.dart';
 import 'l10n.dart';
+import 'login_qr.dart';
+import 'external_links.dart';
 
 /// The server owns the browser and university credentials. This screen only
 /// holds a short-lived login capability and claims AA ID tokens once.
@@ -17,9 +19,11 @@ class ServerLoginPage extends StatefulWidget {
     super.key,
     required this.address,
     this.expectedUserId,
+    this.browserOpener,
   });
   final String address;
   final String? expectedUserId;
+  final UrlOpener? browserOpener;
   @override
   State<ServerLoginPage> createState() => _ServerLoginPageState();
 }
@@ -32,6 +36,7 @@ class _ServerLoginPageState extends State<ServerLoginPage>
   String? _id, _token, _error;
   String _status = 'waiting';
   Uint8List? _qr;
+  Uri? _loginUri;
   bool _polling = false, _claiming = false, _active = true;
 
   @override
@@ -47,6 +52,7 @@ class _ServerLoginPageState extends State<ServerLoginPage>
     setState(() {
       _error = null;
       _qr = null;
+      _loginUri = null;
       _status = 'waiting';
       _claiming = false;
     });
@@ -93,6 +99,8 @@ class _ServerLoginPageState extends State<ServerLoginPage>
       setState(() {
         _status = status;
         _qr = qr ?? _qr;
+        final url = mireaLoginQr(state['qr']);
+        _loginUri = status == 'login' && url != null ? Uri.parse(url) : null;
         _error = null;
       });
       if (status == 'complete') {
@@ -214,6 +222,28 @@ class _ServerLoginPageState extends State<ServerLoginPage>
             ),
           ),
           const SizedBox(height: 24),
+          if (_loginUri != null && !_claiming)
+            CampusButton.text(
+              onPressed: () async {
+                final uri = _loginUri;
+                if (uri == null) return;
+                final opened = await openWebPage(
+                  uri,
+                  opener: widget.browserOpener,
+                );
+                if (!opened && context.mounted) {
+                  CampusNotice.show(
+                    context,
+                    message: tr(
+                      context,
+                      'Не удалось открыть браузер.',
+                      'Could not open the browser.',
+                    ),
+                  );
+                }
+              },
+              child: Text(tr(context, 'Открыть в браузере', 'Open in browser')),
+            ),
           if (_qr != null && !_claiming && _status != 'finishing')
             Center(
               child: ConstrainedBox(

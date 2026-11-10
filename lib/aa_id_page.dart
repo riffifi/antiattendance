@@ -9,10 +9,23 @@ import 'l10n.dart';
 import 'server_login_page.dart';
 import 'app_settings.dart';
 import 'app_tutorial.dart';
+import 'app_theme.dart';
 
 /// Shows [child] only to a phone signed in to AA ID.
 class AaIdGate extends StatefulWidget {
-  const AaIdGate({super.key, required this.child, this.tutorialStore});
+  const AaIdGate({
+    super.key,
+    required this.child,
+    this.tutorialStore,
+    this.language,
+    this.themeMode = AppThemeMode.light,
+    this.onLanguageChanged,
+    this.onThemeModeChanged,
+  });
+  final String? language;
+  final AppThemeMode themeMode;
+  final ValueChanged<String?>? onLanguageChanged;
+  final ValueChanged<AppThemeMode>? onThemeModeChanged;
   final Widget child;
   final AppSettingsStore? tutorialStore;
   @override
@@ -53,6 +66,11 @@ class _AaIdGateState extends State<AaIdGate> {
     if (!_ready) return const CampusScaffold(body: SizedBox.expand());
     if (!_tutorialSeen) {
       return AppTutorial(
+        settings: widget.tutorialStore,
+        language: widget.language,
+        themeMode: widget.themeMode,
+        onLanguageChanged: widget.onLanguageChanged,
+        onThemeModeChanged: widget.onThemeModeChanged,
         onComplete: () async {
           try {
             await widget.tutorialStore?.finishTutorial();

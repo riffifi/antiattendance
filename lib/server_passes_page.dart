@@ -159,6 +159,7 @@ class ServerPassesPageState extends State<ServerPassesPage> {
                     'Master switch for your pass',
                   ),
                   trailing: CampusSwitch(
+                    label: tr(context, 'Разрешить доступ', 'Allow pass access'),
                     value: _mine!['pass_allowed'] == true,
                     onChanged: _busy ? null : _toggle,
                   ),

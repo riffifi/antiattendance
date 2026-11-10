@@ -173,6 +173,10 @@ class _CampusDisclosureState extends State<CampusDisclosure> {
 
   void _toggle() {
     final next = !_expanded;
+    BrockmannFeedbackScope.play(
+      context,
+      next ? BrockmannSound.open : BrockmannSound.close,
+    );
     setState(() => _open = next);
     PageStorage.maybeOf(context)
         ?.writeState(context, next, identifier: _storageIdentifier);
@@ -339,7 +343,12 @@ class CampusListItem extends StatelessWidget {
                 label: headline,
                 secondary: supportingText,
                 selected: selected,
-                onPressed: onTap,
+                onPressed: onTap == null
+                    ? null
+                    : () {
+                        AppHaptics.navigation();
+                        onTap!();
+                      },
               ),
             ),
             if (trailing != null)
@@ -526,7 +535,7 @@ class _CampusRouteHeader extends StatelessWidget {
     final title = bar.title;
     if (bar.compact) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        padding: EdgeInsets.fromLTRB(12, 8, context.brockmannLayout.inset, 12),
         child: Row(
           children: [
             if (bar.leading != null)
@@ -576,15 +585,19 @@ class _CampusRouteHeader extends StatelessWidget {
                     onPressed: () => Navigator.of(context).maybePop(),
                   ),
                 ),
-              const Spacer(),
-              if (bar.actions != null)
-                Flexible(
-                  child: BrockmannButtonBar(
-                    alignment: WrapAlignment.end,
-                    spacing: 8,
-                    children: bar.actions!,
+              if (bar.actions?.isNotEmpty == true)
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: BrockmannButtonBar(
+                      alignment: WrapAlignment.end,
+                      spacing: 8,
+                      children: bar.actions!,
+                    ),
                   ),
-                ),
+                )
+              else
+                const Spacer(),
             ],
           ),
           const SizedBox(height: 16),

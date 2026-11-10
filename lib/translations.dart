@@ -1,6 +1,32 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  "Theme": ("Thème", "Tema", "主题"),
+  "Interface sounds": ("Sons de l’interface", "Sons da interface", "界面音效"),
+  "Welcome to AA": ("Bienvenue dans AA", "Bem-vindo ao AA", "欢迎使用 AA"),
+  "Choose your language and appearance. You can change these later in Settings.":
+      (
+        "Choisissez votre langue et votre apparence. Vous pourrez les modifier dans les paramètres.",
+        "Escolha o idioma e o aspeto. Pode alterá-los mais tarde nas definições.",
+        "选择语言和外观。稍后可在设置中更改。",
+      ),
+
+  "Open in browser": (
+    "Ouvrir dans le navigateur",
+    "Abrir no navegador",
+    "在浏览器中打开",
+  ),
+  "Could not open the browser.": (
+    "Impossible d’ouvrir le navigateur.",
+    "Não foi possível abrir o navegador.",
+    "无法打开浏览器。",
+  ),
+  "The result is uncertain. Check attendance before retrying.": (
+    "Le résultat est incertain. Vérifiez la présence avant de réessayer.",
+    "O resultado é incerto. Verifique a presença antes de tentar novamente.",
+    "结果尚不确定。重试前请先检查考勤。",
+  ),
+
   "Sign in with MIREA once. AA ID connects your group and the data you can access. You do not need to enter a password in the app.":
       (
         "Connectez-vous une fois avec MIREA. AA ID associe votre groupe et vos données autorisées. Aucun mot de passe n’est à saisir dans l’application.",

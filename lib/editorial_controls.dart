@@ -159,17 +159,23 @@ class CampusRadio<T> extends StatelessWidget {
 }
 
 class CampusSwitch extends StatelessWidget {
-  const CampusSwitch({super.key, required this.value, required this.onChanged});
+  const CampusSwitch({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    this.label = '',
+  });
   final bool value;
+  final String label;
   final ValueChanged<bool>? onChanged;
   @override
   Widget build(BuildContext context) => BrockmannSwitch(
-    label: '',
+    label: label,
     compact: true,
     onLabel: tr(context, 'Вкл', 'On'),
     offLabel: tr(context, 'Выкл', 'Off'),
     value: value,
-    sound: false,
+    sound: true,
     onChanged: onChanged == null
         ? null
         : (value) {

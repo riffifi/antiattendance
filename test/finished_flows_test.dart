@@ -27,6 +27,44 @@ void main() {
   });
   tearDown(AaId.reset);
 
+  testWidgets(
+    'header actions align with the trailing gutter at both text sizes',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      for (final width in [320.0, 430.0]) {
+        tester.view.physicalSize = Size(width, 850);
+        for (final scale in [1.0, 2.0]) {
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: AppTheme.light,
+              builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(context)
+                    .copyWith(textScaler: TextScaler.linear(scale)),
+                child: child!,
+              ),
+              home: CampusScaffold(
+                appBar: CampusAppBar(
+                  title: const Text('How to use'),
+                  automaticallyImplyLeading: false,
+                  actions: [CampusTextAction(label: 'Skip', onPressed: () {})],
+                ),
+                body: const SizedBox(),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(
+            tester.getRect(find.bySemanticsLabel('Skip')).right,
+            closeTo(width - 24, 1),
+          );
+          expect(tester.takeException(), isNull);
+        }
+      }
+    },
+  );
+
   testWidgets('first-run tutorial can be skipped and stays dismissed', (
     tester,
   ) async {
@@ -72,7 +110,7 @@ void main() {
         ),
       ),
     );
-    for (var i = 0; i < 3; i++) {
+    for (var i = 0; i < 4; i++) {
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);

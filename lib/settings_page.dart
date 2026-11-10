@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'about_page.dart';
 import 'app_settings.dart';
 import 'app_tutorial.dart';
+import 'expressive.dart';
 import 'accounts.dart';
 import 'server_sessions.dart';
 import 'session_server_sync.dart';
@@ -75,6 +76,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late String? _language = widget.language;
   late AppThemeMode _themeMode = widget.themeMode;
   bool _saving = false;
+  bool _sounds = true;
   bool _daySummary = false;
   bool _summarySaving = false;
   bool _summaryTouched = false;
@@ -83,6 +85,12 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void initState() {
     super.initState();
+    widget.store
+        .interfaceSounds()
+        .then((value) {
+          if (mounted) setState(() => _sounds = value);
+        })
+        .catchError((Object _) {});
     widget.store
         .loadMyGroup()
         .then((value) {
@@ -380,8 +388,54 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  void _openPage(Widget page) =>
-      Navigator.of(context).push<void>(MaterialPageRoute(builder: (_) => page));
+  String _themeLabel(AppThemeMode mode) => switch (mode) {
+    AppThemeMode.light => tr(context, 'Светлая', 'Light'),
+    AppThemeMode.dark => tr(context, 'Тёмная', 'Dark'),
+    AppThemeMode.amoled => tr(context, 'Чёрная (AMOLED)', 'Black (AMOLED)'),
+  };
+  Future<void> _openThemes() async {
+    final mode = await showChoicePage<AppThemeMode>(
+      context,
+      title: tr(context, 'Оформление', 'Appearance'),
+      options: [
+        for (final mode in AppThemeMode.values)
+          ChoiceOption(
+            value: mode,
+            label: _themeLabel(mode).toLowerCase(),
+            selected: mode == _themeMode,
+          ),
+      ],
+    );
+    if (mounted && mode != null) await _chooseTheme(mode);
+  }
+
+  Future<void> _chooseSounds(bool value) async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    try {
+      await widget.store.saveInterfaceSounds(value);
+      if (mounted) {
+        setState(() => _sounds = value);
+        await BrockmannFeedbackScope.of(context)?.configure(
+          mode: value ? BrockmannSoundMode.subtle : BrockmannSoundMode.off,
+        );
+      }
+    } catch (_) {
+      if (mounted) _saveAppearanceError();
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _openPage(Widget page) async {
+    await Navigator.of(context)
+        .push<void>(MaterialPageRoute(builder: (_) => page));
+    if (!mounted) return;
+    try {
+      final sounds = await widget.store.interfaceSounds();
+      if (mounted) setState(() => _sounds = sounds);
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) => CampusScaffold(
@@ -464,26 +518,11 @@ class _SettingsPageState extends State<SettingsPage> {
           ],
         ),
         SettingsSection(tr(context, 'Оформление', 'Appearance'), [
-          for (final (mode, title) in [
-            (AppThemeMode.light, tr(context, 'Светлая', 'Light')),
-            (AppThemeMode.dark, tr(context, 'Тёмная', 'Dark')),
-            (
-              AppThemeMode.amoled,
-              tr(context, 'Чёрная (AMOLED)', 'Black (AMOLED)'),
-            ),
-          ])
-            CampusListItem(
-              showDivider: false,
-              headline: title.toLowerCase(),
-              trailing: mode == _themeMode
-                  ? BrockmannGlyph(
-                      BrockmannIcon.check,
-                      size: 20,
-                      color: context.brockmann.accent,
-                    )
-                  : null,
-              onTap: _saving ? null : () => _chooseTheme(mode),
-            ),
+          CampusListItem(
+            headline: tr(context, 'Тема', 'Theme').toLowerCase(),
+            supportingText: _themeLabel(_themeMode),
+            onTap: _saving ? null : _openThemes,
+          ),
           CampusListItem(
             showDivider: false,
             headline: tr(
@@ -495,6 +534,19 @@ class _SettingsPageState extends State<SettingsPage> {
                 _languages[_language] ??
                 tr(context, 'Как на телефоне', 'Use phone language'),
             onTap: _saving ? null : _openLanguages,
+          ),
+          CampusListItem(
+            headline: tr(
+              context,
+              'Звуки интерфейса',
+              'Interface sounds',
+            ).toLowerCase(),
+            onTap: _saving ? null : () => _chooseSounds(!_sounds),
+            trailing: CampusSwitch(
+              label: tr(context, 'Звуки интерфейса', 'Interface sounds'),
+              value: _sounds,
+              onChanged: _saving ? null : _chooseSounds,
+            ),
           ),
         ]),
         if (Theme.of(context).platform == TargetPlatform.android)
@@ -512,6 +564,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 'After the last class: each person’s confirmations and expired sessions.',
               ),
               trailing: CampusSwitch(
+                label: tr(context, 'Итоги учебного дня', 'Study day summary'),
                 value: _daySummary,
                 onChanged: _summarySaving ? null : _chooseSummary,
               ),
@@ -547,6 +600,17 @@ class _SettingsPageState extends State<SettingsPage> {
             onTap: () => _openPage(
               Builder(
                 builder: (context) => AppTutorial(
+                  settings: widget.store,
+                  language: _language,
+                  themeMode: _themeMode,
+                  onLanguageChanged: (value) {
+                    setState(() => _language = value);
+                    widget.onLanguageChanged(value);
+                  },
+                  onThemeModeChanged: (value) {
+                    setState(() => _themeMode = value);
+                    widget.onThemeModeChanged?.call(value);
+                  },
                   onComplete: () async {
                     Navigator.of(context).pop();
                   },
@@ -637,19 +701,25 @@ class _SettingsChoice {
   final Future<void> Function()? onSelected;
 }
 
-class _SettingsChoicePage extends StatelessWidget {
+class _SettingsChoicePage extends StatefulWidget {
   const _SettingsChoicePage({required this.title, required this.options});
   final String title;
   final List<_SettingsChoice> options;
   @override
+  State<_SettingsChoicePage> createState() => _SettingsChoicePageState();
+}
+
+class _SettingsChoicePageState extends State<_SettingsChoicePage> {
+  bool _choosing = false;
+  @override
   Widget build(BuildContext context) => CampusScaffold(
-    appBar: CampusAppBar(title: Text(title)),
+    appBar: CampusAppBar(title: Text(widget.title)),
     body: SingleChildScrollView(
       padding: AaPageLayout.insets(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final option in options)
+          for (final option in widget.options)
             CampusListItem(
               showDivider: false,
               headline: option.title,
@@ -660,11 +730,18 @@ class _SettingsChoicePage extends StatelessWidget {
                       color: context.brockmann.accent,
                     )
                   : null,
-              onTap: option.enabled
+              onTap: option.enabled && !_choosing
                   ? () async {
-                      await option.onSelected?.call();
-                      if (context.mounted) {
-                        Navigator.of(context).pop(option.value);
+                      if (_choosing) return;
+                      setState(() => _choosing = true);
+                      try {
+                        await option.onSelected?.call();
+                        if (context.mounted &&
+                            (ModalRoute.of(context)?.isCurrent ?? false)) {
+                          Navigator.of(context).pop(option.value);
+                        }
+                      } finally {
+                        if (mounted) setState(() => _choosing = false);
                       }
                     }
                   : null,

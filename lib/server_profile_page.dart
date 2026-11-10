@@ -97,6 +97,7 @@ class _ServerProfilePageState extends State<ServerProfilePage> {
       }
       if (mounted) {
         setState(() {});
+        BrockmannFeedbackScope.play(context, BrockmannSound.confirm);
         CampusNotice.show(
           context,
           message: tr(context, 'Профиль обновлён', 'Profile updated'),

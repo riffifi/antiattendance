@@ -24,3 +24,13 @@ Completed changes:
 Regression tests exercise tutorial persistence, double-size text, day retention,
 profile updates, native NFC authorization/lifecycle and the existing app flows.
 Device delivery follows AGENTS.md and preserves installed app data.
+
+## 3.8.5 follow-up
+
+- [x] First-use setup now previews and saves language and theme, with an interface sound option.
+- [x] Settings uses a single theme chooser and refreshes sound preferences after replaying setup.
+- [x] Header actions occupy the trailing gutter; this fixes both Skip and Updates → Refresh.
+- [x] QR sign-in can open its validated MIREA approval link in a browser.
+- [x] The server scanner has a following QR frame and an inline attendance queue. The selected class and people are frozen for each scan session, completed people are excluded, and uncertain submissions need explicit retry.
+- [x] The About Easter egg flips vertically as one face and springs back; the extra extrusion/plate is removed.
+- [x] Brockmann's feedback controller is mounted for UI audio and haptics, with a persisted sound switch. Android silent/vibrate modes suppress audio.

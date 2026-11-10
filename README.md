@@ -210,3 +210,13 @@ to be the university pass's expiry date. Pulse tokens stay on the server.
 The launcher NFC shortcut opens Passes; activation is explicit in this flow.
 Enrollment is never retried automatically after a lost response.
 See [the design and migration audit](docs/design-server-audit.md) for validation.
+
+First-use setup offers language, light/dark/AMOLED appearance and interface sound
+preferences. It can be replayed from **Settings → How to use**. Brockmann's UI
+sounds are enabled by default, can be disabled in Settings, and stay silent in
+Android's silent/vibrate modes.
+
+The attendance scanner keeps its following QR frame and queue visible. It pins
+the chosen class and people, skips already-confirmed people, and requires an
+explicit retry after uncertain responses. QR sign-in also offers **Open in
+browser** for the MIREA approval link.

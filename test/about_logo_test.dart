@@ -29,8 +29,8 @@ void main() {
     await showBadge(tester);
     final resting = tester.widget<Transform>(faceTransform).transform.clone();
     final gesture = await tester.startGesture(tester.getCenter(object));
-    await gesture.moveBy(const Offset(20, 0));
-    await gesture.moveBy(const Offset(160, 0));
+    await gesture.moveBy(const Offset(0, 20));
+    await gesture.moveBy(const Offset(0, 160));
     await tester.pump();
     expect(back, findsOneWidget);
     expect(portrait, findsNothing);
@@ -54,11 +54,11 @@ void main() {
   ) async {
     await showBadge(tester);
     final gesture = await tester.startGesture(tester.getCenter(object));
-    await gesture.moveBy(const Offset(-20, 0));
-    await gesture.moveBy(const Offset(-140, 0));
+    await gesture.moveBy(const Offset(0, -20));
+    await gesture.moveBy(const Offset(0, -140));
     await tester.pump();
     expect(portrait, findsOneWidget);
-    await gesture.moveBy(const Offset(35, 0));
+    await gesture.moveBy(const Offset(0, 35));
     await tester.pump();
     expect(portrait, findsOneWidget);
     await gesture.up();
@@ -71,11 +71,11 @@ void main() {
     tester,
   ) async {
     await showBadge(tester);
-    await tester.drag(object, const Offset(180, 40));
+    await tester.drag(object, const Offset(40, 180));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 40));
     final gesture = await tester.startGesture(tester.getCenter(object));
-    await gesture.moveBy(const Offset(25, 0));
+    await gesture.moveBy(const Offset(0, 25));
     await tester.pump();
     final held = tester.widget<Transform>(faceTransform).transform.clone();
     await tester.pump(const Duration(seconds: 1));
@@ -107,8 +107,8 @@ void main() {
   ) async {
     await showBadge(tester, reduceMotion: true);
     final gesture = await tester.startGesture(tester.getCenter(object));
-    await gesture.moveBy(const Offset(20, 0));
-    await gesture.moveBy(const Offset(160, 0));
+    await gesture.moveBy(const Offset(0, 20));
+    await gesture.moveBy(const Offset(0, 160));
     await tester.pump();
     expect(back, findsOneWidget);
     await gesture.up();

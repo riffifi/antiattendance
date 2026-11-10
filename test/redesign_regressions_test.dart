@@ -91,38 +91,80 @@ void main() {
         );
         await tester.pumpAndSettle();
         await tester.scrollUntilVisible(
-          find.byType(CampusSwitch),
+          find.byWidgetPredicate(
+            (w) => w is CampusSwitch && w.label == 'Study day summary',
+          ),
           250,
           scrollable: bodyScroll(),
         );
-        await tester.ensureVisible(find.byType(CampusSwitch));
+        await tester.ensureVisible(
+          find.byWidgetPredicate(
+            (w) => w is CampusSwitch && w.label == 'Study day summary',
+          ),
+        );
         await tester.pumpAndSettle();
-        await tester.tap(find.byType(CampusSwitch));
+        await tester.tap(
+          find.byWidgetPredicate(
+            (w) => w is CampusSwitch && w.label == 'Study day summary',
+          ),
+        );
         await tester.pump();
         expect(
-          tester.widget<CampusSwitch>(find.byType(CampusSwitch)).value,
+          tester
+              .widget<CampusSwitch>(
+                find.byWidgetPredicate(
+                  (w) => w is CampusSwitch && w.label == 'Study day summary',
+                ),
+              )
+              .value,
           isTrue,
         );
         expect(
-          tester.widget<CampusSwitch>(find.byType(CampusSwitch)).onChanged,
+          tester
+              .widget<CampusSwitch>(
+                find.byWidgetPredicate(
+                  (w) => w is CampusSwitch && w.label == 'Study day summary',
+                ),
+              )
+              .onChanged,
           isNull,
         );
         response.complete(permission);
         await tester.pumpAndSettle();
         expect(
-          tester.widget<CampusSwitch>(find.byType(CampusSwitch)).value,
+          tester
+              .widget<CampusSwitch>(
+                find.byWidgetPredicate(
+                  (w) => w is CampusSwitch && w.label == 'Study day summary',
+                ),
+              )
+              .value,
           permission,
         );
         expect(
-          tester.widget<CampusSwitch>(find.byType(CampusSwitch)).onChanged,
+          tester
+              .widget<CampusSwitch>(
+                find.byWidgetPredicate(
+                  (w) => w is CampusSwitch && w.label == 'Study day summary',
+                ),
+              )
+              .onChanged,
           isNotNull,
         );
         expect(await store.loadDaySummaryEnabled(), permission);
         expect(enableCalls, permission ? [true] : isEmpty);
         if (permission) {
-          await tester.ensureVisible(find.byType(CampusSwitch));
+          await tester.ensureVisible(
+            find.byWidgetPredicate(
+              (w) => w is CampusSwitch && w.label == 'Study day summary',
+            ),
+          );
           await tester.pumpAndSettle();
-          await tester.tap(find.byType(CampusSwitch));
+          await tester.tap(
+            find.byWidgetPredicate(
+              (w) => w is CampusSwitch && w.label == 'Study day summary',
+            ),
+          );
           await tester.pumpAndSettle();
           expect(await store.loadDaySummaryEnabled(), isFalse);
           expect(enableCalls, [true, false]);

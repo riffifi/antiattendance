@@ -73,6 +73,7 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
   bool _updatesPageOpen = false;
   final AppSettingsStore _settingsStore = AppSettingsStore();
   final UpdateController _updates = UpdateController();
+  final _feedback = BrockmannFeedbackController();
   String? _language;
   AppThemeMode _themeMode = AppThemeMode.light;
 
@@ -81,6 +82,7 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _updates.addListener(_notifyUpdate);
+    if (Platform.isAndroid) AppHaptics.controller = _feedback;
     DebugFrameMonitor.start();
     if (Platform.isAndroid) {
       studySummaryChannel.setMethodCallHandler((call) async {
@@ -103,7 +105,7 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
 
   Future<void> _initialize() async {
     try {
-      await Future.wait([_loadLanguage(), _loadAppearance()]);
+      await Future.wait([_loadLanguage(), _loadAppearance(), _loadFeedback()]);
       unawaited(_updates.check(force: false));
       if (Platform.isAndroid) {
         try {
@@ -146,6 +148,10 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
     if (Platform.isAndroid) _updatesChannel.setMethodCallHandler(null);
     _updates.removeListener(_notifyUpdate);
     _updates.dispose();
+    if (identical(AppHaptics.controller, _feedback)) {
+      AppHaptics.controller = null;
+    }
+    _feedback.dispose();
     DebugFrameMonitor.stop();
     super.dispose();
   }
@@ -218,6 +224,18 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
     } catch (_) {}
   }
 
+  Future<void> _loadFeedback() async {
+    var enabled = true;
+    try {
+      enabled = await _settingsStore.interfaceSounds();
+    } catch (_) {}
+    await _feedback.configure(
+      mode: enabled ? BrockmannSoundMode.subtle : BrockmannSoundMode.off,
+      volume: .3,
+      haptics: BrockmannHapticMode.subtle,
+    );
+  }
+
   Future<void> _loadAppearance() async {
     var mode = AppThemeMode.light;
     try {
@@ -252,7 +270,10 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
             ? Brightness.dark
             : Brightness.light,
       ),
-      child: ThemeCrossfade(mode: _themeMode, child: child!),
+      child: BrockmannFeedbackScope(
+        controller: _feedback,
+        child: ThemeCrossfade(mode: _themeMode, child: child!),
+      ),
     ),
     locale: _language == null ? null : Locale(_language!),
     supportedLocales: const [
@@ -265,6 +286,13 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
     localizationsDelegates: GlobalMaterialLocalizations.delegates,
     home: AaIdGate(
       tutorialStore: _settingsStore,
+      language: _language,
+      themeMode: _themeMode,
+      onLanguageChanged: (value) {
+        setState(() => _language = value);
+        unawaited(_syncWidgetLanguage(value));
+      },
+      onThemeModeChanged: (value) => setState(() => _themeMode = value),
       child: ServerWorkspace(
         settings: _settingsStore,
         language: _language,

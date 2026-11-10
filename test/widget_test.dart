@@ -196,11 +196,13 @@ void main() {
       ),
     );
     await tester.scrollUntilVisible(
-      find.text('dark'),
+      find.text('theme'),
       200,
       scrollable: bodyScroll(),
     );
-    await tester.ensureVisible(find.text('dark'));
+    await tester.ensureVisible(find.text('theme'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('theme'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('dark'));
     await tester.pumpAndSettle();
@@ -416,6 +418,8 @@ void main() {
       200,
       scrollable: bodyScroll(),
     );
+    await tester.ensureVisible(find.text('Use phone language'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Use phone language'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Русский'));

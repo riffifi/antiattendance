@@ -249,10 +249,41 @@ class _ServerWorkspaceState extends State<ServerWorkspace>
   }
 
   Future<void> _scan() async {
-    final qr = await Navigator.of(
-      context,
-    ).push<String>(MaterialPageRoute(builder: (_) => const ServerQrScanner()));
-    if (mounted && qr != null) await _mark(qr);
+    if (_busy || _api == null || _lessonStart == null) return;
+    final lesson = _lessonStart!;
+    final people = serverRows(_state?['people'])
+        .where(
+          (p) =>
+              _selected.contains(p['id']) &&
+              p['session'] == 'valid' &&
+              (_group == null || p['group_id'] == _group),
+        )
+        .toList();
+    if (people.isEmpty) return;
+    setState(() {
+      _busy = true;
+      _results.removeWhere((id, _) => people.any((p) => p['id'] == id));
+    });
+    try {
+      final results = await Navigator.of(context)
+          .push<Map<String, Map<String, dynamic>>>(
+            MaterialPageRoute(
+              builder: (_) => ServerQrScanner(
+                api: _api!,
+                people: people,
+                lessonStart: lesson,
+              ),
+            ),
+          );
+      if (mounted && results != null && lesson == _lessonStart) {
+        setState(() => _results.addAll(results));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+        await _refresh();
+      }
+    }
   }
 
   Future<void> _paste() async {

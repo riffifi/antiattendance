@@ -1,4 +1,4 @@
-Based on Brockmann Flutter commit 6ba8cd1, with AA-local integration and WP8 refinements (0.3.4).
+Based on Brockmann Flutter commit 6ba8cd1, with AA-local integration and WP8 refinements (0.3.5).
 
 The framework includes rich button content, compact selection controls, native text input options, arbitrary dialog content, localized calendar actions, and descendant semantics. These APIs now live in the source framework as well as this vendored copy.
 
@@ -34,3 +34,6 @@ or external framework checkout update is implied.
 The 0.3.4 revision uses typographic WP8 section tabs, lifts the application-bar
 ellipsis, and paints the system navigation inset with the bar surface. Hidden
 tab bars release their Back guard and return in the compact state.
+
+The 0.3.5 Android sound backend respects silent and vibrate modes. AA now mounts
+the feedback scope and exposes persisted audio preferences in setup and Settings.

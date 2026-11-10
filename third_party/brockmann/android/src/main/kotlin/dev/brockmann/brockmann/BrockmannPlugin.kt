@@ -6,6 +6,7 @@ import android.view.HapticFeedbackConstants
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import android.content.Context
+import android.media.AudioManager
 import android.media.AudioAttributes
 import android.media.SoundPool
 import android.os.Handler
@@ -48,7 +49,8 @@ class BrockmannPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Activity
             "play" -> {
                 val cue = call.argument<String>("cue")
                 val gain = call.argument<Number>("gain")?.toFloat() ?: 0f
-                if (ready && gain.isFinite() && cue in samples) {
+                val audio = binding.applicationContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                if (ready && audio.ringerMode == AudioManager.RINGER_MODE_NORMAL && gain.isFinite() && cue in samples) {
                     pool?.play(samples.getValue(cue!!), gain.coerceIn(0f, 1f), gain.coerceIn(0f, 1f), 1, 0, 1f)
                 }
                 result.success(null)

@@ -195,7 +195,9 @@ class _UpdatesPageState extends State<UpdatesPage> {
           actions: [
             CampusTextAction(
               icon: Icons.refresh_rounded,
-              onPressed: updates.checking ? null : () => updates.check(),
+              onPressed: updates.checking || _downloading
+                  ? null
+                  : () => updates.check(),
               tooltip: tr(context, 'Обновить', 'Refresh'),
               label: tr(context, 'Обновить', 'Refresh'),
             ),

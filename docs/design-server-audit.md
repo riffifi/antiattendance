@@ -29,11 +29,11 @@ to that bar, with Android's automatic contrast scrim disabled.
 
 ## Server contract
 
-Verified against riffifi/aa-server commit 28ab0f1, advertised by the live server
-as version 2.2.2. Sources:
+Updated in AA 3.8.2+46 against riffifi/aa-server commit 2df6f96, advertised by
+the live server as version 2.3.0. Sources:
 
-- https://github.com/riffifi/aa-server/blob/28ab0f1/docs/client-api-migration.md
-- https://github.com/riffifi/aa-server/blob/28ab0f1/docs/API.md
+- https://github.com/riffifi/aa-server/blob/2df6f96/docs/client-api-migration.md
+- https://github.com/riffifi/aa-server/blob/2df6f96/docs/API.md
 
 The production entry point uses ServerWorkspace and the shared JSON operations:
 server QR job creation/status/one-time claim, AA ID refresh/devices, class state,
@@ -53,10 +53,19 @@ mutation responses are never automatically retried. Per-person failures remain
 visible. Daily results and notifications index marks by both account and lesson;
 missing marks remain missing, and external journal strings are supported.
 
-The server removed digital NFC issue/token/verification endpoints. Passes now
-manages the owner's switch, grants, revocations, incoming decisions and outgoing
-requests. It does not advertise NFC activation or Telegram approval. The normal
-attendance launcher shortcut is retained; the former NFC shortcut opens Passes.
+Pass permissions retain the owner's switch, grants, revocations, incoming
+decisions and outgoing requests. NFC uses GET /site/passes and /site/passes/{id}
+for metadata and numbers; owner-only POST /site/pass/code and /site/pass/issue
+perform enrollment. No removed RPC, client token or cookie upload is used.
+Six-digit codes preserve leading zeroes. Failed issuance is read back instead
+of automatically repeated. Retry times and server error details are shown.
+
+Numbers remain in process memory. Single-pass and queue activation use native
+Android HCE, with the owner's pass last. Twenty-second authorization rechecks
+renew a 90-second local lease without resetting queue progress. Revocation,
+number replacement, loss of connectivity, app backgrounding and route disposal
+stop presentation. Renewal cannot replace a number or resurrect an expired
+native lease. This is permission renewal, not automatic university issuance.
 
 ## Validation limits
 

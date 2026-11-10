@@ -6,6 +6,7 @@ import 'frontend/command_bar.dart';
 import 'frontend/page_layout.dart';
 import 'l10n.dart';
 import 'server_api.dart';
+import 'server_nfc_page.dart';
 import 'server_workspace.dart' show ServerMessage, serverError;
 
 class ServerPassesPage extends StatefulWidget {
@@ -111,6 +112,13 @@ class ServerPassesPageState extends State<ServerPassesPage> {
     );
   }
 
+  Future<void> _openNfc() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => ServerNfcPassPage(api: widget.api)),
+    );
+    if (mounted) await refresh();
+  }
+
   @override
   Widget build(BuildContext context) => Column(
     children: [
@@ -130,13 +138,9 @@ class ServerPassesPageState extends State<ServerPassesPage> {
                 onChanged: (value) => setState(() => _own = value),
               ),
               const SizedBox(height: 24),
-              BrockmannText(
-                tr(
-                  context,
-                  'Активация цифрового NFC-пропуска сейчас недоступна.',
-                  'Digital NFC pass activation is currently unavailable.',
-                ),
-                color: context.brockmann.secondary,
+              CampusButton.filled(
+                onPressed: _busy ? null : _openNfc,
+                child: Text(tr(context, 'NFC-пропуска', 'NFC passes')),
               ),
               if (_busy)
                 const Padding(
@@ -268,6 +272,11 @@ class ServerPassesPageState extends State<ServerPassesPage> {
       CampusCommandBar(
         active: widget.active,
         commands: [
+          CampusCommand(
+            icon: Icons.nfc_rounded,
+            label: tr(context, 'NFC-пропуска', 'NFC passes'),
+            onPressed: _busy ? null : _openNfc,
+          ),
           CampusCommand(
             icon: Icons.person_add_rounded,
             label: _own

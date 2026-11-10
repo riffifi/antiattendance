@@ -17,9 +17,13 @@ class PassStatusPanel extends StatelessWidget {
     required this.remainingSeconds,
     required this.presented,
     required this.total,
+    this.activeDetail,
+    this.idleTitle,
   });
   final bool running, single, hasPasses, responded;
   final String? accountLabel;
+  final String? activeDetail;
+  final String? idleTitle;
   final int selectedCount, remainingSeconds, presented, total;
   @override
   Widget build(BuildContext context) {
@@ -29,15 +33,16 @@ class PassStatusPanel extends StatelessWidget {
               ? tr(context, 'Пропуск активен', 'Pass is active')
               : tr(context, 'Очередь работает', 'Queue is running')
         : hasPasses
-        ? tr(context, 'Готовы к проходу', 'Ready for the gate')
+        ? idleTitle ?? tr(context, 'Готовы к проходу', 'Ready for the gate')
         : tr(context, 'Подключите первый пропуск', 'Enroll your first pass');
     final detail = running
         ? single
-              ? tr(
-                  context,
-                  'Один пропуск активен до остановки или истечения токена.',
-                  'This pass stays active until stopped or its token expires.',
-                )
+              ? activeDetail ??
+                    tr(
+                      context,
+                      'Один пропуск активен до остановки или истечения токена.',
+                      'This pass stays active until stopped or its token expires.',
+                    )
               : responded
               ? trf(
                   context,

@@ -39,9 +39,16 @@ double? _expirySeconds(String value) {
 }
 
 class SessionServerException implements Exception {
-  const SessionServerException(this.message, {this.status});
+  const SessionServerException(
+    this.message, {
+    this.status,
+    this.detail,
+    this.retryAfterSeconds,
+  });
   final String message;
   final int? status;
+  final String? detail;
+  final int? retryAfterSeconds;
   @override
   String toString() => message;
 }
@@ -64,7 +71,8 @@ class SessionServerClient {
     String path, {
     String method = 'GET',
     Object? body,
-  }) => _json(path, method: method, body: body);
+    Duration timeout = const Duration(seconds: 20),
+  }) => _json(path, method: method, body: body, timeout: timeout);
   String? _passClientKey;
   Future<void>? _passClientLoading;
   String get _passClientStorageKey =>
@@ -311,9 +319,19 @@ class SessionServerClient {
       bytes.add(part);
     }
     if (response.statusCode != 200) {
+      String? detail;
+      try {
+        final body = jsonDecode(utf8.decode(bytes.takeBytes()));
+        final value = body is Map ? body['detail'] : null;
+        if (value is String && value.isNotEmpty && value.length <= 1000) {
+          detail = value;
+        }
+      } catch (_) {}
       throw SessionServerException(
         'Session server returned HTTP ${response.statusCode}.',
         status: response.statusCode,
+        detail: detail,
+        retryAfterSeconds: int.tryParse(response.headers['retry-after'] ?? ''),
       );
     }
     final result = jsonDecode(utf8.decode(bytes.takeBytes()));

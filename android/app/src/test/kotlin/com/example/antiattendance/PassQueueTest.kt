@@ -57,4 +57,28 @@ class PassQueueTest {
         assertEquals(0, PassQueue.status()["total"])
         assertArrayEquals(byteArrayOf(0x69, 0x85.toByte()), PassQueue.response(command))
     }
+
+    @Test fun renewalPreservesResponseAndQueueProgress() {
+        PassQueue.start(listOf(PassQueue.Pass("a", 123, 2000), PassQueue.Pass("b", 456, 2000)), 1)
+        PassQueue.response(command)
+        elapsed += 500
+        PassQueue.renew(listOf(PassQueue.Pass("a", 123, 3000), PassQueue.Pass("b", 456, 3000)))
+        assertEquals(true, PassQueue.status()["responded"])
+        assertEquals(500L, PassQueue.status()["remainingMillis"])
+        elapsed += 500
+        assertEquals("b", PassQueue.status()["accountId"])
+        assertEquals(3000L, PassQueue.status()["expiresAt"])
+    }
+
+    @Test fun renewalCannotReplaceCredentialsOrResurrectExpiredPass() {
+        PassQueue.start(listOf(PassQueue.Pass("a", 123, 2000)), 1, true)
+        assertThrows(IllegalArgumentException::class.java) {
+            PassQueue.renew(listOf(PassQueue.Pass("a", 999, 3000)))
+        }
+        wall = 2000
+        assertThrows(IllegalArgumentException::class.java) {
+            PassQueue.renew(listOf(PassQueue.Pass("a", 123, 3000)))
+        }
+        assertArrayEquals(byteArrayOf(0x69, 0x85.toByte()), PassQueue.response(command))
+    }
 }

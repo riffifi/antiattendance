@@ -37,6 +37,18 @@ internal object PassQueue {
         armed = false
     }
 
+    /** Extend a validated foreground lease without resetting gate progress. */
+    fun renew(values: List<Pass>) {
+        advanceIfDue()
+        require(armed && (passes.getOrNull(index)?.expiresAt ?: 0) > wallTime())
+        require(values.size == passes.size)
+        require(values.zip(passes).all { (next, old) ->
+            next.accountId == old.accountId && next.number == old.number &&
+                next.expiresAt > wallTime()
+        })
+        passes = values.toList()
+    }
+
     fun response(command: ByteArray?): ByteArray {
         advanceIfDue()
         val pass = passes.getOrNull(index)

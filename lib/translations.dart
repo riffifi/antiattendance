@@ -1,6 +1,68 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  "Enable NFC. This phone must support card emulation.": (
+    "Activez le NFC. Ce téléphone doit prendre en charge l’émulation de carte.",
+    "Ative o NFC. Este telefone deve suportar emulação de cartões.",
+    "请启用 NFC。此手机必须支持卡模拟。",
+  ),
+  "The pass is missing or changed. Refresh and enroll your own pass if needed.":
+      (
+        "Le badge est absent ou a changé. Actualisez et associez votre badge si nécessaire.",
+        "O passe está em falta ou foi alterado. Atualize e associe o seu passe, se necessário.",
+        "通行证不存在或已更改。请刷新，必要时绑定您自己的通行证。",
+      ),
+  "Stop": ("Arrêter", "Parar", "停止"),
+  "Your pass is always last in the queue.": (
+    "Votre badge passe toujours en dernier dans la file.",
+    "O seu passe é sempre o último na fila.",
+    "您的通行证始终排在队列最后。",
+  ),
+  "Enroll your own pass": (
+    "Associer votre badge",
+    "Associar o seu passe",
+    "绑定自己的通行证",
+  ),
+  "Keep this screen open and your phone unlocked. Check admission at the gate. Permissions are rechecked while active.":
+      (
+        "Gardez cet écran ouvert et le téléphone déverrouillé. Vérifiez le passage au portique. Les autorisations sont revérifiées pendant l’activation.",
+        "Mantenha este ecrã aberto e o telefone desbloqueado. Confirme a entrada na catraca. As permissões são verificadas durante a utilização.",
+        "请保持此屏幕打开并解锁手机。在闸机处确认通行结果。激活期间会重新检查权限。",
+      ),
+  "No digital pass or MIREA verification method is available.": (
+    "Aucun badge numérique ni moyen de vérification MIREA n’est disponible.",
+    "Não há passe digital nem método de verificação MIREA disponível.",
+    "没有可用的数字通行证或 MIREA 验证方式。",
+  ),
+  "Wait before requesting another code.": (
+    "Patientez avant de demander un autre code.",
+    "Aguarde antes de pedir outro código.",
+    "请稍候再请求验证码。",
+  ),
+  "The code was sent using your MIREA verification method.": (
+    "Le code a été envoyé via votre moyen de vérification MIREA.",
+    "O código foi enviado através do seu método de verificação MIREA.",
+    "验证码已通过您的 MIREA 验证方式发送。",
+  ),
+  "Confirm enrollment with your MIREA code. Issuing again may change the pass binding.":
+      (
+        "Confirmez l’association avec votre code MIREA. Une nouvelle émission peut modifier le rattachement du badge.",
+        "Confirme a associação com o seu código MIREA. Uma nova emissão pode alterar a associação do passe.",
+        "请使用您的 MIREA 验证码确认绑定。重新签发可能更改通行证的设备绑定。",
+      ),
+  "Get code": ("Obtenir un code", "Obter código", "获取验证码"),
+  "Verification code": ("Code de vérification", "Código de verificação", "验证码"),
+  "Issuance was not confirmed. Check the saved pass before issuing again.": (
+    "L’émission n’a pas été confirmée. Vérifiez le badge enregistré avant de recommencer.",
+    "A emissão não foi confirmada. Verifique o passe guardado antes de o emitir novamente.",
+    "签发尚未确认。再次签发前请检查已保存的通行证。",
+  ),
+  "Active while this screen is open and the server allows access.": (
+    "Actif tant que cet écran est ouvert et que le serveur autorise l’accès.",
+    "Ativo enquanto este ecrã estiver aberto e o servidor permitir o acesso.",
+    "此屏幕打开且服务器允许访问时保持激活。",
+  ),
+
   "University sessions stay on the server. This phone uses AA ID to synchronize your permitted data.":
       (
         "Les sessions universitaires restent sur le serveur. AA ID synchronise uniquement les données qui vous sont autorisées.",

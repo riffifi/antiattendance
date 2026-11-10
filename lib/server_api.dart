@@ -51,6 +51,27 @@ class AaServerApi {
 
   Future<Map<String, dynamic>> myPass() => client.requestJson('/api/me/pass');
   Future<Map<String, dynamic>> passes() => client.requestJson('/api/me/passes');
+  Future<Map<String, dynamic>> digitalPasses() =>
+      client.requestJson('/site/passes');
+  Future<Map<String, dynamic>> digitalPass(String id) =>
+      client.requestJson('/site/passes/${Uri.encodeComponent(id)}');
+  Future<Map<String, dynamic>> sendPassCode() => client.requestJson(
+    '/site/pass/code',
+    method: 'POST',
+    timeout: const Duration(seconds: 35),
+  );
+  Future<Map<String, dynamic>> issuePass(String code) {
+    if (!RegExp(r'^[0-9]{6}$').hasMatch(code)) {
+      throw const FormatException('Enter a six-digit verification code.');
+    }
+    return client.requestJson(
+      '/site/pass/issue',
+      method: 'POST',
+      body: {'code': code},
+      timeout: const Duration(seconds: 35),
+    );
+  }
+
   Future<Map<String, dynamic>> people(String username) => client.requestJson(
     '/api/me/people?q=${Uri.encodeQueryComponent(username.trim())}',
   );

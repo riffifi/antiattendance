@@ -193,6 +193,16 @@ configurable. University QR sign-in runs on the server. Attendance uses the
 server-selected class and authorized people, and daily results preserve each
 class’s separate marks.
 
-The current server exposes pass permissions, not digital NFC issuance or
-activation. See [the design and migration audit](docs/design-server-audit.md)
-for compatibility details and validation.
+AA 3.8.2 uses server 2.3.0 for digital passes. Open **Passes → NFC passes**
+to select a single pass or a queue; your own pass goes last in a queue.
+Owners can enroll their own pass with a six-digit MIREA code. Sharing allows
+presentation of a saved pass, while enrollment remains owner-only.
+
+The phone reads numbers when activating, keeps them only in memory, and
+rechecks access every 20 seconds. Leaving the screen or app, a revoked share,
+a changed number, or a failed recheck stops NFC. A 90-second native permission
+deadline also bounds presentation if Dart stops refreshing; it does not claim
+to be the university pass's expiry date. Pulse tokens stay on the server.
+The launcher NFC shortcut opens Passes; activation is explicit in this flow.
+Enrollment is never retried automatically after a lost response.
+See [the design and migration audit](docs/design-server-audit.md) for validation.

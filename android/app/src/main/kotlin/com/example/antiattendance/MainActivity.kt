@@ -226,6 +226,15 @@ class MainActivity : FlutterActivity() {
                         }
                         result.success(PassQueue.status())
                     }
+                    "renew" -> {
+                        val raw = call.argument<List<Map<String, Any>>>("passes") ?: error("Missing passes")
+                        PassQueue.renew(raw.map {
+                            PassQueue.Pass(it["accountId"] as String,
+                                (it["number"] as String).toLong(),
+                                (it["expiresAt"] as Number).toLong())
+                        })
+                        result.success(null)
+                    }
                     "status" -> result.success(PassQueue.status())
                     "stop" -> {
                         stopPassQueue()

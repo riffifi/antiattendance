@@ -1,6 +1,34 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  "Sign in with MIREA once. AA ID connects your group and the data you can access. You do not need to enter a password in the app.":
+      (
+        "Connectez-vous une fois avec MIREA. AA ID associe votre groupe et vos données autorisées. Aucun mot de passe n’est à saisir dans l’application.",
+        "Entre uma vez com a MIREA. O AA ID associa o seu grupo e os dados a que tem acesso. Não precisa de introduzir uma palavra-passe na aplicação.",
+        "通过 MIREA 登录一次。AA ID 会关联您的班级和可访问的数据。无需在应用中输入密码。",
+      ),
+  "Check the class, select people, then tap Scan at the bottom. Scan that class’s QR code. Grey accounts need their owner to sign in again.":
+      (
+        "Vérifiez le cours, sélectionnez les personnes et touchez Scanner en bas. Scannez le QR code de ce cours. Les comptes grisés nécessitent une nouvelle connexion de leur propriétaire.",
+        "Confirme a aula, selecione as pessoas e toque em Ler na parte inferior. Leia o QR dessa aula. Os titulares das contas a cinzento precisam de iniciar sessão novamente.",
+        "核对课程，选择人员，然后点击底部的扫描。请扫描该课程的二维码。灰色账号需要所有者重新登录。",
+      ),
+  "Swipe the screen or its headings to switch sections. Choose a day in Schedule; tap a room to open the map.":
+      (
+        "Balayez l’écran ou ses titres pour changer de rubrique. Choisissez un jour dans l’emploi du temps et touchez une salle pour ouvrir le plan.",
+        "Deslize o ecrã ou os títulos para mudar de secção. Escolha um dia no horário e toque numa sala para abrir o mapa.",
+        "滑动屏幕或标题可切换栏目。在课表中选择日期，点击教室即可打开地图。",
+      ),
+  "Open Passes and tap NFC at the bottom. Choose one pass or a queue. The owner grants access; keep the screen open and the phone unlocked at the gate. The app bar’s three dots reveal command labels.":
+      (
+        "Ouvrez Badges et touchez NFC en bas. Choisissez un badge ou une file. Le propriétaire autorise l’accès. Au portique, gardez l’écran ouvert et le téléphone déverrouillé. Les trois points de la barre affichent les libellés des commandes.",
+        "Abra Passes e toque em NFC em baixo. Escolha um passe ou uma fila. O titular concede o acesso. Na catraca, mantenha o ecrã aberto e o telefone desbloqueado. Os três pontos da barra mostram os nomes dos comandos.",
+        "打开通行证并点击底部的 NFC。选择单张通行证或队列。访问权限由所有者授予；过闸机时请保持此屏幕打开并解锁手机。点击应用栏的三个点可显示操作名称。",
+      ),
+  "Skip": ("Passer", "Ignorar", "跳过"),
+  "Get started": ("Commencer", "Começar", "开始使用"),
+  "Profile updated": ("Profil mis à jour", "Perfil atualizado", "个人资料已更新"),
+
   "Enable NFC. This phone must support card emulation.": (
     "Activez le NFC. Ce téléphone doit prendre en charge l’émulation de carte.",
     "Ative o NFC. Este telefone deve suportar emulação de cartões.",

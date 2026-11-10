@@ -213,6 +213,9 @@ class _ServerNfcPassPageState extends State<ServerNfcPassPage>
                     : null,
               ),
               headline: '${card['label'] ?? card['username'] ?? '—'}',
+              onTap: enabled && card['pass_allowed'] == true
+                  ? () => c.choose(card['account_id'] as String)
+                  : null,
               supportingText: [
                 if (card['group_name'] != null) '${card['group_name']}',
                 if (card['own'] == true) tr(context, 'Мой пропуск', 'My pass'),
@@ -245,13 +248,19 @@ class _ServerNfcPassPageState extends State<ServerNfcPassPage>
                 ),
               ),
             ),
-          BrockmannText(
-            tr(
-              context,
-              'Держите приложение открытым и телефон разблокированным. Результат прохода проверяйте на турникете. Разрешения перепроверяются во время работы.',
-              'Keep this screen open and your phone unlocked. Check admission at the gate. Permissions are rechecked while active.',
-            ),
-            color: context.brockmann.secondary,
+          CampusDisclosure(
+            key: const PageStorageKey('nfc-help'),
+            title: tr(context, 'Как пользоваться', 'How to use'),
+            children: [
+              BrockmannText(
+                tr(
+                  context,
+                  'Держите приложение открытым и телефон разблокированным. Результат прохода проверяйте на турникете. Разрешения перепроверяются во время работы.',
+                  'Keep this screen open and your phone unlocked. Check admission at the gate. Permissions are rechecked while active.',
+                ),
+                color: context.brockmann.secondary,
+              ),
+            ],
           ),
         ],
       ),
@@ -430,7 +439,7 @@ class _ServerPassEnrollmentPageState extends State<ServerPassEnrollmentPage> {
               : _send,
           child: Text(tr(context, 'Получить код', 'Get code')),
         ),
-        if (message != null) ServerMessage(message: message!),
+        if (message != null) ServerMessage(message: message!, isError: false),
         if (retryAt != null && retryAt!.isAfter(DateTime.now()))
           BrockmannText(
             '${tr(context, 'Повторить', 'Retry')} · ${TimeOfDay.fromDateTime(retryAt!).format(context)}',

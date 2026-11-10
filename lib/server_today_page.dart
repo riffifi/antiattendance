@@ -75,6 +75,7 @@ class _ServerTodayPageState extends State<ServerTodayPage> {
                 ),
               for (final person in people) ...[
                 AaSectionHeading(
+                  lowercase: false,
                   title: '${person['label'] ?? person['username'] ?? '—'}',
                 ),
                 for (final lesson in lessons)

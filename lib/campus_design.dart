@@ -162,15 +162,20 @@ class CampusDisclosure extends StatefulWidget {
 
 class _CampusDisclosureState extends State<CampusDisclosure> {
   bool? _open;
+  Object get _storageIdentifier =>
+      ('campus-disclosure-expanded', widget.key ?? widget.title);
   bool get _expanded {
     if (_open != null) return _open!;
-    return PageStorage.maybeOf(context)?.readState(context) == true;
+    return PageStorage.maybeOf(context)
+            ?.readState(context, identifier: _storageIdentifier) ==
+        true;
   }
 
   void _toggle() {
     final next = !_expanded;
     setState(() => _open = next);
-    PageStorage.maybeOf(context)?.writeState(context, next);
+    PageStorage.maybeOf(context)
+        ?.writeState(context, next, identifier: _storageIdentifier);
   }
 
   @override

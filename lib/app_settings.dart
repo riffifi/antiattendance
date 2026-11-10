@@ -36,6 +36,10 @@ class AppSettingsStore {
       _storage.write(key: 'day_summary_v1', value: '$enabled');
 
   final FlutterSecureStorage _storage;
+  Future<bool> tutorialSeen() async =>
+      await _storage.read(key: 'tutorial_seen_v1') == 'true';
+  Future<void> finishTutorial() =>
+      _storage.write(key: 'tutorial_seen_v1', value: 'true');
   static const _languageKey = 'app_language_v1';
   static const _themeKey = 'app_theme_v1';
 

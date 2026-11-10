@@ -415,29 +415,49 @@ class _ServerWorkspaceState extends State<ServerWorkspace>
                   ),
                 ],
                 if (_refreshing) const CampusProgress.compact(),
-                if (choices.length > 1)
-                  BrockmannPicker(
-                    label: tr(context, 'Занятие', 'Class'),
-                    options: [
-                      for (final l in choices)
-                        '${l['start']} · ${l['subject']}',
-                    ],
-                    selected: choices
-                        .indexWhere((l) => l['lesson_start'] == _lessonStart)
-                        .clamp(0, choices.length - 1),
-                    onChanged: _busy
-                        ? null
-                        : (i) => _refresh(
-                            lessonStart: choices[i]['lesson_start'] as int?,
-                            changeLesson: true,
-                          ),
-                  ),
                 if (lesson.isNotEmpty) ...[
-                  const SizedBox(height: 20),
-                  BrockmannText(
-                    '${lesson['start']}–${lesson['end']}',
-                    role: BrockmannType.monoValue,
-                    color: context.brockmann.accentText,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: BrockmannText(
+                          '${lesson['start']}–${lesson['end']}',
+                          role: BrockmannType.monoValue,
+                          color: context.brockmann.accentText,
+                        ),
+                      ),
+                      if (choices.length > 1)
+                        CampusTextAction(
+                          icon: Icons.swap_horiz_rounded,
+                          label: tr(context, 'Занятие', 'Class'),
+                          onPressed: _busy || _refreshing
+                              ? null
+                              : () async {
+                                  final chosen = await showChoicePage<int>(
+                                    context,
+                                    title: tr(context, 'Занятие', 'Class'),
+                                    options: [
+                                      for (final choice in choices)
+                                        ChoiceOption(
+                                          value: choice['lesson_start'] as int,
+                                          label:
+                                              '${choice['start']} · ${choice['subject']}',
+                                          selected:
+                                              choice['lesson_start'] ==
+                                              _lessonStart,
+                                        ),
+                                    ],
+                                  );
+                                  if (mounted &&
+                                      chosen != null &&
+                                      chosen != _lessonStart) {
+                                    await _refresh(
+                                      lessonStart: chosen,
+                                      changeLesson: true,
+                                    );
+                                  }
+                                },
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   BrockmannText(
@@ -446,7 +466,10 @@ class _ServerWorkspaceState extends State<ServerWorkspace>
                   ),
                   const SizedBox(height: 8),
                   BrockmannText(
-                    '${lesson['location'] ?? ''} · ${lesson['type'] ?? ''}',
+                    [lesson['location'], lesson['type']]
+                        .whereType<String>()
+                        .where((v) => v.trim().isNotEmpty)
+                        .join(' · '),
                     color: context.brockmann.secondary,
                   ),
                 ] else if (me['connected'] == true)
@@ -485,9 +508,11 @@ class _ServerWorkspaceState extends State<ServerWorkspace>
                           ),
                   ),
                 AaSectionHeading(
-                  title: tr(context, 'Люди', 'People'),
+                  title:
+                      '${tr(context, 'Люди', 'People')} · ${visible.where((p) => _selected.contains(p['id'])).length}/${visible.length}',
                   action: CampusButton.text(
-                    onPressed: _busy || visible.isEmpty
+                    onPressed:
+                        _busy || !visible.any((p) => p['session'] == 'valid')
                         ? null
                         : () {
                             final ids = visible
@@ -503,7 +528,13 @@ class _ServerWorkspaceState extends State<ServerWorkspace>
                               }
                             });
                           },
-                    child: Text(tr(context, 'Выбрать всех', 'Select all')),
+                    child: Text(
+                      visible
+                              .where((p) => p['session'] == 'valid')
+                              .every((p) => _selected.contains(p['id']))
+                          ? tr(context, 'Снять выбор', 'Clear selection')
+                          : tr(context, 'Выбрать всех', 'Select all'),
+                    ),
                   ),
                 ),
                 for (final (index, person) in visible.indexed)
@@ -569,6 +600,11 @@ class _ServerWorkspaceState extends State<ServerWorkspace>
                 if (!_selected.add(id)) _selected.remove(id);
               }),
       ),
+      onTap: _busy || !valid
+          ? null
+          : () => setState(() {
+              if (!_selected.add(id)) _selected.remove(id);
+            }),
       headline: '${person['label'] ?? person['username'] ?? '—'}',
       supportingText: [
         if (person['group_name'] != null) '${person['group_name']}',
@@ -666,14 +702,20 @@ String serverError(BuildContext context, Object error) {
 }
 
 class ServerMessage extends StatelessWidget {
-  const ServerMessage({super.key, required this.message});
+  const ServerMessage({super.key, required this.message, this.isError = true});
   final String message;
+  final bool isError;
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 16),
     child: Semantics(
       liveRegion: true,
-      child: BrockmannText(message, color: context.brockmann.danger),
+      child: BrockmannText(
+        message,
+        color: isError
+            ? Theme.of(context).colorScheme.error
+            : context.brockmann.secondary,
+      ),
     ),
   );
 }

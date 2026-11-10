@@ -2,6 +2,9 @@ import 'package:brockmann/brockmann.dart';
 import 'package:flutter/material.dart';
 
 import 'aa_id.dart';
+import 'aa_id_page.dart';
+import 'frontend/command_bar.dart';
+import 'server_login_page.dart';
 import 'campus_design.dart';
 import 'frontend/page_layout.dart';
 import 'l10n.dart';
@@ -19,6 +22,12 @@ class _ServerProfilePageState extends State<ServerProfilePage> {
   final _name = TextEditingController(), _username = TextEditingController();
   bool _loading = true, _busy = false;
   String? _error, _group;
+  String _savedName = '', _savedUsername = '';
+  bool _connected = false, _hasAccount = false;
+  bool get _dirty =>
+      (_hasAccount && _name.text.trim() != _savedName) ||
+      _username.text.trim().replaceFirst(RegExp(r'^@'), '').toLowerCase() !=
+          _savedUsername;
   @override
   void initState() {
     super.initState();
@@ -35,9 +44,14 @@ class _ServerProfilePageState extends State<ServerProfilePage> {
       ]);
       if (!mounted) return;
       setState(() {
+        _error = null;
         _name.text = '${data[0]['label'] ?? ''}';
         _username.text = '${data[1]['username'] ?? ''}';
-        _group = data[1]['group_name'] as String?;
+        _group = (data[1]['group_name'] ?? data[0]['group_name']) as String?;
+        _connected = data[0]['connected'] == true;
+        _hasAccount = data[0]['account'] == true;
+        _savedName = _name.text;
+        _savedUsername = _username.text;
       });
     } catch (error) {
       if (mounted) setState(() => _error = serverError(context, error));
@@ -48,15 +62,15 @@ class _ServerProfilePageState extends State<ServerProfilePage> {
   }
 
   Future<void> _save() async {
-    if (_busy) return;
+    if (_busy || !_dirty || _loading) return;
     final name = _name.text.trim(),
         username = _username.text
             .trim()
             .replaceFirst(RegExp(r'^@'), '')
             .toLowerCase();
-    if (name.isEmpty ||
-        name.length > 60 ||
-        !RegExp(r'^[a-z][a-z0-9_]{2,23}$').hasMatch(username)) {
+    if ((_hasAccount && (name.isEmpty || name.length > 60)) ||
+        (username != _savedUsername &&
+            !RegExp(r'^[a-z][a-z0-9_]{2,23}$').hasMatch(username))) {
       setState(
         () => _error = tr(
           context,
@@ -72,10 +86,22 @@ class _ServerProfilePageState extends State<ServerProfilePage> {
     });
     final idApi = AaId.client();
     try {
-      await idApi.setUsername(await AaId.accessToken(), username);
-      await AaId.refreshAccessToken();
-      await widget.api.updateAccount(label: name);
-      if (mounted) Navigator.of(context).pop();
+      if (username != _savedUsername) {
+        await idApi.setUsername(await AaId.accessToken(), username);
+        _savedUsername = username;
+        await AaId.refreshAccessToken();
+      }
+      if (_hasAccount && name != _savedName) {
+        await widget.api.updateAccount(label: name);
+        _savedName = name;
+      }
+      if (mounted) {
+        setState(() {});
+        CampusNotice.show(
+          context,
+          message: tr(context, 'Профиль обновлён', 'Profile updated'),
+        );
+      }
     } catch (error) {
       if (mounted) {
         setState(
@@ -102,47 +128,169 @@ class _ServerProfilePageState extends State<ServerProfilePage> {
   }
 
   @override
-  Widget build(BuildContext context) => CampusScaffold(
-    appBar: CampusAppBar(title: Text(tr(context, 'Мой профиль', 'My profile'))),
-    body: ListView(
-      padding: AaPageLayout.insets(context),
-      children: [
-        if (_loading)
-          const CampusProgress.compact()
-        else ...[
-          CampusTextField(
-            controller: _name,
-            label: tr(context, 'Имя', 'Name'),
-            enabled: !_busy,
-          ),
-          const SizedBox(height: 20),
-          CampusTextField(
-            controller: _username,
-            label: 'Username',
-            enabled: !_busy,
-          ),
-          const SizedBox(height: 12),
-          BrockmannText(
-            tr(
-              context,
-              'По этому username друзья смогут найти вас.',
-              'Friends can find you by this username.',
-            ),
-            role: BrockmannType.caption,
-            color: context.brockmann.secondary,
-          ),
-          if (_group != null) ...[
-            const SizedBox(height: 24),
-            BrockmannText(_group!, role: BrockmannType.value),
-          ],
-          const SizedBox(height: 24),
-          CampusButton.filled(
-            onPressed: _busy ? null : _save,
-            child: Text(tr(context, 'Сохранить', 'Save')),
+  Widget build(BuildContext context) {
+    final displayName = _savedName.isNotEmpty
+        ? _savedName
+        : _savedUsername.isNotEmpty
+        ? '@$_savedUsername'
+        : 'AA ID';
+    final initials =
+        (_savedName.isNotEmpty
+                ? _savedName
+                : _savedUsername.isNotEmpty
+                ? _savedUsername
+                : 'AA')
+            .split(RegExp(r'\s+'))
+            .where((v) => v.isNotEmpty)
+            .take(2)
+            .map((v) => v.characters.first.toUpperCase())
+            .join();
+    return CampusScaffold(
+      appBar: CampusAppBar(
+        title: Text(tr(context, 'Мой профиль', 'My profile')),
+      ),
+      bottomNavigationBar: CampusCommandBar(
+        commands: [
+          CampusCommand(
+            icon: Icons.check_rounded,
+            label: tr(context, 'Сохранить', 'Save'),
+            onPressed: _loading || _busy || !_dirty ? null : _save,
           ),
         ],
-        if (_error != null) ServerMessage(message: _error!),
-      ],
-    ),
-  );
+      ),
+      body: ListView(
+        padding: AaPageLayout.insets(context),
+        children: [
+          if (_loading)
+            const CampusProgress.compact()
+          else ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  color: context.brockmann.surface,
+                  alignment: Alignment.center,
+                  child: ExcludeSemantics(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: BrockmannText(
+                        initials,
+                        role: BrockmannType.heading,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      BrockmannText(displayName, role: BrockmannType.heading),
+                      if (_savedUsername.isNotEmpty && _savedName.isNotEmpty)
+                        BrockmannText(
+                          '@$_savedUsername',
+                          color: context.brockmann.secondary,
+                        ),
+                      if (_group?.isNotEmpty == true)
+                        BrockmannText(
+                          _group!,
+                          role: BrockmannType.caption,
+                          color: context.brockmann.secondary,
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            CampusListItem(
+              headline: 'MIREA',
+              supportingText: _connected
+                  ? tr(
+                      context,
+                      'Привязан к аккаунту МИРЭА',
+                      'Bound to a MIREA account',
+                    )
+                  : tr(context, 'Нужен повторный вход', 'Sign-in needed'),
+              trailing: _connected
+                  ? null
+                  : CampusButton.text(
+                      onPressed: _busy
+                          ? null
+                          : () async {
+                              await Navigator.of(context).push<void>(
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      ServerLoginPage(address: AaId.url),
+                                ),
+                              );
+                              if (mounted) await _load();
+                            },
+                      child: Text(tr(context, 'Войти снова', 'Sign in again')),
+                    ),
+            ),
+            CampusDisclosure(
+              key: const PageStorageKey('profile-editor'),
+              title: tr(context, 'Имя и username', 'Name and username'),
+              children: [
+                if (_hasAccount)
+                  CampusTextField(
+                    controller: _name,
+                    label: tr(context, 'Имя', 'Name'),
+                    maxLength: 60,
+                    enabled: !_busy,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                const SizedBox(height: 16),
+                CampusTextField(
+                  controller: _username,
+                  label: 'Username',
+                  maxLength: 24,
+                  enabled: !_busy,
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 8),
+                BrockmannText(
+                  tr(
+                    context,
+                    'По этому username друзья смогут найти вас.',
+                    'Friends can find you by this username.',
+                  ),
+                  role: BrockmannType.caption,
+                  color: context.brockmann.secondary,
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+            CampusListItem(
+              headline: tr(context, 'Устройства', 'Devices'),
+              supportingText: tr(
+                context,
+                'Ваш аккаунт, устройства и выход',
+                'Your account, devices and sign-out',
+              ),
+              onTap: _busy
+                  ? null
+                  : () => Navigator.of(context).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) => const AaIdAccountPage(),
+                      ),
+                    ),
+            ),
+          ],
+          if (_busy) const CampusProgress.compact(),
+          if (_error != null) ...[
+            ServerMessage(message: _error!),
+            if (!_loading && _savedName.isEmpty && _savedUsername.isEmpty)
+              CampusButton.text(
+                onPressed: _load,
+                child: Text(tr(context, 'Повторить', 'Retry')),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
 }

@@ -264,6 +264,7 @@ class _AntiattendanceAppState extends State<AntiattendanceApp>
     ],
     localizationsDelegates: GlobalMaterialLocalizations.delegates,
     home: AaIdGate(
+      tutorialStore: _settingsStore,
       child: ServerWorkspace(
         settings: _settingsStore,
         language: _language,

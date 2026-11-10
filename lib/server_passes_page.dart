@@ -100,6 +100,7 @@ class ServerPassesPageState extends State<ServerPassesPage> {
   }
 
   Future<void> _find() async {
+    final own = _own;
     final id = await Navigator.of(context).push<String>(
       MaterialPageRoute(
         builder: (_) => ServerPersonSearchPage(api: widget.api),
@@ -107,8 +108,8 @@ class ServerPassesPageState extends State<ServerPassesPage> {
     );
     if (!mounted || id == null) return;
     await _change(
-      () => _own ? widget.api.grant(id) : widget.api.requestPass(id),
-      own: _own,
+      () => own ? widget.api.grant(id) : widget.api.requestPass(id),
+      own: own,
     );
   }
 
@@ -137,11 +138,7 @@ class ServerPassesPageState extends State<ServerPassesPage> {
                     : tr(context, 'Доступные мне', 'Shared with me'),
                 onChanged: (value) => setState(() => _own = value),
               ),
-              const SizedBox(height: 24),
-              CampusButton.filled(
-                onPressed: _busy ? null : _openNfc,
-                child: Text(tr(context, 'NFC-пропуска', 'NFC passes')),
-              ),
+              const SizedBox(height: 12),
               if (_busy)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 16),
@@ -166,7 +163,8 @@ class ServerPassesPageState extends State<ServerPassesPage> {
                     onChanged: _busy ? null : _toggle,
                   ),
                 ),
-                AaSectionHeading(title: tr(context, 'Запросы', 'Requests')),
+                if (serverRows(_mine!['requests']).isNotEmpty)
+                  AaSectionHeading(title: tr(context, 'Запросы', 'Requests')),
                 for (final person in serverRows(_mine!['requests']))
                   CampusListItem(
                     headline: '${person['label'] ?? person['username'] ?? '—'}',
@@ -200,11 +198,6 @@ class ServerPassesPageState extends State<ServerPassesPage> {
                         ),
                       ],
                     ),
-                  ),
-                if (serverRows(_mine!['requests']).isEmpty)
-                  BrockmannText(
-                    tr(context, 'Новых запросов нет', 'No pending requests'),
-                    color: context.brockmann.secondary,
                   ),
                 AaSectionHeading(
                   title: tr(context, 'Кому разрешено', 'People with access'),
@@ -252,9 +245,10 @@ class ServerPassesPageState extends State<ServerPassesPage> {
                     ),
                     color: context.brockmann.secondary,
                   ),
-                AaSectionHeading(
-                  title: tr(context, 'Мои запросы', 'Your requests'),
-                ),
+                if (serverRows(_received!['requests']).isNotEmpty)
+                  AaSectionHeading(
+                    title: tr(context, 'Мои запросы', 'Your requests'),
+                  ),
                 for (final person in serverRows(_received!['requests']))
                   CampusListItem(
                     headline: '${person['label'] ?? person['username'] ?? '—'}',

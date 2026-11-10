@@ -16,6 +16,7 @@ import 'package:flutter/material.dart';
 
 import 'about_page.dart';
 import 'app_settings.dart';
+import 'app_tutorial.dart';
 import 'accounts.dart';
 import 'server_sessions.dart';
 import 'session_server_sync.dart';
@@ -413,16 +414,17 @@ class _SettingsPageState extends State<SettingsPage> {
                   ServerProfilePage(api: AaServerApi(ServerSessions.active!)),
                 ),
               ),
-            CampusListItem(
-              showDivider: false,
-              headline: 'AA ID',
-              supportingText: tr(
-                context,
-                'Ваш аккаунт, устройства и выход',
-                'Your account, devices and sign-out',
+            if (!widget.serverManaged)
+              CampusListItem(
+                showDivider: false,
+                headline: 'AA ID',
+                supportingText: tr(
+                  context,
+                  'Ваш аккаунт, устройства и выход',
+                  'Your account, devices and sign-out',
+                ),
+                onTap: () => _openPage(const AaIdAccountPage()),
               ),
-              onTap: () => _openPage(const AaIdAccountPage()),
-            ),
             CampusListItem(
               showDivider: false,
               headline: tr(
@@ -540,6 +542,18 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ]),
         SettingsSection(tr(context, 'Приложение', 'App'), [
+          CampusListItem(
+            headline: tr(context, 'Как пользоваться', 'How to use'),
+            onTap: () => _openPage(
+              Builder(
+                builder: (context) => AppTutorial(
+                  onComplete: () async {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ),
+            ),
+          ),
           if (widget.updates != null)
             AnimatedBuilder(
               animation: widget.updates!,

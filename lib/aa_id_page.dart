@@ -7,11 +7,14 @@ import 'aa_id.dart';
 import 'campus_design.dart';
 import 'l10n.dart';
 import 'server_login_page.dart';
+import 'app_settings.dart';
+import 'app_tutorial.dart';
 
 /// Shows [child] only to a phone signed in to AA ID.
 class AaIdGate extends StatefulWidget {
-  const AaIdGate({super.key, required this.child});
+  const AaIdGate({super.key, required this.child, this.tutorialStore});
   final Widget child;
+  final AppSettingsStore? tutorialStore;
   @override
   State<AaIdGate> createState() => _AaIdGateState();
 }
@@ -19,6 +22,7 @@ class AaIdGate extends StatefulWidget {
 class _AaIdGateState extends State<AaIdGate> {
   StreamSubscription<void>? _changes;
   bool _ready = false;
+  bool _tutorialSeen = true;
 
   @override
   void initState() {
@@ -26,7 +30,14 @@ class _AaIdGateState extends State<AaIdGate> {
     _changes = AaId.changes.listen((_) {
       if (mounted) setState(() {});
     });
-    AaId.initialize().catchError((Object _) {}).whenComplete(() {
+    Future.wait([
+      AaId.initialize().catchError((Object _) {}),
+      if (widget.tutorialStore != null)
+        widget.tutorialStore!
+            .tutorialSeen()
+            .then((value) => _tutorialSeen = value)
+            .catchError((Object _) => true),
+    ]).whenComplete(() {
       if (mounted) setState(() => _ready = true);
     });
   }
@@ -40,6 +51,16 @@ class _AaIdGateState extends State<AaIdGate> {
   @override
   Widget build(BuildContext context) {
     if (!_ready) return const CampusScaffold(body: SizedBox.expand());
+    if (!_tutorialSeen) {
+      return AppTutorial(
+        onComplete: () async {
+          try {
+            await widget.tutorialStore?.finishTutorial();
+          } catch (_) {}
+          if (mounted) setState(() => _tutorialSeen = true);
+        },
+      );
+    }
     return AaId.signedIn ? widget.child : const AaIdSignInPage();
   }
 }
@@ -207,7 +228,12 @@ class _AaIdAccountPageState extends State<AaIdAccountPage> {
   Future<void> _load() async {
     try {
       final devices = await AaId.devices();
-      if (mounted) setState(() => _devices = devices);
+      if (mounted) {
+        setState(() {
+          _devices = devices;
+          _error = null;
+        });
+      }
     } catch (_) {
       if (mounted) {
         setState(
@@ -222,6 +248,7 @@ class _AaIdAccountPageState extends State<AaIdAccountPage> {
   }
 
   Future<void> _revoke(AaIdDevice device) async {
+    if (_busy || device.current) return;
     setState(() => _busy = true);
     try {
       await AaId.revoke(device.id);
@@ -242,6 +269,7 @@ class _AaIdAccountPageState extends State<AaIdAccountPage> {
   }
 
   Future<void> _signOut() async {
+    if (_busy) return;
     setState(() => _busy = true);
     await AaId.signOut();
     if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
@@ -252,7 +280,7 @@ class _AaIdAccountPageState extends State<AaIdAccountPage> {
     final session = AaId.session;
     final localizations = MaterialLocalizations.of(context);
     return CampusScaffold(
-      appBar: const CampusAppBar(title: Text('AA ID')),
+      appBar: CampusAppBar(title: Text(tr(context, 'Устройства', 'Devices'))),
       body: CampusPageBody(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
@@ -263,8 +291,9 @@ class _AaIdAccountPageState extends State<AaIdAccountPage> {
                 'Привязан к аккаунту МИРЭА',
                 'Bound to a MIREA account',
               ),
-              role: BrockmannType.value,
+              role: BrockmannType.body,
               weight: 400,
+              color: context.brockmann.secondary,
             ),
             if (session?.groupName != null) ...[
               const SizedBox(height: 8),

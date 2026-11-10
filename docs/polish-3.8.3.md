@@ -1,0 +1,26 @@
+# 3.8.3 finishing checklist
+
+The direction remains WP8 with Geist. The original Microsoft guidance favors
+content, typographic hierarchy and negative space:
+https://learn.microsoft.com/en-us/archive/msdn-magazine/2011/december/windows-phone-how-to-translate-common-design-principles-to-the-windows-phone
+
+Completed changes:
+
+- [x] Show the selected class once; move other class choices to a labeled picker.
+- [x] Make attendance and NFC name rows tappable, with selection counts and a true clear-selection action.
+- [x] Keep a chosen schedule day through refreshes; Today preserves the selected group.
+- [x] Combine week navigation and the selected date; handle missing dates safely.
+- [x] Remove duplicate NFC entry buttons and hide empty request sections.
+- [x] Give section labels less emphasis than primary content; preserve case in people's names.
+- [x] Move long NFC help behind an explicit disclosure.
+- [x] Separate informational messages from errors, with readable theme error colors.
+- [x] Add a skippable first-run walkthrough, persistent completion and Settings replay.
+- [x] Give My Profile a clear identity header, connection state, edit disclosure, save action and device access.
+- [x] Save only changed profile fields; handle partial failures without repeating successful changes.
+- [x] Prevent disclosure expansion state from colliding with nested text-field scroll offsets.
+- [x] Wrap tutorial controls at large text sizes and keep the content scrollable.
+- [x] Translate all new UI copy into Russian, English, French, Portuguese and Chinese.
+
+Regression tests exercise tutorial persistence, double-size text, day retention,
+profile updates, native NFC authorization/lifecycle and the existing app flows.
+Device delivery follows AGENTS.md and preserves installed app data.

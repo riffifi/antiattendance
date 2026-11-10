@@ -47,9 +47,15 @@ class AaEmptyState extends StatelessWidget {
 
 /// Uses wrapping instead of squeezing actions at large system text sizes.
 class AaSectionHeading extends StatelessWidget {
-  const AaSectionHeading({super.key, required this.title, this.action});
+  const AaSectionHeading({
+    super.key,
+    required this.title,
+    this.action,
+    this.lowercase = true,
+  });
   final String title;
   final Widget? action;
+  final bool lowercase;
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(top: 20, bottom: 8),
@@ -62,8 +68,10 @@ class AaSectionHeading extends StatelessWidget {
         Semantics(
           header: true,
           child: BrockmannText(
-            title.toLowerCase(),
-            role: BrockmannType.heading,
+            lowercase ? title.toLowerCase() : title,
+            role: BrockmannType.value,
+            weight: 400,
+            color: context.brockmann.secondary,
           ),
         ),
         ?action,

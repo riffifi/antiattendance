@@ -41,6 +41,7 @@ class ServerSchedulePageState extends State<ServerSchedulePage> {
   int? _group;
   bool _busy = false;
   int _generation = 0;
+  int? _loadedWeek, _loadedGroup;
   @override
   void initState() {
     super.initState();
@@ -53,7 +54,12 @@ class ServerSchedulePageState extends State<ServerSchedulePage> {
     if (widget.active && !oldWidget.active) refresh();
   }
 
-  Future<void> refresh() async {
+  Future<void> refresh({bool goToToday = false}) async {
+    final previousDays = serverRows(_data?['days']);
+    final previousDate = previousDays.isEmpty
+        ? null
+        : previousDays[_day]['date'];
+    final sameContext = _loadedWeek == _week && _loadedGroup == _group;
     final generation = ++_generation;
     setState(() => _busy = true);
     try {
@@ -63,9 +69,16 @@ class ServerSchedulePageState extends State<ServerSchedulePage> {
       setState(() {
         _data = data;
         _error = null;
-        if (_week == 0 && days.any((d) => d['today'] == true)) {
-          _day = days.indexWhere((d) => d['today'] == true);
-        }
+        final retained = sameContext && !goToToday
+            ? days.indexWhere((d) => d['date'] == previousDate)
+            : -1;
+        _day = retained >= 0
+            ? retained
+            : _week == 0 && days.any((d) => d['today'] == true)
+            ? days.indexWhere((d) => d['today'] == true)
+            : 0;
+        _loadedWeek = _week;
+        _loadedGroup = _group;
         _day = _day.clamp(0, days.isEmpty ? 0 : days.length - 1);
       });
     } catch (error) {
@@ -114,12 +127,12 @@ class ServerSchedulePageState extends State<ServerSchedulePage> {
                   showDivider: false,
                   headline:
                       '${_data?['group_name'] ?? tr(context, 'Выбрать группу', 'Choose a group')}',
-                  supportingText: tr(
-                    context,
-                    'Нажмите, чтобы выбрать расписание',
-                    'Choose which schedule to view',
+                  trailing: CampusTextAction(
+                    icon: Icons.expand_more_rounded,
+                    label: tr(context, 'Выбрать группу', 'Choose a group'),
+                    onPressed: _busy ? null : _chooseGroup,
                   ),
-                  onTap: _chooseGroup,
+                  onTap: _busy ? null : _chooseGroup,
                 ),
                 Row(
                   children: [
@@ -139,15 +152,19 @@ class ServerSchedulePageState extends State<ServerSchedulePage> {
                             },
                     ),
                     Expanded(
-                      child: BrockmannText(
-                        _data?['monday'] is String
-                            ? MaterialLocalizations.of(context)
-                                  .formatMediumDate(
-                                    DateTime.parse(_data!['monday'] as String),
-                                  )
-                            : '',
-                        role: BrockmannType.value,
-                      ),
+                      child: days.isEmpty
+                          ? const SizedBox(height: 64)
+                          : BrockmannPicker(
+                              label: tr(context, 'День', 'Day'),
+                              options: [
+                                for (final day in days)
+                                  _dateLabel(context, day['date']),
+                              ],
+                              selected: _day,
+                              onChanged: _busy
+                                  ? null
+                                  : (value) => setState(() => _day = value),
+                            ),
                     ),
                     CampusTextAction(
                       icon: Icons.chevron_right_rounded,
@@ -167,16 +184,6 @@ class ServerSchedulePageState extends State<ServerSchedulePage> {
                 if (_data?['schedule_error'] != null)
                   ServerMessage(message: '${_data!['schedule_error']}'),
                 if (days.isNotEmpty) ...[
-                  BrockmannPicker(
-                    label: tr(context, 'День', 'Day'),
-                    options: [
-                      for (final day in days)
-                        MaterialLocalizations.of(context)
-                            .formatMediumDate(DateTime.parse('${day['date']}')),
-                    ],
-                    selected: _day,
-                    onChanged: (value) => setState(() => _day = value),
-                  ),
                   const SizedBox(height: 20),
                   for (final (i, lesson) in lessons.indexed)
                     BrockmannFeather(
@@ -200,7 +207,10 @@ class ServerSchedulePageState extends State<ServerSchedulePage> {
                             ),
                             const SizedBox(height: 8),
                             BrockmannText(
-                              '${lesson['type'] ?? ''} · ${lesson['teacher'] ?? ''}',
+                              [lesson['type'], lesson['teacher']]
+                                  .whereType<String>()
+                                  .where((v) => v.trim().isNotEmpty)
+                                  .join(' · '),
                               color: context.brockmann.secondary,
                             ),
                             if ('${lesson['location'] ?? ''}'.isNotEmpty)
@@ -244,9 +254,8 @@ class ServerSchedulePageState extends State<ServerSchedulePage> {
               onPressed: () {
                 setState(() {
                   _week = 0;
-                  _group = null;
                 });
-                refresh();
+                refresh(goToToday: true);
               },
             ),
             CampusCommand(
@@ -266,4 +275,11 @@ class ServerSchedulePageState extends State<ServerSchedulePage> {
       ],
     );
   }
+}
+
+String _dateLabel(BuildContext context, Object? value) {
+  final date = value is String ? DateTime.tryParse(value) : null;
+  return date == null
+      ? '—'
+      : MaterialLocalizations.of(context).formatMediumDate(date);
 }

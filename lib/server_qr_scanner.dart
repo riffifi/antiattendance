@@ -205,7 +205,7 @@ class _ServerQrScannerState extends State<ServerQrScanner>
                 children: [
                   Semantics(
                     liveRegion: true,
-                    child: BrockmannText(
+                    child: CampusValueTransition(
                       _queue.remaining == 0
                           ? tr(context, 'Все отмечены', 'All confirmed')
                           : trf(

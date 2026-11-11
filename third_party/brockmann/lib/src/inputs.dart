@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'theme.dart';
 import 'foundation.dart';
 import 'interaction.dart';
+import 'motion.dart';
 
 /// Label and control share a 48 dp touch target. Null is a mixed value.
 class BrockmannCheckbox extends StatelessWidget {
@@ -45,7 +46,9 @@ class BrockmannCheckbox extends StatelessWidget {
               mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
               children: [
                 AnimatedContainer(
-                  duration: t.duration(c, 160),
+                  duration: t.motionReduced(c)
+                      ? Duration.zero
+                      : t.duration(c, 160),
                   width: 24,
                   height: 24,
                   decoration: BoxDecoration(
@@ -54,15 +57,28 @@ class BrockmannCheckbox extends StatelessWidget {
                       color: onChanged == null ? t.disabled : t.foreground,
                     ),
                   ),
-                  child: value == false
-                      ? null
-                      : BrockmannGlyph(
-                          value == null
-                              ? BrockmannIcon.minus
-                              : BrockmannIcon.check,
-                          size: 16,
-                          color: t.onAccent,
+                  child: Center(
+                    child: ExcludeSemantics(
+                      child: BrockmannMotion(
+                        value: value == false ? 0 : 1,
+                        milliseconds: 140,
+                        immediate: t.motionReduced(c),
+                        builder: (context, progress) => ClipRect(
+                          child: Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            widthFactor: progress.clamp(0, 1),
+                            child: BrockmannGlyph(
+                              value == null
+                                  ? BrockmannIcon.minus
+                                  : BrockmannIcon.check,
+                              size: 16,
+                              color: t.onAccent,
+                            ),
+                          ),
                         ),
+                      ),
+                    ),
+                  ),
                 ),
                 if (!compact) const SizedBox(width: 16),
                 if (!compact)

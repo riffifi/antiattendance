@@ -150,9 +150,12 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
                         itemCount: _groups.length,
                         itemBuilder: (context, index) {
                           final group = _groups[index];
-                          return CampusListItem(
-                            headline: (group.name),
-                            onTap: () => Navigator.pop(context, group),
+                          return CampusReveal(
+                            key: ValueKey(group.id),
+                            child: CampusListItem(
+                              headline: (group.name),
+                              onTap: () => Navigator.pop(context, group),
+                            ),
                           );
                         },
                       ),

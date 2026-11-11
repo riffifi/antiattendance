@@ -399,15 +399,18 @@ class _ServerPersonSearchPageState extends State<ServerPersonSearchPage> {
         if (_people?.isEmpty == true)
           BrockmannText(tr(context, 'Ничего не найдено', 'No matches found')),
         for (final person in _people ?? <Map<String, dynamic>>[])
-          CampusListItem(
-            headline: '${person['label'] ?? person['username'] ?? '—'}',
-            supportingText: [
-              if ('${person['username'] ?? ''}'.isNotEmpty)
-                '@${person['username']}',
-              if ('${person['group_name'] ?? ''}'.trim().isNotEmpty)
-                '${person['group_name']}',
-            ].join(' · '),
-            onTap: () => Navigator.of(context).pop('${person['account_id']}'),
+          CampusReveal(
+            key: ValueKey(person['account_id']),
+            child: CampusListItem(
+              headline: '${person['label'] ?? person['username'] ?? '—'}',
+              supportingText: [
+                if ('${person['username'] ?? ''}'.isNotEmpty)
+                  '@${person['username']}',
+                if ('${person['group_name'] ?? ''}'.trim().isNotEmpty)
+                  '${person['group_name']}',
+              ].join(' · '),
+              onTap: () => Navigator.of(context).pop('${person['account_id']}'),
+            ),
           ),
       ],
     ),

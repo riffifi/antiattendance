@@ -186,6 +186,7 @@ class _CampusDisclosureState extends State<CampusDisclosure> {
   Widget build(BuildContext context) {
     final open = _expanded;
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Semantics(
@@ -239,8 +240,108 @@ class _CampusDisclosureState extends State<CampusDisclosure> {
             ),
           ),
         ),
-        if (open) ...widget.children,
+        if (context.brockmann.motionReduced(context)) ...[
+          if (open) ...widget.children,
+        ] else
+          AnimatedSize(
+            duration: context.brockmann.duration(context, 160),
+            curve: Curves.easeInOutCubic,
+            alignment: Alignment.topCenter,
+            child: open
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: widget.children,
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
       ],
+    );
+  }
+}
+
+/// Small state-label changes, without duplicate accessibility announcements.
+class CampusValueTransition extends StatelessWidget {
+  const CampusValueTransition(
+    this.text, {
+    super.key,
+    this.role = BrockmannType.body,
+    this.color,
+  });
+  final String text;
+  final BrockmannType role;
+  final Color? color;
+  @override
+  Widget build(BuildContext context) {
+    if (context.brockmann.motionReduced(context)) {
+      return BrockmannText(text, role: role, color: color);
+    }
+    final duration = context.brockmann.duration(context, 140);
+    return AnimatedSize(
+      duration: duration,
+      curve: Curves.easeOutCubic,
+      alignment: Alignment.topLeft,
+      child: SizedBox(
+        width: double.infinity,
+        child: AnimatedSwitcher(
+          duration: duration,
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween(
+                begin: const Offset(0, .08),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            ),
+          ),
+          layoutBuilder: (current, previous) => Stack(
+            clipBehavior: Clip.none,
+            alignment: AlignmentDirectional.topStart,
+            children: [
+              for (final child in previous)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: ExcludeSemantics(child: IgnorePointer(child: child)),
+                ),
+              ?current,
+            ],
+          ),
+          child: BrockmannText(
+            text,
+            key: ValueKey(text),
+            role: role,
+            color: color,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Search results enter once; ordinary rebuilds do not replay their animation.
+class CampusReveal extends StatelessWidget {
+  const CampusReveal({super.key, required this.child});
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    if (context.brockmann.motionReduced(context)) return child;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: context.brockmann.duration(context, 140),
+      curve: Curves.easeOutCubic,
+      child: child,
+      builder: (context, value, child) => Opacity(
+        opacity: value,
+        child: Transform.translate(
+          offset: Offset(0, 4 * (1 - value)),
+          child: child,
+        ),
+      ),
     );
   }
 }

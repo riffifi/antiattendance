@@ -79,14 +79,14 @@ class PassStatusPanel extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            BrockmannText(
+            CampusValueTransition(
               title,
               role: BrockmannType.caption,
               color: t.secondary,
             ),
             if (hasPasses || running) ...[
               const SizedBox(height: 12),
-              BrockmannText(
+              CampusValueTransition(
                 running
                     ? accountLabel ?? '—'
                     : single

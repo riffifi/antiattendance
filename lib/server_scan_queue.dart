@@ -12,7 +12,15 @@ class ServerScanQueue extends ChangeNotifier {
     required this.lessonStart,
   }) : people = List.unmodifiable(
          people.map((p) => Map<String, dynamic>.unmodifiable(p)),
-       );
+       ) {
+    for (final person in this.people) {
+      final mark = serverObject(person['mark']);
+      final id = person['id'];
+      if (id is String && mark['state'] == 'approved') {
+        results[id] = Map.unmodifiable({...mark, 'id': id});
+      }
+    }
+  }
   final AaServerApi api;
   final List<Map<String, dynamic>> people;
   final int lessonStart;
@@ -20,6 +28,7 @@ class ServerScanQueue extends ChangeNotifier {
   final _seen = <String>{};
   bool processing = false, paused = false, blocked = false, _disposed = false;
   Object? error;
+  bool get checkingResults => processing && blocked;
   bool get canRetry =>
       !(error is SessionServerException &&
           [401, 403, 409].contains((error as SessionServerException).status));
@@ -80,12 +89,42 @@ class ServerScanQueue extends ChangeNotifier {
     }
   }
 
-  void retry() {
-    if (processing || _disposed || !canRetry) return;
-    blocked = false;
+  Future<void> retry() async {
+    if (processing || _disposed || !blocked || !canRetry) return;
+    processing = true;
     error = null;
-    _seen.clear();
     _notify();
+    try {
+      final state = await api.state(lessonStart: lessonStart);
+      if (_disposed) return;
+      if (serverObject(state['selected_lesson'])['lesson_start'] !=
+          lessonStart) {
+        throw const SessionServerException(
+          'The selected class changed.',
+          status: 409,
+        );
+      }
+      if (state['people'] is! List) {
+        throw const FormatException('Invalid attendance state.');
+      }
+      final ids = people.map((p) => p['id']).toSet();
+      for (final person in serverRows(state['people'])) {
+        final id = person['id'];
+        final mark = serverObject(person['mark']);
+        if (id is String && ids.contains(id) && mark['state'] == 'approved') {
+          results[id] = Map.unmodifiable({...mark, 'id': id});
+        }
+      }
+      blocked = false;
+      _seen.clear();
+    } catch (e) {
+      if (!_disposed) error = e;
+    } finally {
+      if (!_disposed) {
+        processing = false;
+        _notify();
+      }
+    }
   }
 
   @override

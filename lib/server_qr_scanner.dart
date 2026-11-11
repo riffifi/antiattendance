@@ -48,6 +48,7 @@ class _ServerQrScannerState extends State<ServerQrScanner>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _confirmed = _queue.confirmed;
     _queue.addListener(_updated);
   }
 
@@ -81,6 +82,20 @@ class _ServerQrScannerState extends State<ServerQrScanner>
   void _close() =>
       Navigator.of(context)
           .pop(Map<String, Map<String, dynamic>>.from(_queue.results));
+  String _personStatus(Map<String, dynamic> person) {
+    final result = _queue.results[person['id']];
+    final message = result?['message'];
+    if (message is String && message.trim().isNotEmpty) {
+      return trMessage(context, message);
+    }
+    if (result?['state'] == 'approved') {
+      return tr(context, 'Отметка подтверждена', 'Attendance confirmed');
+    }
+    return _queue.processing
+        ? tr(context, 'Подождите…', 'Please wait…')
+        : tr(context, 'В очереди', 'Queued');
+  }
+
   @override
   Widget build(BuildContext context) => PopScope(
     canPop: !_queue.processing,
@@ -112,7 +127,7 @@ class _ServerQrScannerState extends State<ServerQrScanner>
             CampusCommand(
               icon: Icons.refresh_rounded,
               label: tr(context, 'Повторить', 'Retry'),
-              onPressed: _queue.retry,
+              onPressed: _queue.processing ? null : _queue.retry,
             ),
           CampusCommand(
             icon: Icons.check_rounded,
@@ -206,6 +221,12 @@ class _ServerQrScannerState extends State<ServerQrScanner>
                     ),
                   ),
                   if (_queue.processing) const CampusProgress.linear(),
+                  if (_queue.checkingResults)
+                    BrockmannText(
+                      tr(context, 'Проверяем отметки…', 'Checking attendance…'),
+                      role: BrockmannType.caption,
+                      color: context.brockmann.secondary,
+                    ),
                   if (_hint != null)
                     ServerMessage(message: _hint!, isError: false),
                   if (_queue.error != null)
@@ -228,7 +249,7 @@ class _ServerQrScannerState extends State<ServerQrScanner>
                             '${person['label'] ?? person['username'] ?? '—'}',
                           ),
                           BrockmannText(
-                            '${_queue.results[person['id']]?['message'] ?? (_queue.processing ? tr(context, 'Подождите…', 'Please wait…') : tr(context, 'В очереди', 'Queued'))}',
+                            _personStatus(person),
                             role: BrockmannType.caption,
                             color: context.brockmann.secondary,
                           ),

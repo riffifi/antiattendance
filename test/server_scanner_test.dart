@@ -80,7 +80,13 @@ void main() {
       var calls = 0;
       final client = SessionServerClient(
         'https://aa.example',
-        client: MockClient((_) async {
+        client: MockClient((r) async {
+          if (r.method == 'GET') {
+            return response({
+              'selected_lesson': {'lesson_start': 123},
+              'people': people,
+            });
+          }
           calls++;
           return response({'detail': 'Lost response'}, 503);
         }),
@@ -96,7 +102,7 @@ void main() {
       await queue.accept(qr('two'));
       expect(calls, 1);
       expect(queue.blocked, isTrue);
-      queue.retry();
+      await queue.retry();
       await queue.accept(qr('one'));
       expect(calls, 2);
     },
@@ -122,7 +128,7 @@ void main() {
       addTearDown(queue.dispose);
       await queue.accept(qr('one'));
       expect(queue.canRetry, isFalse);
-      queue.retry();
+      await queue.retry();
       await queue.accept(qr('two'));
       expect(calls, 1);
     },
@@ -160,6 +166,160 @@ void main() {
     await first;
     expect(queue.confirmed, 2);
   });
+
+  test(
+    'queue starts with existing confirmations and sends only remaining people',
+    () async {
+      final sent = <String>[];
+      final client = SessionServerClient(
+        'https://aa.example',
+        client: MockClient((r) async {
+          sent.addAll(
+            (jsonDecode(r.body)['account_ids'] as List).cast<String>(),
+          );
+          return response({
+            'results': [
+              {'id': 'b', 'state': 'approved'},
+            ],
+          });
+        }),
+      );
+      addTearDown(client.close);
+      final queue = ServerScanQueue(
+        api: AaServerApi(client),
+        lessonStart: 123,
+        people: [
+          {
+            ...people.first,
+            'mark': {
+              'state': 'approved',
+              'message': 'Присутствие подтверждено',
+            },
+          },
+          people.last,
+        ],
+      );
+      addTearDown(queue.dispose);
+      expect(queue.confirmed, 1);
+      await queue.accept(qr('one'));
+      expect(sent, ['b']);
+      expect(queue.confirmed, 2);
+    },
+  );
+
+  for (final allConfirmed in [false, true]) {
+    test(
+      'retry reconciles lost results before resuming; all confirmed: $allConfirmed',
+      () async {
+        final pending = Completer<http.Response>();
+        var reads = 0;
+        final sent = <List<dynamic>>[];
+        final client = SessionServerClient(
+          'https://aa.example',
+          client: MockClient((r) async {
+            if (r.method == 'GET') {
+              reads++;
+              expect(r.url.queryParameters['lesson_start'], '123');
+              return pending.future;
+            }
+            sent.add(jsonDecode(r.body)['account_ids'] as List);
+            if (sent.length == 1) {
+              return response({'detail': 'Lost response'}, 503);
+            }
+            return response({
+              'results': [
+                {'id': 'b', 'state': 'approved'},
+              ],
+            });
+          }),
+        );
+        addTearDown(client.close);
+        final queue = ServerScanQueue(
+          api: AaServerApi(client),
+          people: people,
+          lessonStart: 123,
+        );
+        addTearDown(queue.dispose);
+        await queue.accept(qr('one'));
+        final retry = queue.retry();
+        await Future<void>.delayed(Duration.zero);
+        expect(queue.checkingResults, isTrue);
+        await queue.retry();
+        await queue.accept(qr('two'));
+        expect(sent, hasLength(1));
+        pending.complete(
+          response({
+            'selected_lesson': {'lesson_start': 123},
+            'people': [
+              {
+                'id': 'a',
+                'mark': {'state': 'approved'},
+              },
+              {
+                'id': 'b',
+                'mark': {'state': allConfirmed ? 'approved' : 'waiting'},
+              },
+              {
+                'id': 'not-selected',
+                'mark': {'state': 'approved'},
+              },
+            ],
+          }),
+        );
+        await retry;
+        expect(reads, 1);
+        expect(queue.blocked, isFalse);
+        expect(queue.results.containsKey('not-selected'), isFalse);
+        expect(sent, hasLength(1));
+        await queue.accept(qr('two'));
+        if (allConfirmed) {
+          expect(sent, hasLength(1));
+        } else {
+          expect(sent.last, ['b']);
+        }
+        expect(queue.remaining, 0);
+      },
+    );
+  }
+
+  for (final classChanged in [false, true]) {
+    test(
+      'failed retry keeps scanning blocked; class changed: $classChanged',
+      () async {
+        var posts = 0, reads = 0;
+        final client = SessionServerClient(
+          'https://aa.example',
+          client: MockClient((r) async {
+            if (r.method == 'POST') {
+              posts++;
+              return response({}, 503);
+            }
+            reads++;
+            return classChanged
+                ? response({
+                    'selected_lesson': {'lesson_start': 456},
+                    'people': [],
+                  })
+                : response({}, 503);
+          }),
+        );
+        addTearDown(client.close);
+        final queue = ServerScanQueue(
+          api: AaServerApi(client),
+          people: people,
+          lessonStart: 123,
+        );
+        addTearDown(queue.dispose);
+        await queue.accept(qr('one'));
+        await queue.retry();
+        expect(queue.blocked, isTrue);
+        expect(queue.canRetry, !classChanged);
+        await queue.accept(qr('two'));
+        expect(posts, 1);
+        expect(reads, 1);
+      },
+    );
+  }
 
   for (final trusted in [true, false]) {
     testWidgets(

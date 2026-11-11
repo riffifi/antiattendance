@@ -1,6 +1,12 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  "Checking attendance…": (
+    "Vérification des présences…",
+    "A verificar presenças…",
+    "正在核对出勤记录…",
+  ),
+
   "Enter a name between 1 and 60 characters.": (
     "Saisissez un nom de 1 à 60 caractères.",
     "Introduza um nome com 1 a 60 caracteres.",

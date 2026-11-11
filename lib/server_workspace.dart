@@ -644,7 +644,8 @@ class _ServerWorkspaceState extends State<ServerWorkspace>
           tr(context, 'В университете', 'On campus'),
         if (person['inside'] == false)
           tr(context, 'Вне университета', 'Off campus'),
-        if (result.isNotEmpty) '${result['message'] ?? result['state']}',
+        if (result.isNotEmpty)
+          trMessage(context, '${result['message'] ?? result['state']}'),
       ].join(' · '),
     );
   }

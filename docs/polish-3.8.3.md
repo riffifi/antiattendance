@@ -121,3 +121,14 @@ The shared field adapter now exposes Brockmann's inline error support. The
 command bar reports user presentation changes so page navigation can respect
 its Back behavior. Regression tests exercise validation, failed loads,
 unsaved drafts, expanded commands and in-flight saving.
+
+## 3.8.13 disclosure indicators
+
+- [x] Morph the plus into a minus by smoothly shortening the vertical stroke over 160ms.
+- [x] Reverse continuously when tapped again before the animation finishes.
+- [x] Keep the indicator frame and header tap area stable.
+- [x] Snap to the final state under reduced motion.
+- [x] Expose expanded/collapsed state to assistive technology without announcing decorative glyphs.
+
+Focused tests cover intermediate frames, rapid reversal, reduced motion and the
+profile/session-server screens that use the shared disclosure.

@@ -188,32 +188,54 @@ class _CampusDisclosureState extends State<CampusDisclosure> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        BrockmannPressable(
-          label: widget.title,
-          onPressed: _toggle,
-          builder: (context, pressed) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: BrockmannText(
-                    widget.title,
-                    role: BrockmannType.value,
-                    weight: 400,
-                    color: pressed
-                        ? context.brockmann.accent
-                        : context.brockmann.foreground,
+        Semantics(
+          expanded: open,
+          child: BrockmannPressable(
+            label: widget.title,
+            onPressed: _toggle,
+            builder: (context, pressed) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: BrockmannText(
+                      widget.title,
+                      role: BrockmannType.value,
+                      weight: 400,
+                      color: pressed
+                          ? context.brockmann.accent
+                          : context.brockmann.foreground,
+                    ),
                   ),
-                ),
-                Text(
-                  open ? '−' : '+',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w300,
-                    color: context.brockmann.foreground,
+                  const SizedBox(width: 12),
+                  ExcludeSemantics(
+                    child: SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            width: 14,
+                            height: 1.5,
+                            color: context.brockmann.foreground,
+                          ),
+                          AnimatedContainer(
+                            key: const ValueKey('disclosure-vertical-stroke'),
+                            duration: context.brockmann.motionReduced(context)
+                                ? Duration.zero
+                                : context.brockmann.duration(context, 160),
+                            curve: Curves.easeInOutCubic,
+                            width: 1.5,
+                            height: open ? 0 : 14,
+                            color: context.brockmann.foreground,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

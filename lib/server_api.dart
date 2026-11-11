@@ -55,17 +55,22 @@ class AaServerApi {
       client.requestJson('/site/passes');
   Future<Map<String, dynamic>> digitalPass(String id) =>
       client.requestJson('/site/passes/${Uri.encodeComponent(id)}');
-  Future<Map<String, dynamic>> sendPassCode() => client.requestJson(
-    '/site/pass/code',
-    method: 'POST',
-    timeout: const Duration(seconds: 35),
-  );
-  Future<Map<String, dynamic>> issuePass(String code) {
+  Future<Map<String, dynamic>> sendPassCode({String? accountId}) =>
+      client.requestJson(
+        accountId == null
+            ? '/site/pass/code'
+            : '/site/passes/${Uri.encodeComponent(accountId)}/code',
+        method: 'POST',
+        timeout: const Duration(seconds: 35),
+      );
+  Future<Map<String, dynamic>> issuePass(String code, {String? accountId}) {
     if (!RegExp(r'^[0-9]{6}$').hasMatch(code)) {
       throw const FormatException('Enter a six-digit verification code.');
     }
     return client.requestJson(
-      '/site/pass/issue',
+      accountId == null
+          ? '/site/pass/issue'
+          : '/site/passes/${Uri.encodeComponent(accountId)}/issue',
       method: 'POST',
       body: {'code': code},
       timeout: const Duration(seconds: 35),

@@ -75,13 +75,13 @@ void main() {
     expect(seen, isEmpty);
     await tester.enterText(find.byType(CampusTextField), '012345');
     await tester.pump();
-    await tester.tap(find.text('Enroll a pass'));
+    await tester.tap(find.byKey(const ValueKey('issue-pass')));
     await settleNetwork(tester);
     await tester.pumpAndSettle();
     expect(find.text('open'), findsOneWidget);
     expect(seen.map((r) => r.url.path), [
       '/site/passes/$ownId',
-      '/site/pass/issue',
+      '/site/passes/$ownId/issue',
     ]);
     expect(jsonDecode(seen.last.body), {'code': '012345'});
   });
@@ -109,7 +109,7 @@ void main() {
     await enrollment(tester, client);
     await tester.enterText(find.byType(CampusTextField), '012345');
     await tester.pump();
-    await tester.tap(find.text('Enroll a pass'));
+    await tester.tap(find.byKey(const ValueKey('issue-pass')));
     await settleNetwork(tester);
     await tester.pumpAndSettle();
     expect(posts, 1);
@@ -135,7 +135,7 @@ void main() {
     await enrollment(tester, client);
     await tester.enterText(find.byType(CampusTextField), '012345');
     await tester.pump();
-    await tester.tap(find.text('Enroll a pass'));
+    await tester.tap(find.byKey(const ValueKey('issue-pass')));
     await settleNetwork(tester);
     await tester.pumpAndSettle();
     expect(posts, 1);
@@ -146,6 +146,87 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'shared pass enrollment targets its owner for code and issuance',
+    (tester) async {
+      tester.view.physicalSize = const Size(430, 932);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final seen = <http.Request>[];
+      final client = SessionServerClient(
+        defaultSessionServerUrl,
+        client: MockClient((r) async {
+          seen.add(r);
+          if (r.url.path == '/site/passes') {
+            return response({
+              'passes': [
+                ...cards,
+                {
+                  'account_id': 'disabled',
+                  'label': 'Disabled',
+                  'own': false,
+                  'pass_allowed': false,
+                },
+              ],
+            });
+          }
+          if (r.url.path.endsWith('/code')) {
+            return response({'state': 'code_sent', 'retry_at': null});
+          }
+          return response({
+            'account_id': 'shared',
+            'number': r.method == 'GET' ? null : '456',
+          });
+        }),
+      );
+      addTearDown(client.close);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: ServerNfcPassPage(api: AaServerApi(client)),
+        ),
+      );
+      await settleNetwork(tester);
+      expect(find.byKey(const ValueKey('enroll-pass-disabled')), findsNothing);
+      final enroll = find.byKey(const ValueKey('enroll-pass-shared'));
+      await tester.ensureVisible(enroll);
+      await tester.pumpAndSettle();
+      await tester.tap(enroll);
+      await settleNetwork(tester);
+      await tester.pumpAndSettle();
+      expect(find.byType(ServerPassEnrollmentPage), findsOneWidget);
+      expect(
+        tester
+            .widget<ServerPassEnrollmentPage>(
+              find.byType(ServerPassEnrollmentPage),
+            )
+            .accountId,
+        'shared',
+      );
+      expect(find.text('Sam'), findsOneWidget);
+      await tester.tap(find.text('Get code'));
+      await settleNetwork(tester);
+      await tester.enterText(find.byType(CampusTextField), '012345');
+      await tester.pump();
+      final issue = find.byKey(const ValueKey('issue-pass'));
+      await tester.ensureVisible(issue);
+      await tester.tap(issue);
+      await settleNetwork(tester);
+      await tester.pumpAndSettle();
+      final posts = seen.where((r) => r.method == 'POST').toList();
+      expect(posts.map((r) => r.url.path), [
+        '/site/passes/shared/code',
+        '/site/passes/shared/issue',
+      ]);
+      expect(jsonDecode(posts.last.body), {'code': '012345'});
+      expect(find.byType(ServerPassEnrollmentPage), findsNothing);
+      expect(seen.where((r) => r.url.path == '/site/passes').length, 2);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+    },
+  );
 
   for (final mode in AppThemeMode.values) {
     testWidgets('NFC controls fit 320dp with double text in ${mode.name}', (

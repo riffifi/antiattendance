@@ -47,6 +47,7 @@ class _ServerNfcPassPageState extends State<ServerNfcPassPage>
   late final controller = ServerNfcController(widget.api);
   final delay = TextEditingController(text: '60');
   String? delayError;
+  bool _enrolling = false;
   @override
   void initState() {
     super.initState();
@@ -73,20 +74,30 @@ class _ServerNfcPassPageState extends State<ServerNfcPassPage>
     super.dispose();
   }
 
-  Future<void> _enroll() async {
-    await controller.stop();
-    if (!mounted) return;
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => ServerPassEnrollmentPage(
-          api: widget.api,
-          accountId:
-              controller.cards.firstWhere((c) => c['own'] == true)['account_id']
-                  as String,
+  Future<void> _enroll(Map<String, dynamic> card) async {
+    if (_enrolling ||
+        controller.busy ||
+        controller.running ||
+        card['pass_allowed'] != true) {
+      return;
+    }
+    setState(() => _enrolling = true);
+    try {
+      await controller.stop();
+      if (!mounted) return;
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => ServerPassEnrollmentPage(
+            api: widget.api,
+            accountId: card['account_id'] as String,
+            accountLabel: '${card['label'] ?? card['username'] ?? '—'}',
+          ),
         ),
-      ),
-    );
-    if (mounted) await controller.refresh();
+      );
+      if (mounted) await controller.refresh();
+    } finally {
+      if (mounted) setState(() => _enrolling = false);
+    }
   }
 
   Future<void> _activate() async {
@@ -110,7 +121,7 @@ class _ServerNfcPassPageState extends State<ServerNfcPassPage>
   @override
   Widget build(BuildContext context) {
     final c = controller;
-    final enabled = !c.busy && !c.running;
+    final enabled = !c.busy && !c.running && !_enrolling;
     final current = c.cards
         .where(
           (p) =>
@@ -118,7 +129,6 @@ class _ServerNfcPassPageState extends State<ServerNfcPassPage>
               (c.running ? c.status['accountId'] : c.selected.firstOrNull),
         )
         .firstOrNull;
-    final own = c.cards.where((p) => p['own'] == true).firstOrNull;
     return CampusScaffold(
       appBar: CampusAppBar(
         title: Text(tr(context, 'NFC-пропуска', 'NFC passes')),
@@ -132,7 +142,7 @@ class _ServerNfcPassPageState extends State<ServerNfcPassPage>
                 : c.single
                 ? tr(context, 'Активировать пропуск', 'Activate pass')
                 : tr(context, 'Запустить очередь', 'Start queue'),
-            onPressed: c.busy
+            onPressed: c.busy || _enrolling
                 ? null
                 : c.running
                 ? c.stop
@@ -205,23 +215,40 @@ class _ServerNfcPassPageState extends State<ServerNfcPassPage>
             title: tr(context, 'Доступные пропуска', 'Shared passes'),
           ),
           for (final card in c.cards)
-            CampusListItem(
-              leading: CampusCheckbox(
-                value: c.selected.contains(card['account_id']),
-                onChanged: enabled && card['pass_allowed'] == true
-                    ? (_) => c.choose(card['account_id'] as String)
-                    : null,
-              ),
-              headline: '${card['label'] ?? card['username'] ?? '—'}',
-              onTap: enabled && card['pass_allowed'] == true
-                  ? () => c.choose(card['account_id'] as String)
-                  : null,
-              supportingText: [
-                if (card['group_name'] != null) '${card['group_name']}',
-                if (card['own'] == true) tr(context, 'Мой пропуск', 'My pass'),
-                if (card['pass_allowed'] != true)
-                  tr(context, 'Выключен владельцем', 'Disabled by owner'),
-              ].join(' · '),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                CampusListItem(
+                  leading: CampusCheckbox(
+                    value: c.selected.contains(card['account_id']),
+                    onChanged: enabled && card['pass_allowed'] == true
+                        ? (_) => c.choose(card['account_id'] as String)
+                        : null,
+                  ),
+                  headline: '${card['label'] ?? card['username'] ?? '—'}',
+                  onTap: enabled && card['pass_allowed'] == true
+                      ? () => c.choose(card['account_id'] as String)
+                      : null,
+                  supportingText: [
+                    if (card['group_name'] != null) '${card['group_name']}',
+                    if (card['own'] == true)
+                      tr(context, 'Мой пропуск', 'My pass'),
+                    if (card['pass_allowed'] != true)
+                      tr(context, 'Выключен владельцем', 'Disabled by owner'),
+                  ].join(' · '),
+                ),
+                if (card['pass_allowed'] == true)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: CampusButton.text(
+                      key: ValueKey('enroll-pass-${card['account_id']}'),
+                      onPressed: enabled ? () => _enroll(card) : null,
+                      child: Text(
+                        tr(context, 'Подключить пропуск', 'Enroll a pass'),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           if (c.cards.isEmpty && !c.busy)
             BrockmannText(
@@ -231,22 +258,6 @@ class _ServerNfcPassPageState extends State<ServerNfcPassPage>
                 'No passes shared with you yet',
               ),
               color: context.brockmann.secondary,
-            ),
-          if (own != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: CampusButton.text(
-                onPressed: enabled && own['pass_allowed'] == true
-                    ? _enroll
-                    : null,
-                child: Text(
-                  tr(
-                    context,
-                    'Подключить свой пропуск',
-                    'Enroll your own pass',
-                  ),
-                ),
-              ),
             ),
           CampusDisclosure(
             key: const PageStorageKey('nfc-help'),
@@ -273,9 +284,11 @@ class ServerPassEnrollmentPage extends StatefulWidget {
     super.key,
     required this.api,
     required this.accountId,
+    this.accountLabel,
   });
   final AaServerApi api;
   final String accountId;
+  final String? accountLabel;
   @override
   State<ServerPassEnrollmentPage> createState() =>
       _ServerPassEnrollmentPageState();
@@ -302,7 +315,7 @@ class _ServerPassEnrollmentPageState extends State<ServerPassEnrollmentPage> {
       error = null;
     });
     try {
-      final result = await widget.api.sendPassCode();
+      final result = await widget.api.sendPassCode(accountId: widget.accountId);
       if (!mounted) return;
       final state = result['state'];
       if (!['code_sent', 'wait', 'unavailable'].contains(state)) {
@@ -323,8 +336,8 @@ class _ServerPassEnrollmentPageState extends State<ServerPassEnrollmentPage> {
               )
             : tr(
                 context,
-                'Код отправлен способом подтверждения МИРЭА.',
-                'The code was sent using your MIREA verification method.',
+                'Код отправлен владельцу способом подтверждения МИРЭА.',
+                'The code was sent using the owner’s MIREA verification method.',
               );
         final seconds = result['retry_at'];
         retryAt =
@@ -375,7 +388,10 @@ class _ServerPassEnrollmentPageState extends State<ServerPassEnrollmentPage> {
       previous = (await widget.api.digitalPass(widget.accountId))['number'];
       if (!mounted) return;
       attempted = true;
-      final issued = await widget.api.issuePass(entered);
+      final issued = await widget.api.issuePass(
+        entered,
+        accountId: widget.accountId,
+      );
       if (issued['account_id'] != widget.accountId ||
           issued['number'] is! String) {
         throw const FormatException();
@@ -417,18 +433,18 @@ class _ServerPassEnrollmentPageState extends State<ServerPassEnrollmentPage> {
   @override
   Widget build(BuildContext context) => CampusScaffold(
     appBar: CampusAppBar(
-      title: Text(
-        tr(context, 'Подключить свой пропуск', 'Enroll your own pass'),
-      ),
+      title: Text(tr(context, 'Подключить пропуск', 'Enroll a pass')),
     ),
     body: ListView(
       padding: AaPageLayout.insets(context),
       children: [
+        if (widget.accountLabel != null)
+          AaSectionHeading(title: widget.accountLabel!, lowercase: false),
         BrockmannText(
           tr(
             context,
-            'Подтвердите выпуск своим кодом МИРЭА. Повторный выпуск может изменить привязку пропуска.',
-            'Confirm enrollment with your MIREA code. Issuing again may change the pass binding.',
+            'Запросите у владельца код подтверждения МИРЭА. Повторный выпуск может изменить привязку пропуска.',
+            'Ask the pass owner for their MIREA verification code. Issuing again may change the pass binding.',
           ),
           color: context.brockmann.secondary,
         ),
@@ -461,6 +477,7 @@ class _ServerPassEnrollmentPageState extends State<ServerPassEnrollmentPage> {
         const SizedBox(height: 24),
         if (busy) const CampusProgress.compact(),
         CampusButton.filled(
+          key: const ValueKey('issue-pass'),
           onPressed: busy || code.text.length != 6 ? null : _issue,
           child: Text(tr(context, 'Подключить пропуск', 'Enroll a pass')),
         ),

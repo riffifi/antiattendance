@@ -1,6 +1,19 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  "The code was sent using the owner’s MIREA verification method.": (
+    "Le code a été envoyé via le moyen de vérification MIREA du propriétaire.",
+    "O código foi enviado pelo método de verificação MIREA do titular.",
+    "验证码已通过持有人的 MIREA 验证方式发送。",
+  ),
+
+  "Ask the pass owner for their MIREA verification code. Issuing again may change the pass binding.":
+      (
+        "Demandez au propriétaire du pass son code de vérification MIREA. Une nouvelle émission peut modifier l’association du pass.",
+        "Peça ao titular do passe o código de verificação MIREA. Emitir novamente pode alterar a vinculação do passe.",
+        "请向通行证持有人索取 MIREA 验证码。重新签发可能更改通行证绑定。",
+      ),
+
   "Theme": ("Thème", "Tema", "主题"),
   "Interface sounds": ("Sons de l’interface", "Sons da interface", "界面音效"),
   "Welcome to AA": ("Bienvenue dans AA", "Bem-vindo ao AA", "欢迎使用 AA"),

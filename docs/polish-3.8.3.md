@@ -46,3 +46,15 @@ Device delivery follows AGENTS.md and preserves installed app data.
 
 Regression coverage includes delayed preference reads, duplicate completion,
 profile partial failures, existing large-text layouts and the full app suite.
+
+## 3.8.7 shared pass enrollment
+
+- [x] Offer enrollment for every enabled shared pass, including the user's own pass.
+- [x] Use the server's account-specific `/site/passes/{id}/code` and `/issue` endpoints.
+- [x] Show the selected person's name and explain that verification uses the owner's MIREA method.
+- [x] Refresh available passes after returning from enrollment; prevent duplicate enrollment pages.
+- [x] Retain explicit code requests, leading-zero codes, rate-limit handling and read-back after uncertain issuance.
+
+The server implementation was inspected at `aa-server` commit `f056554`.
+App regression tests cover shared-pass targeting, disabled passes and 320dp
+layouts at double text size. Real issuance still requires the owner's code.

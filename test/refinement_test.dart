@@ -84,6 +84,31 @@ void main() {
     });
   }
 
+  testWidgets('inline errors stay readable in dark and AMOLED fields', (
+    tester,
+  ) async {
+    for (final mode in [AppThemeMode.dark, AppThemeMode.amoled]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.build(mode),
+          home: const Scaffold(
+            body: CampusTextField(label: 'Name', error: 'Check this value'),
+          ),
+        ),
+      );
+      final decoration = tester
+          .widget<InputDecorator>(find.byType(InputDecorator))
+          .decoration;
+      expect(
+        BrockmannThemeData.contrast(
+          decoration.errorStyle!.color!,
+          decoration.fillColor!,
+        ),
+        greaterThan(4.5),
+      );
+    }
+  });
+
   testWidgets(
     'person search accepts @username and keyboard submit; editing clears errors',
     (tester) async {

@@ -109,6 +109,7 @@ reported a connected Pixel; delivery is retried for the final release.
 ## 3.8.12 profile editing
 
 - [x] Show field-specific validation beside name and username, clearing it when edited.
+- [x] Keep inline error text readable against Dark and AMOLED input surfaces.
 - [x] Support Next/Done keyboard actions and dismiss the keyboard during saving.
 - [x] Offer Keep editing / Discard changes when leaving a modified profile.
 - [x] Collapse an expanded WP8 command bar before considering an unsaved-edit prompt.

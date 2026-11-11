@@ -1011,6 +1011,7 @@ class BrockmannTextField extends StatelessWidget {
     final t = context.brockmann;
     final inputFill = t.light ? const Color(0xffe4e4e4) : t.surface;
     final inputInk = enabled ? t.foreground : t.disabled;
+    final errorColor = Theme.of(context).colorScheme.error;
     Widget? adornment(Widget? child) => child == null || !t.windowsPhone
         ? child
         : IconTheme(
@@ -1085,13 +1086,13 @@ class BrockmannTextField extends StatelessWidget {
               suffixIcon: adornment(suffix ?? trailing),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.zero,
-                borderSide: BorderSide(color: t.danger),
+                borderSide: BorderSide(color: errorColor),
               ),
               focusedErrorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.zero,
-                borderSide: BorderSide(color: t.danger, width: 2),
+                borderSide: BorderSide(color: errorColor, width: 2),
               ),
-              errorStyle: BrockmannType.caption.style(color: t.danger),
+              errorStyle: BrockmannType.caption.style(color: errorColor),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.zero,
                 borderSide: BorderSide(

@@ -14,6 +14,7 @@ class ServerNfcController extends ChangeNotifier {
   final DateTime Function() _now;
   List<Map<String, dynamic>> cards = [];
   final selected = <String>{};
+  final enrolled = <String, bool>{};
   bool single = true, busy = false, running = false;
   int seconds = 60;
   Object? error;
@@ -37,7 +38,37 @@ class ServerNfcController extends ChangeNotifier {
     try {
       final result = await api.digitalPasses();
       if (_disposed || epoch != _epoch) return;
-      cards = serverRows(result['passes']);
+      final updated = serverRows(result['passes']);
+      final states = <String, bool>{};
+      final allowed = updated.where((c) => c['pass_allowed'] == true).toList();
+      // Keep only enrollment state; credentials are read afresh on activation.
+      // Limit concurrent reads for large shared groups.
+      for (var offset = 0; offset < allowed.length; offset += 4) {
+        await Future.wait(
+          allowed.skip(offset).take(4).map((card) async {
+            if (_disposed || epoch != _epoch) return;
+            final id = card['account_id'];
+            if (id is! String) return;
+            try {
+              final pass = await api.digitalPass(id);
+              if (pass['account_id'] == id && pass.containsKey('number')) {
+                if (pass['number'] == null) states[id] = false;
+                if (pass['number'] is String &&
+                    (pass['number'] as String).isNotEmpty) {
+                  states[id] = true;
+                }
+              }
+            } catch (_) {
+              // Unknown status must not offer unnecessary reissuance.
+            }
+          }),
+        );
+        if (_disposed || epoch != _epoch) return;
+      }
+      cards = updated;
+      enrolled
+        ..clear()
+        ..addAll(states);
       selected.retainAll(
         cards
             .where((c) => c['pass_allowed'] == true)
@@ -54,6 +85,7 @@ class ServerNfcController extends ChangeNotifier {
       if (!_disposed && epoch == _epoch) {
         error = e;
         cards = [];
+        enrolled.clear();
         selected.clear();
       }
     } finally {

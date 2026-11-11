@@ -215,40 +215,34 @@ class _ServerNfcPassPageState extends State<ServerNfcPassPage>
             title: tr(context, 'Доступные пропуска', 'Shared passes'),
           ),
           for (final card in c.cards)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                CampusListItem(
-                  leading: CampusCheckbox(
-                    value: c.selected.contains(card['account_id']),
-                    onChanged: enabled && card['pass_allowed'] == true
-                        ? (_) => c.choose(card['account_id'] as String)
-                        : null,
-                  ),
-                  headline: '${card['label'] ?? card['username'] ?? '—'}',
-                  onTap: enabled && card['pass_allowed'] == true
-                      ? () => c.choose(card['account_id'] as String)
-                      : null,
-                  supportingText: [
-                    if (card['group_name'] != null) '${card['group_name']}',
-                    if (card['own'] == true)
-                      tr(context, 'Мой пропуск', 'My pass'),
-                    if (card['pass_allowed'] != true)
-                      tr(context, 'Выключен владельцем', 'Disabled by owner'),
-                  ].join(' · '),
-                ),
-                if (card['pass_allowed'] == true)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: CampusButton.text(
+            CampusListItem(
+              trailing:
+                  card['pass_allowed'] == true &&
+                      c.enrolled[card['account_id']] == false
+                  ? CampusButton.text(
                       key: ValueKey('enroll-pass-${card['account_id']}'),
                       onPressed: enabled ? () => _enroll(card) : null,
                       child: Text(
                         tr(context, 'Подключить пропуск', 'Enroll a pass'),
                       ),
-                    ),
-                  ),
-              ],
+                    )
+                  : null,
+              leading: CampusCheckbox(
+                value: c.selected.contains(card['account_id']),
+                onChanged: enabled && card['pass_allowed'] == true
+                    ? (_) => c.choose(card['account_id'] as String)
+                    : null,
+              ),
+              headline: '${card['label'] ?? card['username'] ?? '—'}',
+              onTap: enabled && card['pass_allowed'] == true
+                  ? () => c.choose(card['account_id'] as String)
+                  : null,
+              supportingText: [
+                if (card['group_name'] != null) '${card['group_name']}',
+                if (card['own'] == true) tr(context, 'Мой пропуск', 'My pass'),
+                if (card['pass_allowed'] != true)
+                  tr(context, 'Выключен владельцем', 'Disabled by owner'),
+              ].join(' · '),
             ),
           if (c.cards.isEmpty && !c.busy)
             BrockmannText(

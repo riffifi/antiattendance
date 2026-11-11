@@ -155,6 +155,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       final seen = <http.Request>[];
+      var issued = false;
       final client = SessionServerClient(
         defaultSessionServerUrl,
         client: MockClient((r) async {
@@ -175,9 +176,18 @@ void main() {
           if (r.url.path.endsWith('/code')) {
             return response({'state': 'code_sent', 'retry_at': null});
           }
+          if (r.method == 'POST') issued = true;
           return response({
-            'account_id': 'shared',
-            'number': r.method == 'GET' ? null : '456',
+            'account_id': r.method == 'GET'
+                ? r.url.pathSegments.last
+                : 'shared',
+            'number': r.method == 'GET'
+                ? (r.url.pathSegments.last == ownId
+                      ? '123'
+                      : issued
+                      ? '456'
+                      : null)
+                : '456',
           });
         }),
       );
@@ -190,6 +200,7 @@ void main() {
       );
       await settleNetwork(tester);
       expect(find.byKey(const ValueKey('enroll-pass-disabled')), findsNothing);
+      expect(find.byKey(const ValueKey('enroll-pass-$ownId')), findsNothing);
       final enroll = find.byKey(const ValueKey('enroll-pass-shared'));
       await tester.ensureVisible(enroll);
       await tester.pumpAndSettle();
@@ -222,6 +233,7 @@ void main() {
       ]);
       expect(jsonDecode(posts.last.body), {'code': '012345'});
       expect(find.byType(ServerPassEnrollmentPage), findsNothing);
+      expect(find.byKey(const ValueKey('enroll-pass-shared')), findsNothing);
       expect(seen.where((r) => r.url.path == '/site/passes').length, 2);
       await tester.pumpWidget(const SizedBox());
       await tester.pumpAndSettle();
@@ -238,7 +250,14 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       final client = SessionServerClient(
         defaultSessionServerUrl,
-        client: MockClient((r) async => response({'passes': cards})),
+        client: MockClient(
+          (r) async => r.url.path == '/site/passes'
+              ? response({'passes': cards})
+              : response({
+                  'account_id': r.url.pathSegments.last,
+                  'number': null,
+                }),
+        ),
       );
       addTearDown(client.close);
       await tester.pumpWidget(
@@ -255,6 +274,38 @@ void main() {
       await settleNetwork(tester);
       await tester.pumpAndSettle();
       expect(find.text('Alex'), findsOneWidget);
+      final enrollment = find.byKey(const ValueKey('enroll-pass-$ownId'));
+      await tester.scrollUntilVisible(
+        enrollment,
+        160,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.pumpAndSettle();
+      expect(enrollment, findsOneWidget);
+      final row = find.ancestor(
+        of: enrollment,
+        matching: find.byType(CampusListItem),
+      );
+      expect(
+        (tester.getCenter(enrollment).dy - tester.getCenter(row).dy).abs(),
+        lessThan(1),
+      );
+      await tester.scrollUntilVisible(
+        find.text('Queue'),
+        -160,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Queue'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);

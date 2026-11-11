@@ -80,7 +80,8 @@ void main() {
     () async {
       final c = create();
       await c.refresh();
-      expect(gets, 0);
+      expect(gets, 2);
+      expect(c.enrolled, {ownId: true, 'shared': true});
       await c.activate();
       final start = calls.singleWhere((c) => c.method == 'start');
       final values = (start.arguments as Map)['passes'] as List;
@@ -163,17 +164,25 @@ void main() {
     () async {
       client.close();
       final pending = Completer<http.Response>();
+      var delayRead = false;
       client = SessionServerClient(
         defaultSessionServerUrl,
         client: MockClient((request) async {
           if (request.url.path == '/site/passes') {
             return response({'passes': cards});
           }
+          if (!delayRead) {
+            return response({
+              'account_id': request.url.pathSegments.last,
+              'number': '123',
+            });
+          }
           return pending.future;
         }),
       );
       final c = create();
       await c.refresh();
+      delayRead = true;
       final activation = c.activate();
       await Future<void>.delayed(Duration.zero);
       await c.stop();

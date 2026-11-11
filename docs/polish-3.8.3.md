@@ -58,3 +58,10 @@ profile partial failures, existing large-text layouts and the full app suite.
 The server implementation was inspected at `aa-server` commit `f056554`.
 App regression tests cover shared-pass targeting, disabled passes and 320dp
 layouts at double text size. Real issuance still requires the owner's code.
+
+## 3.8.8 enrollment action placement
+
+- [x] Check enrollment state on pass-list refresh and retain only a boolean per account.
+- [x] Hide enrollment for existing credentials, disabled passes and unknown status.
+- [x] Place the action inside the pass row, vertically centered beside the name.
+- [x] Cover automatic disappearance after issuance and alignment at 320dp with double text size.

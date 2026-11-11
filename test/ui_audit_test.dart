@@ -14,6 +14,18 @@ class _PendingGroups extends ScheduleApi {
   Future<List<ScheduleGroup>> searchGroups(String query) => pending.future;
 }
 
+class _GroupQueries extends ScheduleApi {
+  final requests = <String>[];
+  final pending = <Completer<List<ScheduleGroup>>>[];
+  @override
+  Future<List<ScheduleGroup>> searchGroups(String query) {
+    requests.add(query);
+    final result = Completer<List<ScheduleGroup>>();
+    pending.add(result);
+    return result.future;
+  }
+}
+
 void main() {
   testWidgets('long row actions leave readable space for the headline', (
     tester,
@@ -123,11 +135,11 @@ void main() {
         findsOneWidget,
       );
       await tester.enterText(find.byType(TextField), 'test');
+      await tester.pump();
       await tester.tap(find.byTooltip('Search'));
       await tester.pump();
       expect(find.byType(CampusProgress), findsOneWidget);
       await tester.enterText(find.byType(TextField), 'x');
-      await tester.tap(find.byTooltip('Search'));
       await tester.pump();
       expect(find.byType(CampusProgress), findsNothing);
       api.pending.complete([const ScheduleGroup(id: 1, name: 'Old result')]);
@@ -139,4 +151,38 @@ void main() {
       );
     },
   );
+  testWidgets('a changed group query cannot be replaced by an older response', (
+    tester,
+  ) async {
+    final api = _GroupQueries();
+    addTearDown(api.close);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: GroupPickerPage(api: api),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'first');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pump();
+    await tester.enterText(find.byType(TextField), 'second');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pump();
+    expect(api.requests, ['first', 'second']);
+    api.pending.last.complete([
+      const ScheduleGroup(id: 2, name: 'Current group'),
+    ]);
+    await tester.pumpAndSettle();
+    expect(find.text('Current group'), findsOneWidget);
+    api.pending.first.complete([
+      const ScheduleGroup(id: 1, name: 'Stale group'),
+    ]);
+    await tester.pumpAndSettle();
+    expect(find.text('Current group'), findsOneWidget);
+    expect(find.text('Stale group'), findsNothing);
+    await tester.enterText(find.byType(TextField), 'third');
+    await tester.pump();
+    expect(find.text('Current group'), findsNothing);
+  });
 }

@@ -1,5 +1,7 @@
 import 'campus_design.dart';
 
+import 'package:brockmann/brockmann.dart';
+
 import 'package:flutter/material.dart';
 
 import 'l10n.dart';
@@ -23,11 +25,13 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
 
   @override
   void dispose() {
+    ++_generation;
     _controller.dispose();
     super.dispose();
   }
 
   Future<void> _search() async {
+    if (_loading) return;
     final generation = ++_generation;
     final query = _controller.text.trim();
     if (query.length < 2) {
@@ -39,7 +43,9 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
       });
       return;
     }
+    FocusScope.of(context).unfocus();
     setState(() {
+      _groups = [];
       _loading = true;
       _error = null;
       _searched = true;
@@ -84,6 +90,16 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
                 child: CampusTextField(
                   controller: _controller,
                   autofocus: true,
+                  textInputAction: TextInputAction.search,
+                  onChanged: (_) {
+                    ++_generation;
+                    setState(() {
+                      _groups = [];
+                      _error = null;
+                      _loading = false;
+                      _searched = false;
+                    });
+                  },
                   label: tr(
                     context,
                     'Например, ИНБО-10-23',
@@ -91,7 +107,9 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
                   ),
                   trailing: CampusTextAction(
                     icon: Icons.search_rounded,
-                    onPressed: _search,
+                    onPressed: _loading || _controller.text.trim().length < 2
+                        ? null
+                        : _search,
                     tooltip: tr(context, 'Поиск', 'Search'),
                     label: tr(context, 'Поиск', 'Search'),
                   ),
@@ -102,7 +120,10 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
               if (_error != null)
                 Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Text(_error!),
+                  child: BrockmannText(
+                    _error!,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
                 ),
               Expanded(
                 child: _groups.isEmpty && !_loading && _error == null
@@ -123,6 +144,9 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
                         ),
                       )
                     : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
                         itemCount: _groups.length,
                         itemBuilder: (context, index) {
                           final group = _groups[index];

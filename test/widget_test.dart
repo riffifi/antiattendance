@@ -319,6 +319,7 @@ void main() {
     await tester.tap(find.text('Assign group'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(CampusTextField), 'ИНБО');
+    await tester.pump();
     await tester.tap(find.byTooltip('Search'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('ИНБО-10-23'));

@@ -178,6 +178,54 @@ void main() {
     expect(find.text('Today class'), findsOneWidget);
   });
 
+  testWidgets('failed next-week request retains the displayed week context', (
+    tester,
+  ) async {
+    final weeks = <int>[];
+    final client = SessionServerClient(
+      'https://aa.example',
+      client: MockClient((r) async {
+        final week = int.parse(r.url.queryParameters['week']!);
+        weeks.add(week);
+        if (weeks.length == 2) {
+          return response({'detail': 'Unavailable'}, 503);
+        }
+        return response({
+          'group_name': 'Group A',
+          'days': [
+            {
+              'date': '2026-11-10',
+              'lessons': [
+                {'subject': 'Week $week', 'start': '09:00', 'end': '10:00'},
+              ],
+            },
+          ],
+        });
+      }),
+    );
+    addTearDown(client.close);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: ServerSchedulePage(api: AaServerApi(client), active: true),
+        ),
+      ),
+    );
+    await settleNetwork(tester);
+    await tester.tap(find.byTooltip('Next week'));
+    await settleNetwork(tester);
+    expect(find.text('Week 0'), findsOneWidget);
+    await tester.tap(find.byTooltip('Next week'));
+    await settleNetwork(tester);
+    expect(weeks, [0, 1, 1]);
+    expect(find.text('Week 1'), findsOneWidget);
+    expect(
+      find.text('Could not get a response. Check your connection.'),
+      findsNothing,
+    );
+  });
+
   testWidgets(
     'profile edits only the changed name and keeps device access available',
     (tester) async {

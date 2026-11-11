@@ -39,7 +39,7 @@ class ServerSchedulePageState extends State<ServerSchedulePage> {
   String? _error;
   int _week = 0, _day = 0;
   int? _group;
-  bool _busy = false;
+  bool _busy = false, _routeOpen = false;
   int _generation = 0;
   int? _loadedWeek, _loadedGroup;
   @override
@@ -83,7 +83,14 @@ class ServerSchedulePageState extends State<ServerSchedulePage> {
       });
     } catch (error) {
       if (mounted && generation == _generation) {
-        setState(() => _error = serverError(context, error));
+        setState(() {
+          _error = serverError(context, error);
+          // Existing lessons must keep the week/group they were loaded for.
+          if (_data != null) {
+            _week = _loadedWeek ?? 0;
+            _group = _loadedGroup;
+          }
+        });
       }
     } finally {
       if (mounted && generation == _generation) setState(() => _busy = false);
@@ -91,6 +98,8 @@ class ServerSchedulePageState extends State<ServerSchedulePage> {
   }
 
   Future<void> _chooseGroup() async {
+    if (_busy || _routeOpen) return;
+    _routeOpen = true;
     final search = ServerScheduleSearch(widget.api);
     try {
       final group = await Navigator.of(context).push<ScheduleGroup>(
@@ -104,7 +113,20 @@ class ServerSchedulePageState extends State<ServerSchedulePage> {
         await refresh();
       }
     } finally {
+      _routeOpen = false;
       search.close();
+    }
+  }
+
+  Future<void> _openMap({String? room}) async {
+    if (_routeOpen) return;
+    _routeOpen = true;
+    try {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(builder: (_) => CampusMapsPage(room: room ?? '')),
+      );
+    } finally {
+      _routeOpen = false;
     }
   }
 
@@ -127,11 +149,7 @@ class ServerSchedulePageState extends State<ServerSchedulePage> {
                   showDivider: false,
                   headline:
                       '${_data?['group_name'] ?? tr(context, 'Выбрать группу', 'Choose a group')}',
-                  trailing: CampusTextAction(
-                    icon: Icons.expand_more_rounded,
-                    label: tr(context, 'Выбрать группу', 'Choose a group'),
-                    onPressed: _busy ? null : _chooseGroup,
-                  ),
+                  navigation: true,
                   onTap: _busy ? null : _chooseGroup,
                 ),
                 Row(
@@ -206,23 +224,20 @@ class ServerSchedulePageState extends State<ServerSchedulePage> {
                               role: BrockmannType.heading,
                             ),
                             const SizedBox(height: 8),
-                            BrockmannText(
-                              [lesson['type'], lesson['teacher']]
-                                  .whereType<String>()
-                                  .where((v) => v.trim().isNotEmpty)
-                                  .join(' · '),
-                              color: context.brockmann.secondary,
-                            ),
+                            if ([lesson['type'], lesson['teacher']]
+                                .whereType<String>()
+                                .any((v) => v.trim().isNotEmpty))
+                              BrockmannText(
+                                [lesson['type'], lesson['teacher']]
+                                    .whereType<String>()
+                                    .where((v) => v.trim().isNotEmpty)
+                                    .join(' · '),
+                                color: context.brockmann.secondary,
+                              ),
                             if ('${lesson['location'] ?? ''}'.isNotEmpty)
                               CampusButton.text(
-                                onPressed: () => Navigator.of(context)
-                                    .push<void>(
-                                      MaterialPageRoute(
-                                        builder: (_) => CampusMapsPage(
-                                          room: '${lesson['location']}',
-                                        ),
-                                      ),
-                                    ),
+                                onPressed: () =>
+                                    _openMap(room: '${lesson['location']}'),
                                 child: Text('${lesson['location']}'),
                               ),
                           ],
@@ -261,9 +276,7 @@ class ServerSchedulePageState extends State<ServerSchedulePage> {
             CampusCommand(
               icon: Icons.map_outlined,
               label: tr(context, 'Карты', 'Maps'),
-              onPressed: () => Navigator.of(context).push<void>(
-                MaterialPageRoute(builder: (_) => const CampusMapsPage()),
-              ),
+              onPressed: _openMap,
             ),
             CampusCommand(
               icon: Icons.refresh_rounded,

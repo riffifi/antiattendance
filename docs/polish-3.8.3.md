@@ -78,3 +78,16 @@ layouts at double text size. Real issuance still requires the owner's code.
 
 Brockmann's shared input implementation and its theme regression tests were
 updated together. The external Brockmann checkout is unchanged.
+
+## 3.8.10 schedule and group selection
+
+- [x] Keep week/group navigation consistent with displayed lessons after failed requests.
+- [x] Make the schedule's group selector a single navigable row without a duplicate action label.
+- [x] Prevent stacked group/map pages during rapid taps.
+- [x] Clear stale group results on edit and ignore responses for previous queries.
+- [x] Use keyboard Search, dismiss the keyboard on submission and align result text with the input.
+- [x] Show group-search failures with the shared theme error color.
+- [x] Avoid empty lesson metadata rows.
+
+Regression tests exercise out-of-order group responses and failed week changes,
+in addition to retained-day, small-screen and existing schedule coverage.

@@ -1,6 +1,18 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  "Connect": ("Connecter", "Ligar", "连接"),
+  "Connection settings": (
+    "Paramètres de connexion",
+    "Definições de ligação",
+    "连接设置",
+  ),
+  "Enter your server address to synchronize accounts and passes.": (
+    "Saisissez l’adresse de votre serveur pour synchroniser les comptes et les pass.",
+    "Introduza o endereço do servidor para sincronizar contas e passes.",
+    "输入服务器地址以同步账户和通行证。",
+  ),
+
   "Could not check the pass. Refresh to retry.": (
     "Impossible de vérifier le pass. Actualisez pour réessayer.",
     "Não foi possível verificar o passe. Atualize para tentar novamente.",

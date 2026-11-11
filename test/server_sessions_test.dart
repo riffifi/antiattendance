@@ -182,7 +182,11 @@ void main() {
         MaterialApp(theme: AppTheme.light, home: const SessionServerPage()),
       );
       await tester.pumpAndSettle();
-      expect(find.text('http://192.168.1.20:8080'), findsWidgets);
+      expect(find.text('192.168.1.20:8080'), findsOneWidget);
+      expect(find.byType(EditableText), findsNothing);
+      await tester.tap(find.text('Connection settings'));
+      await tester.pumpAndSettle();
+      expect(find.text('http://192.168.1.20:8080'), findsOneWidget);
       final fields = tester
           .widgetList<EditableText>(find.byType(EditableText))
           .toList();

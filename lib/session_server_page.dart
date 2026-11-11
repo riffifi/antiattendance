@@ -6,6 +6,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'campus_design.dart';
 import 'l10n.dart';
+import 'frontend/command_bar.dart';
+import 'frontend/page_layout.dart';
 import 'server_sessions.dart';
 import 'session_server_sync.dart';
 
@@ -17,7 +19,7 @@ class SessionServerPage extends StatefulWidget {
 
 class _SessionServerPageState extends State<SessionServerPage> {
   final _url = TextEditingController();
-  bool _busy = false, _ready = false;
+  bool _busy = false, _ready = false, _opening = false;
   String? _error;
   StreamSubscription<void>? _updates;
   @override
@@ -57,17 +59,19 @@ class _SessionServerPageState extends State<SessionServerPage> {
   }
 
   Future<void> _connect() async {
-    if (_busy) return;
+    if (_busy || !_ready) return;
     setState(() {
       _busy = true;
       _error = null;
     });
+    FocusScope.of(context).unfocus();
     SessionServerClient? candidate;
     try {
       candidate = SessionServerClient(_url.text.trim());
       await ServerSessions.connect(candidate);
       candidate = null;
       if (mounted) {
+        _url.text = ServerSessions.active!.base.toString();
         CampusNotice.show(
           context,
           message: tr(context, 'Сервер подключён.', 'Server connected.'),
@@ -96,7 +100,11 @@ class _SessionServerPageState extends State<SessionServerPage> {
   }
 
   Future<void> _disconnect() async {
-    setState(() => _busy = true);
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
     try {
       await ServerSessions.disconnect();
     } catch (_) {
@@ -134,158 +142,237 @@ class _SessionServerPageState extends State<SessionServerPage> {
                   'Автоматическая синхронизация включена',
                   'Automatic synchronization is on',
                 ),
+          color: state.failed ? Theme.of(context).colorScheme.error : null,
         ),
-        if (state.pending > 0)
-          BrockmannText(
-            trf(
-              context,
-              'Ожидает отправки: {count}',
-              'Waiting to upload: {count}',
-              {'count': state.pending},
-            ),
-            role: BrockmannType.caption,
-            color: context.brockmann.secondary,
-          ),
-        if (state.lastSuccess != null)
-          BrockmannText(
-            trf(
-              context,
-              'Последняя синхронизация: {time}',
-              'Last synchronized: {time}',
-              {
-                'time': MaterialLocalizations.of(context).formatTimeOfDay(
-                  TimeOfDay.fromDateTime(state.lastSuccess!.toLocal()),
+        const SizedBox(height: 20),
+        CampusDisclosure(
+          key: const PageStorageKey('server-sync-details'),
+          title: tr(context, 'Подробности', 'Details'),
+          children: [
+            if (state.pending > 0)
+              BrockmannText(
+                trf(
+                  context,
+                  'Ожидает отправки: {count}',
+                  'Waiting to upload: {count}',
+                  {'count': state.pending},
                 ),
-              },
+                role: BrockmannType.caption,
+                color: context.brockmann.secondary,
+              ),
+            if (state.lastSuccess != null)
+              BrockmannText(
+                trf(
+                  context,
+                  'Последняя синхронизация: {time}',
+                  'Last synchronized: {time}',
+                  {
+                    'time': MaterialLocalizations.of(context).formatTimeOfDay(
+                      TimeOfDay.fromDateTime(state.lastSuccess!.toLocal()),
+                    ),
+                  },
+                ),
+                role: BrockmannType.caption,
+                color: context.brockmann.secondary,
+              ),
+            BrockmannText(
+              trf(context, 'Аккаунтов: {count}', 'Accounts: {count}', {
+                'count': server.accounts.length,
+              }),
+              role: BrockmannType.caption,
+              color: context.brockmann.secondary,
             ),
-            role: BrockmannType.caption,
-            color: context.brockmann.secondary,
-          ),
-        BrockmannText(
-          trf(context, 'Аккаунтов: {count}', 'Accounts: {count}', {
-            'count': server.accounts.length,
-          }),
-          role: BrockmannType.caption,
-          color: context.brockmann.secondary,
+          ],
         ),
       ],
     ),
   );
+  Future<void> _openWebsite(SessionServerClient server) async {
+    if (_opening || _busy) return;
+    setState(() {
+      _opening = true;
+      _error = null;
+    });
+    try {
+      final opened = await launchUrl(
+        server.base,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened) throw StateError('Could not open website');
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _error = tr(
+            context,
+            'Не удалось открыть панель.',
+            'Could not open the panel.',
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _opening = false);
+    }
+  }
+
+  Widget _address(BuildContext context) => CampusTextField(
+    controller: _url,
+    label: tr(context, 'Адрес сервера', 'Server address'),
+    placeholder: defaultSessionServerUrl,
+    keyboardType: TextInputType.url,
+    textInputAction: TextInputAction.go,
+    onSubmitted: (_) => _connect(),
+    onChanged: (_) => setState(() => _error = null),
+    enabled: _ready && !_busy,
+  );
+
   @override
   Widget build(BuildContext context) {
     final server = ServerSessions.active;
-    return CampusScaffold(
-      appBar: CampusAppBar(
-        title: Text(tr(context, 'Сервер сессий', 'Session server')),
-      ),
-      body: CampusPageBody(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
-          children: [
-            BrockmannText(
-              server == null
-                  ? tr(
-                      context,
-                      'Подключите общий сервер',
-                      'Connect your shared server',
-                    )
-                  : tr(context, 'Сервер настроен', 'Server configured'),
-              role: BrockmannType.value,
-              weight: 400,
-            ),
-            const SizedBox(height: 8),
-            BrockmannText(
-              tr(
-                context,
-                'Сессии университета хранятся на сервере. Телефон входит через AA ID и получает разрешённые вам данные.',
-                'University sessions stay on the server. This phone uses AA ID to synchronize your permitted data.',
-              ),
-              color: context.brockmann.secondary,
-            ),
-            if (server != null) ...[
-              const SizedBox(height: 12),
-              BrockmannText('${server.base}', role: BrockmannType.monoValue),
-              const SizedBox(height: 8),
-              _status(context, server),
-            ],
-            const SizedBox(height: 20),
-            CampusTextField(
-              controller: _url,
-              label: tr(context, 'Адрес сервера', 'Server address'),
-              placeholder: defaultSessionServerUrl,
-              keyboardType: TextInputType.url,
-              enabled: _ready && !_busy,
-            ),
-            const SizedBox(height: 12),
-            BrockmannText(
-              tr(
-                context,
-                'Ваш AA ID определяет доступные аккаунты и разрешения на пропуска.',
-                'Your AA ID determines which accounts and pass permissions are available.',
-              ),
-              role: BrockmannType.caption,
-              color: context.brockmann.secondary,
-            ),
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: BrockmannText(_error!, color: context.brockmann.danger),
-              ),
-            const SizedBox(height: 20),
-            CampusButton.filled(
-              onPressed: !_ready || _busy ? null : _connect,
-              child: Text(
-                _busy
-                    ? tr(context, 'Подождите…', 'Please wait…')
-                    : tr(context, 'Проверить и подключить', 'Test and connect'),
-              ),
-            ),
-            if (server != null) ...[
-              const SizedBox(height: 12),
-              CampusButton.text(
-                onPressed: _busy ? null : SessionAutoSync.request,
-                child: Text(tr(context, 'Синхронизировать сейчас', 'Sync now')),
-              ),
-              CampusButton.text(
-                onPressed: _busy
-                    ? null
-                    : () async {
-                        try {
-                          final opened = await launchUrl(
-                            server.base,
-                            mode: LaunchMode.externalApplication,
-                          );
-                          if (!opened && mounted) {
-                            setState(
-                              () => _error = tr(
-                                context,
-                                'Не удалось открыть панель.',
-                                'Could not open the panel.',
-                              ),
-                            );
-                          }
-                        } catch (_) {
-                          if (mounted) {
-                            setState(
-                              () => _error = tr(
-                                context,
-                                'Не удалось открыть панель.',
-                                'Could not open the panel.',
-                              ),
-                            );
-                          }
-                        }
-                      },
-                child: Text(tr(context, 'Открыть сайт', 'Open website')),
-              ),
-              CampusButton.text(
-                onPressed: _busy ? null : _disconnect,
-                child: Text(
-                  tr(context, 'Отключить сервер', 'Disconnect server'),
+    return PopScope(
+      canPop: !_busy,
+      child: CampusScaffold(
+        appBar: CampusAppBar(
+          title: Text(tr(context, 'Сервер сессий', 'Session server')),
+        ),
+        bottomNavigationBar: ValueListenableBuilder<SessionSyncStatus>(
+          valueListenable: SessionAutoSync.status,
+          builder: (context, state, _) => CampusCommandBar(
+            commands: [
+              if (server == null)
+                CampusCommand(
+                  icon: Icons.link_rounded,
+                  label: tr(context, 'Подключить', 'Connect'),
+                  onPressed: !_ready || _busy || _url.text.trim().isEmpty
+                      ? null
+                      : _connect,
                 ),
-              ),
+              if (server != null) ...[
+                CampusCommand(
+                  icon: Icons.sync_rounded,
+                  label: tr(context, 'Синхронизировать сейчас', 'Sync now'),
+                  onPressed: _busy || state.running
+                      ? null
+                      : SessionAutoSync.request,
+                ),
+                CampusCommand(
+                  icon: Icons.open_in_new_rounded,
+                  label: tr(context, 'Открыть сайт', 'Open website'),
+                  onPressed: _busy || _opening
+                      ? null
+                      : () => _openWebsite(server),
+                ),
+              ],
             ],
-          ],
+          ),
+        ),
+        body: CampusPageBody(
+          child: ListView(
+            padding: AaPageLayout.insets(context).copyWith(
+              left: AaPageLayout.gutter(context, title: true),
+              right: AaPageLayout.gutter(context, title: true),
+            ),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            children: [
+              if (!_ready || _busy) const CampusProgress.compact(),
+              if (server == null) ...[
+                BrockmannText(
+                  tr(
+                    context,
+                    'Подключите общий сервер',
+                    'Connect your shared server',
+                  ),
+                  role: BrockmannType.heading,
+                ),
+                const SizedBox(height: 12),
+                BrockmannText(
+                  tr(
+                    context,
+                    'Введите адрес сервера для синхронизации аккаунтов и пропусков.',
+                    'Enter your server address to synchronize accounts and passes.',
+                  ),
+                  color: context.brockmann.secondary,
+                ),
+                const SizedBox(height: 24),
+                _address(context),
+              ] else ...[
+                BrockmannText(
+                  tr(context, 'Сервер настроен', 'Server configured'),
+                  role: BrockmannType.caption,
+                  color: context.brockmann.secondary,
+                ),
+                const SizedBox(height: 8),
+                BrockmannText(
+                  server.base.authority,
+                  role: BrockmannType.heading,
+                ),
+                const SizedBox(height: 16),
+                _status(context, server),
+                const SizedBox(height: 12),
+                CampusDisclosure(
+                  key: const PageStorageKey('server-connection-settings'),
+                  title: tr(
+                    context,
+                    'Настройки подключения',
+                    'Connection settings',
+                  ),
+                  children: [
+                    _address(context),
+                    const SizedBox(height: 12),
+                    BrockmannText(
+                      tr(
+                        context,
+                        'Ваш AA ID определяет доступные аккаунты и разрешения на пропуска.',
+                        'Your AA ID determines which accounts and pass permissions are available.',
+                      ),
+                      role: BrockmannType.caption,
+                      color: context.brockmann.secondary,
+                    ),
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      children: [
+                        CampusButton.text(
+                          onPressed:
+                              !_ready || _busy || _url.text.trim().isEmpty
+                              ? null
+                              : _connect,
+                          child: Text(
+                            tr(
+                              context,
+                              'Проверить и подключить',
+                              'Test and connect',
+                            ),
+                          ),
+                        ),
+                        CampusButton.text(
+                          onPressed: _busy ? null : _disconnect,
+                          child: Text(
+                            tr(
+                              context,
+                              'Отключить сервер',
+                              'Disconnect server',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Semantics(
+                    liveRegion: true,
+                    child: BrockmannText(
+                      _error!,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

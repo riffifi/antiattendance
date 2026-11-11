@@ -91,3 +91,17 @@ updated together. The external Brockmann checkout is unchanged.
 
 Regression tests exercise out-of-order group responses and failed week changes,
 in addition to retained-day, small-screen and existing schedule coverage.
+
+## 3.8.11 session server screen
+
+- [x] Replace repeated addresses, explanations and stacked buttons with one server/sync overview.
+- [x] Put Sync now and Open website in the WP8 command bar.
+- [x] Move account counts and last-sync metadata behind Details.
+- [x] Move address editing, connection checks and disconnect behind Connection settings.
+- [x] Keep initial connection simple: one explanation, one address field, one Connect command.
+- [x] Support keyboard Go, visible retry errors and guarded connection/browser actions.
+- [x] Align the reading column with the page title and verify all themes at double text size.
+
+Rendered shipping-font previews and regression tests cover both connected and
+disconnected states. Installation of 3.8.10 could not run because ADB no longer
+reported a connected Pixel; delivery is retried for the final release.

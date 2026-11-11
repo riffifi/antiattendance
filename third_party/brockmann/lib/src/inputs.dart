@@ -199,14 +199,24 @@ class BrockmannSegmentedControl<T> extends StatelessWidget {
                       ),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 10),
-                        child: BrockmannText(
-                          labelFor(option),
-                          role: BrockmannType.heading,
-                          color: onChanged == null
-                              ? t.disabled
-                              : option == value
-                              ? t.foreground
-                              : t.secondary,
+                        child: TweenAnimationBuilder<Color?>(
+                          tween: ColorTween(
+                            end: onChanged == null
+                                ? t.disabled
+                                : p
+                                ? t.accentText
+                                : option == value
+                                ? t.foreground
+                                : t.secondary,
+                          ),
+                          duration: t.motionReduced(c)
+                              ? Duration.zero
+                              : t.duration(c, 140),
+                          builder: (context, color, _) => BrockmannText(
+                            labelFor(option),
+                            role: BrockmannType.heading,
+                            color: color,
+                          ),
                         ),
                       ),
                     )

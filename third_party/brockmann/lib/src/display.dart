@@ -102,7 +102,23 @@ class BrockmannListItem extends StatelessWidget {
                   ],
                   if (chevron) ...[
                     const SizedBox(width: 8),
-                    BrockmannGlyph(BrockmannIcon.caretRight, size: 20),
+                    BrockmannMotion(
+                      value: p ? 1 : 0,
+                      milliseconds: p ? 70 : 140,
+                      immediate: t.motionReduced(c),
+                      builder: (context, value) => Transform.translate(
+                        offset: Offset(3 * value.clamp(0, 1), 0),
+                        child: BrockmannGlyph(
+                          BrockmannIcon.caretRight,
+                          size: 20,
+                          color: Color.lerp(
+                            t.foreground,
+                            t.accentText,
+                            value.clamp(0, 1),
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ],
               ),

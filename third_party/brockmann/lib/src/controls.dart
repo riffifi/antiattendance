@@ -257,7 +257,7 @@ class _BrockmannSwitchState extends State<BrockmannSwitch> {
       builder: (c, pressed) => BrockmannMotion(
         value: _drag ?? (widget.value ? 1 : 0),
         milliseconds: 180,
-        immediate: _drag != null,
+        immediate: _drag != null || t.motionReduced(c),
         builder: (c, raw) {
           final progress = raw.clamp(0.0, 1.0);
           return Padding(
@@ -269,11 +269,10 @@ class _BrockmannSwitchState extends State<BrockmannSwitch> {
               children: [
                 if (widget.compact && t.windowsPhone) ...[
                   Flexible(
-                    child: BrockmannText(
-                      progress >= .5 ? widget.onLabel : widget.offLabel,
-                      role: BrockmannType.caption,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    child: _CompactSwitchLabel(
+                      value: progress >= .5,
+                      onLabel: widget.onLabel,
+                      offLabel: widget.offLabel,
                       color: widget.onChanged == null
                           ? t.disabled
                           : t.foreground,
@@ -293,11 +292,19 @@ class _BrockmannSwitchState extends State<BrockmannSwitch> {
                               : t.secondary,
                         ),
                         AnimatedSwitcher(
-                          duration: t.duration(c, 170),
-                          reverseDuration: t.duration(c, 90),
+                          duration: t.motionReduced(c)
+                              ? Duration.zero
+                              : t.duration(c, 140),
+                          reverseDuration: t.motionReduced(c)
+                              ? Duration.zero
+                              : t.duration(c, 90),
                           layoutBuilder: (current, previous) => Stack(
                             alignment: Alignment.centerLeft,
-                            children: [...previous, ?current],
+                            children: [
+                              for (final child in previous)
+                                ExcludeSemantics(child: child),
+                              ?current,
+                            ],
                           ),
                           transitionBuilder: (child, animation) =>
                               FadeTransition(
@@ -363,7 +370,8 @@ class _BrockmannSwitchState extends State<BrockmannSwitch> {
                     height: 48,
                     child: BrockmannMotion(
                       value: pressed ? 1 : 0,
-                      milliseconds: pressed ? 60 : 220,
+                      milliseconds: pressed ? 60 : 140,
+                      immediate: t.motionReduced(c),
                       builder: (c, press) => CustomPaint(
                         painter: _SwitchPainter(
                           progress: progress,
@@ -380,6 +388,60 @@ class _BrockmannSwitchState extends State<BrockmannSwitch> {
           );
         },
       ),
+    );
+  }
+}
+
+class _CompactSwitchLabel extends StatelessWidget {
+  const _CompactSwitchLabel({
+    required this.value,
+    required this.onLabel,
+    required this.offLabel,
+    required this.color,
+  });
+  final bool value;
+  final String onLabel, offLabel;
+  final Color color;
+  @override
+  Widget build(BuildContext context) {
+    Widget text(String value) => BrockmannText(
+      value,
+      role: BrockmannType.caption,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      color: color,
+    );
+    final current = value ? onLabel : offLabel;
+    return Stack(
+      alignment: AlignmentDirectional.centerEnd,
+      children: [
+        // Reserve both labels' width so the thumb does not jump between states.
+        for (final label in [onLabel, offLabel])
+          ExcludeSemantics(child: Opacity(opacity: 0, child: text(label))),
+        if (context.brockmann.motionReduced(context))
+          text(current)
+        else
+          AnimatedSwitcher(
+            duration: context.brockmann.duration(context, 140),
+            layoutBuilder: (current, previous) => Stack(
+              alignment: AlignmentDirectional.centerEnd,
+              children: [
+                for (final child in previous) ExcludeSemantics(child: child),
+                ?current,
+              ],
+            ),
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween(begin: const Offset(0, .12), end: Offset.zero)
+                    .chain(CurveTween(curve: Curves.easeOutCubic))
+                    .animate(animation),
+                child: child,
+              ),
+            ),
+            child: KeyedSubtree(key: ValueKey(current), child: text(current)),
+          ),
+      ],
     );
   }
 }

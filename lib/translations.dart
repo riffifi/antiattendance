@@ -1,6 +1,33 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  "Enter a name between 1 and 60 characters.": (
+    "Saisissez un nom de 1 à 60 caractères.",
+    "Introduza um nome com 1 a 60 caracteres.",
+    "请输入 1 至 60 个字符的姓名。",
+  ),
+  "Use 3–24 Latin letters, digits or underscores, starting with a letter.": (
+    "Utilisez 3 à 24 lettres latines, chiffres ou tirets bas, en commençant par une lettre.",
+    "Use 3 a 24 letras latinas, números ou sublinhados, começando por uma letra.",
+    "使用 3 至 24 个拉丁字母、数字或下划线，并以字母开头。",
+  ),
+  "Unsaved changes": (
+    "Modifications non enregistrées",
+    "Alterações não guardadas",
+    "未保存的更改",
+  ),
+  "Your profile changes have not been saved.": (
+    "Les modifications de votre profil n’ont pas été enregistrées.",
+    "As alterações ao perfil ainda não foram guardadas.",
+    "您的个人资料更改尚未保存。",
+  ),
+  "Keep editing": ("Continuer la modification", "Continuar a editar", "继续编辑"),
+  "Discard changes": (
+    "Abandonner les modifications",
+    "Descartar alterações",
+    "放弃更改",
+  ),
+
   "Connect": ("Connecter", "Ligar", "连接"),
   "Connection settings": (
     "Paramètres de connexion",

@@ -391,6 +391,7 @@ class CampusTextField extends StatelessWidget {
     this.textCapitalization = TextCapitalization.none,
     this.textAlign = TextAlign.start,
     this.suffixText,
+    this.error,
   });
   final TextEditingController? controller;
   final String? label;
@@ -409,6 +410,7 @@ class CampusTextField extends StatelessWidget {
   final TextCapitalization textCapitalization;
   final TextAlign textAlign;
   final String? suffixText;
+  final String? error;
   @override
   Widget build(BuildContext context) => BrockmannTextField(
     label: label ?? '',
@@ -428,6 +430,7 @@ class CampusTextField extends StatelessWidget {
     textCapitalization: textCapitalization,
     textAlign: textAlign,
     suffixText: suffixText,
+    error: error,
   );
 }
 

@@ -25,12 +25,15 @@ class CampusCommandBar extends StatelessWidget {
     super.key,
     required this.commands,
     this.active = true,
+    this.onModeChanged,
   });
   final List<CampusCommand> commands;
   final bool active;
+  final ValueChanged<BrockmannCommandBarMode>? onModeChanged;
   @override
   Widget build(BuildContext context) => BrockmannCommandBar(
     active: active,
+    onModeChanged: onModeChanged,
     expandLabel: tr(context, 'Развернуть панель', 'Expand app bar'),
     collapseLabel: tr(context, 'Свернуть панель', 'Collapse app bar'),
     minimizeLabel: tr(context, 'Скрыть команды', 'Minimize app bar'),

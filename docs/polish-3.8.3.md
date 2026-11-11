@@ -105,3 +105,18 @@ in addition to retained-day, small-screen and existing schedule coverage.
 Rendered shipping-font previews and regression tests cover both connected and
 disconnected states. Installation of 3.8.10 could not run because ADB no longer
 reported a connected Pixel; delivery is retried for the final release.
+
+## 3.8.12 profile editing
+
+- [x] Show field-specific validation beside name and username, clearing it when edited.
+- [x] Support Next/Done keyboard actions and dismiss the keyboard during saving.
+- [x] Offer Keep editing / Discard changes when leaving a modified profile.
+- [x] Collapse an expanded WP8 command bar before considering an unsaved-edit prompt.
+- [x] Keep the profile open while saving and avoid prompts after a successful save.
+- [x] Keep an unsuccessful initial profile load out of the editor and offer Retry.
+- [x] Preserve drafts across profile reloads and prevent duplicate device/sign-in pages.
+
+The shared field adapter now exposes Brockmann's inline error support. The
+command bar reports user presentation changes so page navigation can respect
+its Back behavior. Regression tests exercise validation, failed loads,
+unsaved drafts, expanded commands and in-flight saving.

@@ -34,6 +34,7 @@ class BrockmannCommandBar extends StatefulWidget {
     required this.commands,
     this.initialMode = BrockmannCommandBarMode.compact,
     this.active = true,
+    this.onModeChanged,
     this.expandLabel = 'Expand app bar',
     this.collapseLabel = 'Collapse app bar',
     this.minimizeLabel = 'Minimize app bar',
@@ -43,6 +44,8 @@ class BrockmannCommandBar extends StatefulWidget {
   static const minimizedExtent = 22.0;
   final List<BrockmannCommand> commands;
   final bool active;
+  /// Reports presentation changes caused by user interaction.
+  final ValueChanged<BrockmannCommandBarMode>? onModeChanged;
   final BrockmannCommandBarMode initialMode;
   final String expandLabel, collapseLabel, minimizeLabel;
   @override
@@ -76,7 +79,9 @@ class _BrockmannCommandBarState extends State<BrockmannCommandBar>
 
   void _settle(BrockmannCommandBarMode mode) {
     if (!mounted || !widget.active) return;
+    final changed = _mode != mode;
     setState(() => _mode = mode);
+    if (changed) widget.onModeChanged?.call(mode);
     if (mounted) {
       _motion.animateTo(
         _value(mode),

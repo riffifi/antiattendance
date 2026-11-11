@@ -190,7 +190,11 @@ class BrockmannSegmentedControl<T> extends StatelessWidget {
             selected: option == value,
             child: BrockmannPressable(
               label: labelFor(option),
-              onPressed: onChanged == null ? null : () => onChanged!(option),
+              onPressed: onChanged == null
+                  ? null
+                  : () {
+                      if (option != value) onChanged!(option);
+                    },
               builder: (c, p) => t.windowsPhone
                   ? ConstrainedBox(
                       constraints: const BoxConstraints(

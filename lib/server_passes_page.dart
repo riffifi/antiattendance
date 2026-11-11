@@ -326,7 +326,7 @@ class _ServerPersonSearchPageState extends State<ServerPersonSearchPage> {
   final _query = TextEditingController();
   List<Map<String, dynamic>>? _people;
   String? _error;
-  bool _busy = false;
+  bool _busy = false, _choosing = false;
   int _generation = 0;
   @override
   void dispose() {
@@ -361,6 +361,13 @@ class _ServerPersonSearchPageState extends State<ServerPersonSearchPage> {
     } finally {
       if (mounted && generation == _generation) setState(() => _busy = false);
     }
+  }
+
+  void _choose(String id) {
+    if (_choosing || ModalRoute.of(context)?.isCurrent == false) return;
+    _choosing = true;
+    FocusScope.of(context).unfocus();
+    Navigator.pop(context, id);
   }
 
   @override
@@ -409,7 +416,11 @@ class _ServerPersonSearchPageState extends State<ServerPersonSearchPage> {
                 if ('${person['group_name'] ?? ''}'.trim().isNotEmpty)
                   '${person['group_name']}',
               ].join(' · '),
-              onTap: () => Navigator.of(context).pop('${person['account_id']}'),
+              onTap:
+                  person['account_id'] is String &&
+                      (person['account_id'] as String).isNotEmpty
+                  ? () => _choose(person['account_id'] as String)
+                  : null,
             ),
           ),
       ],

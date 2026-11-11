@@ -64,6 +64,7 @@ class _BrockmannMotionState extends State<BrockmannMotion>
   late double _from = widget.value, _target = widget.value;
   double _correction = 0, _seconds = .24;
   Curve _curve = brockmannOutExpo;
+  bool _reduced = false;
   double get _value {
     final t = _clock.value;
     return _from +
@@ -79,9 +80,26 @@ class _BrockmannMotionState extends State<BrockmannMotion>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reduced = context.brockmann.motionReduced(context);
+    if (reduced && !_reduced) {
+      _from = _target = widget.value;
+      _correction = 0;
+      _clock.stop();
+      _clock.value = 1;
+    }
+    _reduced = reduced;
+  }
+
+  @override
   void didUpdateWidget(BrockmannMotion old) {
     super.didUpdateWidget(old);
-    if (old.value != widget.value || (widget.immediate && !old.immediate)) {
+    if (old.value != widget.value ||
+        (widget.immediate && !old.immediate) ||
+        (_clock.isAnimating &&
+            (old.milliseconds != widget.milliseconds ||
+                old.curve != widget.curve))) {
       _retarget();
     }
   }
@@ -97,7 +115,7 @@ class _BrockmannMotionState extends State<BrockmannMotion>
     _correction = active
         ? velocity - (_target - _from) * _slope(_curve, 0) / _seconds
         : 0;
-    if (widget.immediate) {
+    if (widget.immediate || _reduced) {
       _clock.stop();
       _clock.value = 1;
     } else {

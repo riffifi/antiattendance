@@ -100,38 +100,48 @@ Future<T?> showChoicePage<T>(
   required String title,
   String? detail,
   required List<ChoiceOption<T>> options,
-}) => Navigator.of(context).push<T>(
-  MaterialPageRoute(
-    builder: (context) => CampusScaffold(
-      appBar: CampusAppBar(title: Text(title.toLowerCase())),
-      body: ListView(
-        padding: AaPageLayout.insets(context),
-        children: [
-          if (detail != null) ...[
-            BrockmannText(detail),
-            const SizedBox(height: 12),
+}) {
+  var choosing = false;
+  return Navigator.of(context).push<T>(
+    MaterialPageRoute(
+      builder: (context) => CampusScaffold(
+        appBar: CampusAppBar(title: Text(title.toLowerCase())),
+        body: ListView(
+          padding: AaPageLayout.insets(context),
+          children: [
+            if (detail != null) ...[
+              BrockmannText(detail),
+              const SizedBox(height: 12),
+            ],
+            for (final option in options)
+              CampusListItem(
+                showDivider: false,
+                headline: option.label,
+                supportingText: option.supporting,
+                trailing: option.selected
+                    ? BrockmannGlyph(
+                        BrockmannIcon.check,
+                        size: 20,
+                        color: context.brockmann.accent,
+                      )
+                    : null,
+                onTap: option.enabled
+                    ? () {
+                        if (choosing ||
+                            ModalRoute.of(context)?.isCurrent == false) {
+                          return;
+                        }
+                        choosing = true;
+                        Navigator.pop(context, option.value);
+                      }
+                    : null,
+              ),
           ],
-          for (final option in options)
-            CampusListItem(
-              showDivider: false,
-              headline: option.label,
-              supportingText: option.supporting,
-              trailing: option.selected
-                  ? BrockmannGlyph(
-                      BrockmannIcon.check,
-                      size: 20,
-                      color: context.brockmann.accent,
-                    )
-                  : null,
-              onTap: option.enabled
-                  ? () => Navigator.pop(context, option.value)
-                  : null,
-            ),
-        ],
+        ),
       ),
     ),
-  ),
-);
+  );
+}
 
 /// Route-backed picker with wrapped labels and native back handling.
 class AppPassPicker extends StatelessWidget {

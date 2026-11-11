@@ -20,7 +20,7 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
   List<ScheduleGroup> _groups = [];
   String? _error;
   bool _loading = false;
-  bool _searched = false;
+  bool _searched = false, _choosing = false;
   int _generation = 0;
 
   @override
@@ -70,6 +70,13 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
         setState(() => _loading = false);
       }
     }
+  }
+
+  void _choose(ScheduleGroup group) {
+    if (_choosing || ModalRoute.of(context)?.isCurrent == false) return;
+    _choosing = true;
+    FocusScope.of(context).unfocus();
+    Navigator.pop(context, group);
   }
 
   @override
@@ -154,7 +161,7 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
                             key: ValueKey(group.id),
                             child: CampusListItem(
                               headline: (group.name),
-                              onTap: () => Navigator.pop(context, group),
+                              onTap: () => _choose(group),
                             ),
                           );
                         },

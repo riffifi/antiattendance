@@ -41,6 +41,100 @@ void main() {
     expect(tester.binding.hasScheduledFrame, isFalse);
   });
 
+  for (final startsReduced in [false, true]) {
+    testWidgets(
+      'shared motion snaps when reduced motion is enabled; initially: $startsReduced',
+      (tester) async {
+        var reduced = startsReduced;
+        double target = 0, observed = 0;
+        late StateSetter update;
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: const BrockmannThemeData().material,
+            home: StatefulBuilder(
+              builder: (context, set) {
+                update = set;
+                return MediaQuery(
+                  data: MediaQuery.of(context)
+                      .copyWith(disableAnimations: reduced),
+                  child: BrockmannMotion(
+                    value: target,
+                    milliseconds: 180,
+                    builder: (context, value) {
+                      observed = value;
+                      return const SizedBox();
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        update(() => target = 1);
+        await tester.pump();
+        if (startsReduced) {
+          expect(observed, 1);
+        } else {
+          await tester.pump(const Duration(milliseconds: 60));
+          expect(observed, inExclusiveRange(0, 1));
+          update(() => reduced = true);
+          await tester.pump();
+          expect(observed, 1);
+        }
+        await tester.pumpAndSettle();
+        expect(tester.binding.hasScheduledFrame, isFalse);
+      },
+    );
+  }
+
+  testWidgets(
+    'changing motion timing mid-flight retains position and velocity',
+    (tester) async {
+      double target = 0, observed = 0;
+      var milliseconds = 180;
+      Curve curve = brockmannOutExpo;
+      late StateSetter update;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: const BrockmannThemeData().material,
+          home: StatefulBuilder(
+            builder: (context, set) {
+              update = set;
+              return BrockmannMotion(
+                value: target,
+                milliseconds: milliseconds,
+                curve: curve,
+                builder: (context, value) {
+                  observed = value;
+                  return const SizedBox();
+                },
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      update(() => target = 1);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 58));
+      final before = observed;
+      await tester.pump(const Duration(milliseconds: 1));
+      final position = observed, velocity = observed - before;
+      update(() {
+        milliseconds = 90;
+        curve = brockmannInOut;
+      });
+      await tester.pump();
+      expect(observed, closeTo(position, .000001));
+      await tester.pump(const Duration(milliseconds: 1));
+      expect(observed - position, closeTo(velocity, velocity.abs() * .2));
+      await tester.pumpAndSettle();
+      expect(observed, 1);
+      expect(tester.binding.hasScheduledFrame, isFalse);
+    },
+  );
+
   testWidgets('Switch drag follows the finger and commits only on release', (
     tester,
   ) async {

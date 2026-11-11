@@ -1,6 +1,12 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  "Could not check the pass. Refresh to retry.": (
+    "Impossible de vérifier le pass. Actualisez pour réessayer.",
+    "Não foi possível verificar o passe. Atualize para tentar novamente.",
+    "无法检查通行证。请刷新重试。",
+  ),
+
   "The code was sent using the owner’s MIREA verification method.": (
     "Le code a été envoyé via le moyen de vérification MIREA du propriétaire.",
     "O código foi enviado pelo método de verificação MIREA do titular.",

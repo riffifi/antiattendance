@@ -1009,18 +1009,13 @@ class BrockmannTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.brockmann;
-    final inputFill = t.light ? const Color(0xffe4e4e4) : Colors.white;
-    final inputInk = t.windowsPhone ? Colors.black : t.foreground;
+    final inputFill = t.light ? const Color(0xffe4e4e4) : t.surface;
+    final inputInk = enabled ? t.foreground : t.disabled;
     Widget? adornment(Widget? child) => child == null || !t.windowsPhone
         ? child
-        : Theme(
-            data: Theme.of(
-              context,
-            ).copyWith(extensions: [t.copyWith(brightness: Brightness.light)]),
-            child: IconTheme(
-              data: const IconThemeData(color: Colors.black),
-              child: child,
-            ),
+        : IconTheme(
+            data: IconThemeData(color: inputInk),
+            child: child,
           );
     return BrockmannInteractionRegion(
       child: Column(
@@ -1063,10 +1058,14 @@ class BrockmannTextField extends StatelessWidget {
               prefixIcon: adornment(leading),
               filled: t.windowsPhone,
               fillColor: t.windowsPhone
-                  ? (enabled ? inputFill : const Color(0xffd0d0d0))
+                  ? (enabled
+                        ? inputFill
+                        : t.light
+                        ? const Color(0xffd0d0d0)
+                        : t.background)
                   : null,
-              prefixIconColor: t.windowsPhone ? Colors.black : null,
-              suffixIconColor: t.windowsPhone ? Colors.black : null,
+              prefixIconColor: t.windowsPhone ? inputInk : null,
+              suffixIconColor: t.windowsPhone ? inputInk : null,
               suffixStyle: BrockmannType.body.style(color: inputInk),
               suffixText: suffixText,
               isDense: true,
@@ -1075,7 +1074,9 @@ class BrockmannTextField extends StatelessWidget {
               errorMaxLines: 3,
               hintText: hint ?? placeholder,
               hintStyle: BrockmannType.body.style(
-                color: t.windowsPhone ? const Color(0xff707070) : t.disabled,
+                color: t.windowsPhone
+                    ? (t.light ? const Color(0xff707070) : t.secondary)
+                    : t.disabled,
               ),
               helperText: helper,
               helperMaxLines: 3,
@@ -1094,14 +1095,14 @@ class BrockmannTextField extends StatelessWidget {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.zero,
                 borderSide: BorderSide(
-                  color: t.windowsPhone ? inputFill : t.lineStrong,
+                  color: t.windowsPhone && t.light ? inputFill : t.lineStrong,
                   width: t.windowsPhone ? 2 : 1,
                 ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.zero,
                 borderSide: BorderSide(
-                  color: t.windowsPhone ? inputFill : t.lineStrong,
+                  color: t.windowsPhone && t.light ? inputFill : t.lineStrong,
                   width: t.windowsPhone ? 2 : 1,
                 ),
               ),

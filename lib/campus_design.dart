@@ -384,6 +384,7 @@ class CampusTextField extends StatelessWidget {
     this.enabled = true,
     this.maxLength,
     this.keyboardType,
+    this.textInputAction,
     this.inputFormatters,
     this.onChanged,
     this.onSubmitted,
@@ -401,6 +402,7 @@ class CampusTextField extends StatelessWidget {
   final bool enabled;
   final int? maxLength;
   final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
   final List<TextInputFormatter>? inputFormatters;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
@@ -419,6 +421,7 @@ class CampusTextField extends StatelessWidget {
     enabled: enabled,
     maxLength: maxLength,
     keyboardType: keyboardType,
+    textInputAction: textInputAction,
     inputFormatters: inputFormatters,
     onChanged: onChanged,
     onSubmitted: onSubmitted,

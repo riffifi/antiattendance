@@ -37,6 +37,11 @@ class _ServerProfilePageState extends State<ServerProfilePage> {
   }
 
   Future<void> _load() async {
+    if (_busy) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     final idApi = AaId.client();
     try {
       final token = await AaId.accessToken();

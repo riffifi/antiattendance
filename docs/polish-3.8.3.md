@@ -65,3 +65,16 @@ layouts at double text size. Real issuance still requires the owner's code.
 - [x] Hide enrollment for existing credentials, disabled passes and unknown status.
 - [x] Place the action inside the pass row, vertically centered beside the name.
 - [x] Cover automatic disappearance after issuance and alignment at 320dp with double text size.
+
+## 3.8.9 theme and interaction details
+
+- [x] Make shared WP8 inputs use charcoal Dark surfaces and pure black AMOLED surfaces, including disabled fields, text, hints and icons.
+- [x] Keep visible theme borders and accent focus rings; verify contrast in all three modes.
+- [x] Submit person search from the keyboard, accept pasted @usernames and clear stale errors when edited.
+- [x] Remove dangling separators from pass and person metadata when a group is absent.
+- [x] Prevent duplicate pass/search pages and accidental Back during explicit pass mutations.
+- [x] Explain unavailable enrollment status and offer refresh as recovery.
+- [x] Show loading state again when retrying profile loading.
+
+Brockmann's shared input implementation and its theme regression tests were
+updated together. The external Brockmann checkout is unchanged.

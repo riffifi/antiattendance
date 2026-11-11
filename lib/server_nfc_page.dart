@@ -242,6 +242,13 @@ class _ServerNfcPassPageState extends State<ServerNfcPassPage>
                 if (card['own'] == true) tr(context, 'Мой пропуск', 'My pass'),
                 if (card['pass_allowed'] != true)
                   tr(context, 'Выключен владельцем', 'Disabled by owner'),
+                if (card['pass_allowed'] == true &&
+                    c.enrolled[card['account_id']] == null)
+                  tr(
+                    context,
+                    'Не удалось проверить пропуск. Обновите список.',
+                    'Could not check the pass. Refresh to retry.',
+                  ),
               ].join(' · '),
             ),
           if (c.cards.isEmpty && !c.busy)
@@ -371,6 +378,7 @@ class _ServerPassEnrollmentPageState extends State<ServerPassEnrollmentPage> {
 
   Future<void> _issue() async {
     if (busy || !RegExp(r'^[0-9]{6}$').hasMatch(code.text)) return;
+    FocusScope.of(context).unfocus();
     final entered = code.text;
     Object? previous;
     var attempted = false;
@@ -425,57 +433,60 @@ class _ServerPassEnrollmentPageState extends State<ServerPassEnrollmentPage> {
   }
 
   @override
-  Widget build(BuildContext context) => CampusScaffold(
-    appBar: CampusAppBar(
-      title: Text(tr(context, 'Подключить пропуск', 'Enroll a pass')),
-    ),
-    body: ListView(
-      padding: AaPageLayout.insets(context),
-      children: [
-        if (widget.accountLabel != null)
-          AaSectionHeading(title: widget.accountLabel!, lowercase: false),
-        BrockmannText(
-          tr(
-            context,
-            'Запросите у владельца код подтверждения МИРЭА. Повторный выпуск может изменить привязку пропуска.',
-            'Ask the pass owner for their MIREA verification code. Issuing again may change the pass binding.',
-          ),
-          color: context.brockmann.secondary,
-        ),
-        const SizedBox(height: 24),
-        CampusButton.text(
-          onPressed: busy || (retryAt?.isAfter(DateTime.now()) ?? false)
-              ? null
-              : _send,
-          child: Text(tr(context, 'Получить код', 'Get code')),
-        ),
-        if (message != null) ServerMessage(message: message!, isError: false),
-        if (retryAt != null && retryAt!.isAfter(DateTime.now()))
+  Widget build(BuildContext context) => PopScope(
+    canPop: !busy,
+    child: CampusScaffold(
+      appBar: CampusAppBar(
+        title: Text(tr(context, 'Подключить пропуск', 'Enroll a pass')),
+      ),
+      body: ListView(
+        padding: AaPageLayout.insets(context),
+        children: [
+          if (widget.accountLabel != null)
+            AaSectionHeading(title: widget.accountLabel!, lowercase: false),
           BrockmannText(
-            '${tr(context, 'Повторить', 'Retry')} · ${TimeOfDay.fromDateTime(retryAt!).format(context)}',
+            tr(
+              context,
+              'Запросите у владельца код подтверждения МИРЭА. Повторный выпуск может изменить привязку пропуска.',
+              'Ask the pass owner for their MIREA verification code. Issuing again may change the pass binding.',
+            ),
             color: context.brockmann.secondary,
           ),
-        if (error != null) ServerMessage(message: passError(context, error!)),
-        CampusTextField(
-          controller: code,
-          label: tr(context, 'Код подтверждения', 'Verification code'),
-          enabled: !busy,
-          keyboardType: TextInputType.number,
-          obscureText: true,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(6),
-          ],
-          onChanged: (_) => setState(() {}),
-        ),
-        const SizedBox(height: 24),
-        if (busy) const CampusProgress.compact(),
-        CampusButton.filled(
-          key: const ValueKey('issue-pass'),
-          onPressed: busy || code.text.length != 6 ? null : _issue,
-          child: Text(tr(context, 'Подключить пропуск', 'Enroll a pass')),
-        ),
-      ],
+          const SizedBox(height: 24),
+          CampusButton.text(
+            onPressed: busy || (retryAt?.isAfter(DateTime.now()) ?? false)
+                ? null
+                : _send,
+            child: Text(tr(context, 'Получить код', 'Get code')),
+          ),
+          if (message != null) ServerMessage(message: message!, isError: false),
+          if (retryAt != null && retryAt!.isAfter(DateTime.now()))
+            BrockmannText(
+              '${tr(context, 'Повторить', 'Retry')} · ${TimeOfDay.fromDateTime(retryAt!).format(context)}',
+              color: context.brockmann.secondary,
+            ),
+          if (error != null) ServerMessage(message: passError(context, error!)),
+          CampusTextField(
+            controller: code,
+            label: tr(context, 'Код подтверждения', 'Verification code'),
+            enabled: !busy,
+            keyboardType: TextInputType.number,
+            obscureText: true,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(6),
+            ],
+            onChanged: (_) => setState(() => error = null),
+          ),
+          const SizedBox(height: 24),
+          if (busy) const CampusProgress.compact(),
+          CampusButton.filled(
+            key: const ValueKey('issue-pass'),
+            onPressed: busy || code.text.length != 6 ? null : _issue,
+            child: Text(tr(context, 'Подключить пропуск', 'Enroll a pass')),
+          ),
+        ],
+      ),
     ),
   );
 }

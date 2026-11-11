@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:antiattendance/aa_id.dart';
@@ -239,6 +240,40 @@ void main() {
       await tester.pumpAndSettle();
     },
   );
+
+  testWidgets('Back cannot abandon an in-flight pass issuance', (tester) async {
+    final pending = Completer<http.Response>();
+    var posts = 0;
+    final client = SessionServerClient(
+      defaultSessionServerUrl,
+      client: MockClient((r) async {
+        if (r.method == 'GET') {
+          return response({'account_id': ownId, 'number': null});
+        }
+        posts++;
+        return pending.future;
+      }),
+    );
+    addTearDown(client.close);
+    await enrollment(tester, client);
+    await tester.enterText(find.byType(CampusTextField), '012345');
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('issue-pass')));
+    for (var i = 0; i < 8; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 10)),
+      );
+    }
+    expect(posts, 1);
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    expect(find.byType(ServerPassEnrollmentPage), findsOneWidget);
+    pending.complete(response({'account_id': ownId, 'number': '456'}));
+    await settleNetwork(tester);
+    expect(find.byType(ServerPassEnrollmentPage), findsNothing);
+    expect(posts, 1);
+  });
 
   for (final mode in AppThemeMode.values) {
     testWidgets('NFC controls fit 320dp with double text in ${mode.name}', (

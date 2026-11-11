@@ -68,10 +68,9 @@ void main() {
         );
         await tester.pumpAndSettle();
         final input = tester.widget<TextFormField>(find.byType(TextFormField));
-        // Inspect the editable field: its ink must contrast with the light fill,
-        // including when the rest of the app is dark.
+        // Input surfaces and ink follow the selected theme.
         final editable = tester.widget<EditableText>(find.byType(EditableText));
-        expect(editable.style.color, Colors.black);
+        expect(editable.style.color, theme.foreground);
         final decorator = tester.widget<InputDecorator>(
           find.byType(InputDecorator),
         );

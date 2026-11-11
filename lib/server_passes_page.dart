@@ -19,7 +19,7 @@ class ServerPassesPage extends StatefulWidget {
 
 class ServerPassesPageState extends State<ServerPassesPage> {
   Map<String, dynamic>? _mine, _received;
-  bool _busy = false, _own = true;
+  bool _busy = false, _own = true, _routeOpen = false;
   String? _error;
   @override
   void initState() {
@@ -100,23 +100,39 @@ class ServerPassesPageState extends State<ServerPassesPage> {
   }
 
   Future<void> _find() async {
+    if (_busy || _routeOpen) return;
+    _routeOpen = true;
     final own = _own;
-    final id = await Navigator.of(context).push<String>(
-      MaterialPageRoute(
-        builder: (_) => ServerPersonSearchPage(api: widget.api),
-      ),
-    );
+    String? id;
+    try {
+      id = await Navigator.of(context).push<String>(
+        MaterialPageRoute(
+          builder: (_) => ServerPersonSearchPage(api: widget.api),
+        ),
+      );
+    } finally {
+      _routeOpen = false;
+    }
     if (!mounted || id == null) return;
+    final selectedId = id;
     await _change(
-      () => own ? widget.api.grant(id) : widget.api.requestPass(id),
+      () => own
+          ? widget.api.grant(selectedId)
+          : widget.api.requestPass(selectedId),
       own: own,
     );
   }
 
   Future<void> _openNfc() async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(builder: (_) => ServerNfcPassPage(api: widget.api)),
-    );
+    if (_busy || _routeOpen) return;
+    _routeOpen = true;
+    try {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(builder: (_) => ServerNfcPassPage(api: widget.api)),
+      );
+    } finally {
+      _routeOpen = false;
+    }
     if (mounted) await refresh();
   }
 
@@ -234,8 +250,17 @@ class ServerPassesPageState extends State<ServerPassesPage> {
                 for (final person in serverRows(_received!['passes']))
                   CampusListItem(
                     headline: '${person['label'] ?? person['username'] ?? '—'}',
-                    supportingText:
-                        '${person['group_name'] ?? ''} · ${person['pass_allowed'] == true ? tr(context, 'Разрешён', 'Allowed') : tr(context, 'Выключен владельцем', 'Disabled by owner')}',
+                    supportingText: [
+                      if ('${person['group_name'] ?? ''}'.trim().isNotEmpty)
+                        '${person['group_name']}',
+                      person['pass_allowed'] == true
+                          ? tr(context, 'Разрешён', 'Allowed')
+                          : tr(
+                              context,
+                              'Выключен владельцем',
+                              'Disabled by owner',
+                            ),
+                    ].join(' · '),
                   ),
                 if (serverRows(_received!['passes']).isEmpty)
                   BrockmannText(
@@ -311,8 +336,13 @@ class _ServerPersonSearchPageState extends State<ServerPersonSearchPage> {
   }
 
   Future<void> _search() async {
-    final query = _query.text.trim();
+    if (_busy) return;
+    final query = _query.text
+        .trim()
+        .replaceFirst(RegExp(r'^@'), '')
+        .toLowerCase();
     if (query.isEmpty || query.length > 60) return;
+    FocusScope.of(context).unfocus();
     final generation = ++_generation;
     setState(() {
       _busy = true;
@@ -344,16 +374,24 @@ class _ServerPersonSearchPageState extends State<ServerPersonSearchPage> {
         CampusTextField(
           controller: _query,
           label: tr(context, 'Точный username', 'Exact username'),
+          autofocus: true,
+          textInputAction: TextInputAction.search,
+          onSubmitted: (_) => _search(),
           onChanged: (_) {
             ++_generation;
             setState(() {
               _people = null;
+              _error = null;
               _busy = false;
             });
           },
         ),
         CampusButton.filled(
-          onPressed: _busy ? null : _search,
+          onPressed:
+              _busy ||
+                  _query.text.trim().replaceFirst(RegExp(r'^@'), '').isEmpty
+              ? null
+              : _search,
           child: Text(tr(context, 'Найти', 'Search')),
         ),
         if (_busy) const CampusProgress.compact(),
@@ -363,8 +401,12 @@ class _ServerPersonSearchPageState extends State<ServerPersonSearchPage> {
         for (final person in _people ?? <Map<String, dynamic>>[])
           CampusListItem(
             headline: '${person['label'] ?? person['username'] ?? '—'}',
-            supportingText:
-                '${person['username'] ?? ''} · ${person['group_name'] ?? ''}',
+            supportingText: [
+              if ('${person['username'] ?? ''}'.isNotEmpty)
+                '@${person['username']}',
+              if ('${person['group_name'] ?? ''}'.trim().isNotEmpty)
+                '${person['group_name']}',
+            ].join(' · '),
             onTap: () => Navigator.of(context).pop('${person['account_id']}'),
           ),
       ],

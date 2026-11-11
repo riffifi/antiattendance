@@ -123,7 +123,7 @@ class _AttendancePageState extends State<AttendancePage> {
           label: tr(context, 'Восстановить вход', 'Restore sessions'),
         ),
     ];
-    return RefreshIndicator(
+    return CampusRefresh(
       onRefresh: widget.busy ? () async {} : widget.onRefresh,
       child: CustomScrollView(
         key: const PageStorageKey('attendance-tab'),

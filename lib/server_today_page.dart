@@ -48,7 +48,7 @@ class _ServerTodayPageState extends State<ServerTodayPage> {
     final people = serverRows(_data?['people']);
     return CampusScaffold(
       appBar: CampusAppBar(title: Text(tr(context, 'За день', 'Today'))),
-      body: RefreshIndicator(
+      body: CampusRefresh(
         onRefresh: _load,
         child: ListView(
           padding: AaPageLayout.insets(context),

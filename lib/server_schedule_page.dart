@@ -139,7 +139,7 @@ class ServerSchedulePageState extends State<ServerSchedulePage> {
     return Column(
       children: [
         Expanded(
-          child: RefreshIndicator(
+          child: CampusRefresh(
             onRefresh: refresh,
             child: ListView(
               padding: AaPageLayout.insets(context),

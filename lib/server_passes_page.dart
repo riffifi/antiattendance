@@ -140,7 +140,7 @@ class ServerPassesPageState extends State<ServerPassesPage> {
   Widget build(BuildContext context) => Column(
     children: [
       Expanded(
-        child: RefreshIndicator(
+        child: CampusRefresh(
           onRefresh: refresh,
           child: ListView(
             padding: AaPageLayout.insets(context),

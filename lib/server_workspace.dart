@@ -420,7 +420,7 @@ class _ServerWorkspaceState extends State<ServerWorkspace>
     return Column(
       children: [
         Expanded(
-          child: RefreshIndicator(
+          child: CampusRefresh(
             onRefresh: _refresh,
             child: ListView(
               key: const PageStorageKey('server-attendance'),

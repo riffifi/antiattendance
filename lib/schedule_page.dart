@@ -351,7 +351,7 @@ class _SchedulePageState extends State<SchedulePage> {
     return Column(
       children: [
         Expanded(
-          child: RefreshIndicator(
+          child: CampusRefresh(
             onRefresh: () => _refresh(force: true),
             child: ListView(
               key: const PageStorageKey('schedule-scroll'),

@@ -11,6 +11,7 @@ import 'frontend/page_layout.dart';
 import 'l10n.dart';
 import 'editorial_controls.dart';
 export 'editorial_controls.dart';
+export 'frontend/pull_to_refresh.dart';
 export 'campus_models.dart';
 import 'campus_models.dart';
 

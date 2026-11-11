@@ -1,6 +1,14 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  "Pull to refresh": ("Tirez pour actualiser", "Puxe para atualizar", "下拉刷新"),
+  "Release to refresh": (
+    "Relâchez pour actualiser",
+    "Solte para atualizar",
+    "松开刷新",
+  ),
+  "Refreshing…": ("Actualisation…", "A atualizar…", "正在刷新…"),
+
   "Checking attendance…": (
     "Vérification des présences…",
     "A verificar presenças…",

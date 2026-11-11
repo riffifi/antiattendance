@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:antiattendance/aa_id.dart';
 import 'package:antiattendance/app_theme.dart';
 import 'package:antiattendance/campus_design.dart';
@@ -9,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/testing.dart';
+import 'package:http/http.dart' as http;
 
 import 'server_contract_test.dart' show response, tokenGrant;
 import 'server_workspace_test.dart' show settleNetwork;
@@ -144,6 +147,96 @@ void main() {
         findsNothing,
       );
       expect(queries, hasLength(1));
+    },
+  );
+  testWidgets(
+    'technical input flags reach the editor without changing normal name entry',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: const Scaffold(
+            body: Column(
+              children: [
+                CampusTextField(label: 'Name'),
+                CampusTextField(
+                  label: 'Username',
+                  autocorrect: false,
+                  enableSuggestions: false,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      final fields = tester
+          .widgetList<EditableText>(find.byType(EditableText))
+          .toList();
+      expect(fields.first.autocorrect, isTrue);
+      expect(fields.first.enableSuggestions, isTrue);
+      expect(fields.last.autocorrect, isFalse);
+      expect(fields.last.enableSuggestions, isFalse);
+    },
+  );
+
+  testWidgets(
+    'clearing a pending person search keeps focus and rejects its late result',
+    (tester) async {
+      final pending = Completer<http.Response>();
+      var calls = 0;
+      final client = SessionServerClient(
+        defaultSessionServerUrl,
+        client: MockClient((r) async {
+          calls++;
+          return pending.future;
+        }),
+      );
+      addTearDown(client.close);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: ServerPersonSearchPage(api: AaServerApi(client)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final field = find.byType(CampusTextField);
+      final originalWidth = tester.getSize(find.byType(EditableText)).width;
+      await tester.enterText(field, 'alex');
+      await tester.pumpAndSettle();
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)),
+        );
+      }
+      expect(calls, 1);
+      await tester.tap(find.byKey(const ValueKey('clear-person-search')));
+      await tester.pumpAndSettle();
+      expect(tester.widget<CampusTextField>(field).controller!.text, isEmpty);
+      expect(
+        tester
+            .widget<EditableText>(find.byType(EditableText))
+            .focusNode
+            .hasFocus,
+        isTrue,
+      );
+      expect(tester.getSize(find.byType(EditableText)).width, originalWidth);
+      pending.complete(
+        response({
+          'people': [
+            {
+              'account_id': 'person',
+              'label': 'Late result',
+              'username': 'alex',
+            },
+          ],
+        }),
+      );
+      await settleNetwork(tester);
+      expect(find.text('Late result'), findsNothing);
+      expect(calls, 1);
+      expect(find.byKey(const ValueKey('clear-person-search')), findsNothing);
     },
   );
 }

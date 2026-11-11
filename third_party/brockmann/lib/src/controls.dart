@@ -1037,6 +1037,8 @@ class BrockmannTextField extends StatelessWidget {
     this.textInputAction,
     this.maxLength,
     this.autofocus = false,
+    this.autocorrect = true,
+    this.enableSuggestions = true,
     this.autofillHints,
     this.mono,
     this.suffix,
@@ -1052,6 +1054,7 @@ class BrockmannTextField extends StatelessWidget {
   final String? helper;
   final ValueChanged<String>? onChanged, onSubmitted;
   final bool enabled, multiline, obscureText, autofocus;
+  final bool autocorrect, enableSuggestions;
   final List<TextInputFormatter>? inputFormatters;
   final TextCapitalization textCapitalization;
   final TextAlign textAlign;
@@ -1100,6 +1103,8 @@ class BrockmannTextField extends StatelessWidget {
             onChanged: onChanged,
             enabled: enabled,
             obscureText: obscureText,
+            autocorrect: autocorrect,
+            enableSuggestions: enableSuggestions,
             focusNode: focusNode,
             onFieldSubmitted: onSubmitted,
             textInputAction: textInputAction,

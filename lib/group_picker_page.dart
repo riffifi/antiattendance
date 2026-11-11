@@ -96,6 +96,8 @@ class _GroupPickerPageState extends State<GroupPickerPage> {
                 padding: const EdgeInsets.all(24),
                 child: CampusTextField(
                   controller: _controller,
+                  autocorrect: false,
+                  enableSuggestions: false,
                   autofocus: true,
                   textInputAction: TextInputAction.search,
                   onChanged: (_) {

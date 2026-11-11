@@ -504,6 +504,9 @@ class CampusTextField extends StatelessWidget {
     this.leading,
     this.trailing,
     this.autofocus = false,
+    this.autocorrect = true,
+    this.enableSuggestions = true,
+    this.focusNode,
     this.obscureText = false,
     this.enabled = true,
     this.maxLength,
@@ -523,6 +526,8 @@ class CampusTextField extends StatelessWidget {
   final Widget? leading;
   final Widget? trailing;
   final bool autofocus;
+  final bool autocorrect, enableSuggestions;
+  final FocusNode? focusNode;
   final bool obscureText;
   final bool enabled;
   final int? maxLength;
@@ -543,6 +548,9 @@ class CampusTextField extends StatelessWidget {
     leading: leading,
     trailing: trailing,
     autofocus: autofocus,
+    autocorrect: autocorrect,
+    enableSuggestions: enableSuggestions,
+    focusNode: focusNode,
     obscureText: obscureText,
     enabled: enabled,
     maxLength: maxLength,

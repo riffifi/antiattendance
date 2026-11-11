@@ -324,6 +324,7 @@ class ServerPersonSearchPage extends StatefulWidget {
 
 class _ServerPersonSearchPageState extends State<ServerPersonSearchPage> {
   final _query = TextEditingController();
+  final _queryFocus = FocusNode();
   List<Map<String, dynamic>>? _people;
   String? _error;
   bool _busy = false, _choosing = false;
@@ -332,7 +333,23 @@ class _ServerPersonSearchPageState extends State<ServerPersonSearchPage> {
   void dispose() {
     ++_generation;
     _query.dispose();
+    _queryFocus.dispose();
     super.dispose();
+  }
+
+  void _queryChanged() {
+    ++_generation;
+    setState(() {
+      _people = null;
+      _error = null;
+      _busy = false;
+    });
+  }
+
+  void _clearQuery() {
+    _query.clear();
+    _queryChanged();
+    _queryFocus.requestFocus();
   }
 
   Future<void> _search() async {
@@ -380,18 +397,40 @@ class _ServerPersonSearchPageState extends State<ServerPersonSearchPage> {
       children: [
         CampusTextField(
           controller: _query,
+          focusNode: _queryFocus,
+          autocorrect: false,
+          enableSuggestions: false,
+          trailing: SizedBox(
+            width: 48,
+            height: 48,
+            child: AnimatedSwitcher(
+              duration: context.brockmann.motionReduced(context)
+                  ? Duration.zero
+                  : context.brockmann.duration(context, 140),
+              layoutBuilder: (current, previous) => Stack(
+                alignment: Alignment.center,
+                children: [
+                  for (final child in previous)
+                    ExcludeSemantics(child: IgnorePointer(child: child)),
+                  ?current,
+                ],
+              ),
+              child: _query.text.isEmpty
+                  ? const SizedBox.shrink(key: ValueKey('empty-search'))
+                  : CampusTextAction(
+                      key: const ValueKey('clear-person-search'),
+                      icon: Icons.close_rounded,
+                      label: tr(context, 'Очистить', 'Clear'),
+                      tooltip: tr(context, 'Очистить', 'Clear'),
+                      onPressed: _clearQuery,
+                    ),
+            ),
+          ),
           label: tr(context, 'Точный username', 'Exact username'),
           autofocus: true,
           textInputAction: TextInputAction.search,
           onSubmitted: (_) => _search(),
-          onChanged: (_) {
-            ++_generation;
-            setState(() {
-              _people = null;
-              _error = null;
-              _busy = false;
-            });
-          },
+          onChanged: (_) => _queryChanged(),
         ),
         CampusButton.filled(
           onPressed:

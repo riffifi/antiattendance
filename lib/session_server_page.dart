@@ -219,6 +219,8 @@ class _SessionServerPageState extends State<SessionServerPage> {
     label: tr(context, 'Адрес сервера', 'Server address'),
     placeholder: defaultSessionServerUrl,
     keyboardType: TextInputType.url,
+    autocorrect: false,
+    enableSuggestions: false,
     textInputAction: TextInputAction.go,
     onSubmitted: (_) => _connect(),
     onChanged: (_) => setState(() => _error = null),

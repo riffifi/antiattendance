@@ -191,6 +191,8 @@ class _AaIdSignInPageState extends State<AaIdSignInPage> {
                 label: tr(context, 'Адрес AA ID', 'AA ID address'),
                 placeholder: defaultAaIdUrl,
                 keyboardType: TextInputType.url,
+                autocorrect: false,
+                enableSuggestions: false,
                 enabled: !_busy,
               ),
             ],

@@ -331,6 +331,8 @@ class _ServerProfilePageState extends State<ServerProfilePage> {
                   CampusTextField(
                     controller: _username,
                     label: 'Username',
+                    autocorrect: false,
+                    enableSuggestions: false,
                     maxLength: 24,
                     enabled: !_busy,
                     error: _usernameError,

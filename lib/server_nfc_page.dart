@@ -197,6 +197,8 @@ class _ServerNfcPassPageState extends State<ServerNfcPassPage>
               label: tr(context, 'Между пропусками', 'Between passes'),
               enabled: enabled,
               keyboardType: TextInputType.number,
+              autocorrect: false,
+              enableSuggestions: false,
               inputFormatters: [
                 FilteringTextInputFormatter.digitsOnly,
                 LengthLimitingTextInputFormatter(3),
@@ -471,6 +473,8 @@ class _ServerPassEnrollmentPageState extends State<ServerPassEnrollmentPage> {
             label: tr(context, 'Код подтверждения', 'Verification code'),
             enabled: !busy,
             keyboardType: TextInputType.number,
+            autocorrect: false,
+            enableSuggestions: false,
             obscureText: true,
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,

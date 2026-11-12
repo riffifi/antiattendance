@@ -280,7 +280,10 @@ class ServerSchedulePageState extends State<ServerSchedulePage> {
                     ),
                   ],
                 ),
-                if (_busy) const CampusProgress.compact(),
+                SizedBox(
+                  height: 20,
+                  child: _busy ? const CampusProgress.compact() : null,
+                ),
                 if (_cachedAt != null)
                   ServerMessage(
                     isError: false,

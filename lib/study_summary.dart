@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'accounts.dart';
 import 'aa_id.dart';
 import 'server_api.dart';
+import 'today_summary.dart';
 import 'server_sessions.dart';
 import 'app_settings.dart';
 import 'attendance_log.dart';
@@ -122,6 +123,12 @@ List<Map<String, Object?>> buildStudySummaries({
       });
     }
     result.add({
+      'updatedAt': now.millisecondsSinceEpoch,
+      'snapshotLabel': summaryText(
+        language,
+        'Results saved at',
+        'Результаты сохранены',
+      ),
       'id': entry.key,
       'at': moscowInstant(end).millisecondsSinceEpoch,
       'title': summaryText(language, 'Study day summary', 'Итоги учебного дня'),
@@ -141,30 +148,40 @@ List<Map<String, Object?>> buildStudySummaries({
 List<Map<String, Object?>> buildServerStudySummary(
   Map<String, dynamic> data, {
   String language = 'en',
+  DateTime? fetchedAt,
 }) {
   final lessons = serverRows(data['lessons']);
   if (lessons.isEmpty) return [];
-  final date = '${data['date']}'.split('.');
-  if (date.length != 3) throw const FormatException('Invalid study date');
-  final day = DateTime.utc(
-    int.parse(date[2]),
-    int.parse(date[1]),
-    int.parse(date[0]),
-  );
+  final date = RegExp(r'^(\d{2})\.(\d{2})\.(\d{4})$')
+      .firstMatch('${data['date']}');
+  if (date == null) throw const FormatException('Invalid study date');
+  final year = int.parse(date[3]!);
+  final month = int.parse(date[2]!);
+  final dayOfMonth = int.parse(date[1]!);
+  final day = DateTime.utc(year, month, dayOfMonth);
+  if (day.year != year || day.month != month || day.day != dayOfMonth) {
+    throw const FormatException('Invalid study date');
+  }
   DateTime endOf(Map<String, dynamic> lesson) {
-    final parts = '${lesson['end']}'.split(':');
-    return DateTime.utc(
-      day.year,
-      day.month,
-      day.day,
-      int.parse(parts[0]),
-      int.parse(parts[1]),
-    );
+    final time = RegExp(r'^(\d{2}):(\d{2})$').firstMatch('${lesson['end']}');
+    if (time == null) throw const FormatException('Invalid class end');
+    final hour = int.parse(time[1]!);
+    final minute = int.parse(time[2]!);
+    if (hour > 23 || minute > 59) {
+      throw const FormatException('Invalid class end');
+    }
+    return DateTime.utc(year, month, dayOfMonth, hour, minute);
   }
 
   final end = lessons.map(endOf).reduce((a, b) => a.isAfter(b) ? a : b);
   return [
     {
+      'updatedAt': (fetchedAt ?? DateTime.now()).millisecondsSinceEpoch,
+      'snapshotLabel': summaryText(
+        language,
+        'Results saved at',
+        'Результаты сохранены',
+      ),
       'id': day.toIso8601String().substring(0, 10),
       'at': moscowInstant(end).millisecondsSinceEpoch,
       'title': summaryText(language, 'Study day summary', 'Итоги учебного дня'),
@@ -175,16 +192,17 @@ List<Map<String, Object?>> buildServerStudySummary(
         'Нужно войти снова',
       ),
       'people': [
-        for (final person in serverRows(data['people']))
+        for (final summary in serverRows(
+          data['people'],
+        ).map((p) => TodayPersonSummary(p, lessons)))
           {
-            'name': person['label'] ?? person['username'] ?? '—',
-            'accountId': person['id'],
-            'sessionExpired': person['session'] == 'expired',
-            'counts':
-                '${lessons.where((l) => dayMark(l, '${person['id']}')?['state'] == 'approved').length}/${lessons.length}',
+            'name': summary.name,
+            'accountId': summary.id,
+            'sessionExpired': summary.signInNeeded,
+            'counts': '${summary.confirmations}/${summary.lessons.length}',
             'lines': [
-              for (final lesson in lessons)
-                '${lesson['start']} ${lesson['subject']} · ${dayMark(lesson, '${person['id']}')?['message'] ?? dayMark(lesson, '${person['id']}')?['state'] ?? '—'}',
+              for (final lesson in summary.lessons)
+                '${lesson['start']} ${lesson['subject']} · ${summary.confirmed(lesson) ? summaryText(language, 'Confirmed', 'Подтверждено') : summary.mark(lesson)?['message'] ?? summary.mark(lesson)?['state'] ?? '—'}',
             ],
           },
       ],
@@ -211,9 +229,13 @@ class StudySummaryService {
 
   Future<void> sync() async {
     if (!Platform.isAndroid) return;
+    final revision =
+        await studySummaryChannel.invokeMethod<int>('revision') ?? 0;
+    Future<void> configure(Map<String, Object?> payload) => studySummaryChannel
+        .invokeMethod('configure', {...payload, 'revision': revision});
     final enabled = await _settings.loadDaySummaryEnabled();
     if (!enabled) {
-      await studySummaryChannel.invokeMethod('configure', {'enabled': false});
+      await configure({'enabled': false});
       return;
     }
     if (_ownsApi) {
@@ -232,10 +254,7 @@ class StudySummaryService {
               Platform.localeName.split('_').first;
           final tasks = buildServerStudySummary(data, language: language);
           if (await _settings.loadDaySummaryEnabled()) {
-            await studySummaryChannel.invokeMethod('configure', {
-              'enabled': true,
-              'tasks': tasks,
-            });
+            await configure({'enabled': true, 'tasks': tasks});
           }
           return;
         }
@@ -272,10 +291,7 @@ class StudySummaryService {
       language: language,
     );
     if (!await _settings.loadDaySummaryEnabled()) return;
-    await studySummaryChannel.invokeMethod('configure', {
-      'enabled': true,
-      'tasks': tasks,
-    });
+    await configure({'enabled': true, 'tasks': tasks});
   }
 
   void close() {

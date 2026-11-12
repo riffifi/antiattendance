@@ -1,3 +1,8 @@
+import 'dart:async';
+
+import 'package:flutter/services.dart';
+import 'package:antiattendance/server_schedule_cache.dart';
+
 import 'dart:convert';
 
 import 'package:antiattendance/aa_id.dart';
@@ -30,6 +35,65 @@ void main() {
     AaId.reset();
     FlutterSecureStorage.setMockInitialValues({});
   });
+
+  for (final rejected in [false, true]) {
+    test(
+      'a late refresh cannot restore or erase a different session: rejected=$rejected',
+      () async {
+        final reply = Completer<http.Response>();
+        final started = Completer<void>();
+        var resets = 0;
+        const channel = MethodChannel('antiattendance/study_summary');
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (call) async {
+              if (call.method == 'reset') resets++;
+              return null;
+            });
+        addTearDown(
+          () => TestDefaultBinaryMessengerBinding
+              .instance
+              .defaultBinaryMessenger
+              .setMockMethodCallHandler(channel, null),
+        );
+        AaId.httpClient = () => MockClient((r) async {
+          if (r.url.path.endsWith('/refresh')) {
+            started.complete();
+            return reply.future;
+          }
+          return json({});
+        });
+        await AaId.acceptLogin(
+          'https://aa.example/id',
+          AaIdSession.fromServer(grant('old', 'refresh-old', ttl: 0)),
+        );
+        final cache = ServerScheduleCache();
+        await cache.save('private-old', 0, {'days': []});
+        final refresh = AaId.refreshAccessToken();
+        final result = expectLater(refresh, throwsA(isA<AaIdException>()));
+        await started.future;
+        await AaId.signOut();
+        expect(AaId.session, isNull);
+        expect(await cache.countWeeks(), 0);
+        expect(resets, 1);
+        if (rejected) {
+          await AaId.acceptLogin(
+            'https://aa.example/id',
+            AaIdSession.fromServer(grant('new-login', 'new-refresh')),
+          );
+          reply.complete(json({}, 401));
+        } else {
+          reply.complete(json(grant('late', 'late-refresh')));
+        }
+        await result;
+        expect(AaId.session?.accessToken, rejected ? 'new-login' : null);
+        expect(resets, 1);
+        final saved = await const FlutterSecureStorage().read(
+          key: 'aa_id_session_v1',
+        );
+        expect(saved, rejected ? contains('new-login') : isNull);
+      },
+    );
+  }
 
   test('AA ID address may include a path and is normalized', () {
     expect(

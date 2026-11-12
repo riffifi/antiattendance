@@ -4,6 +4,7 @@ import 'package:brockmann/brockmann.dart';
 import 'package:flutter/material.dart';
 
 import 'campus_design.dart';
+import 'frontend/page_layout.dart';
 import 'l10n.dart';
 import 'study_summary.dart';
 
@@ -30,13 +31,23 @@ class _StudySummaryPageState extends State<StudySummaryPage> {
     });
     try {
       final raw = await studySummaryChannel.invokeMethod<String>('last');
-      if (mounted) {
-        setState(
-          () => _summary = raw == null
-              ? null
-              : jsonDecode(raw) as Map<String, dynamic>,
-        );
+      final parsed = raw == null ? null : jsonDecode(raw);
+      if (parsed != null) {
+        if (parsed is! Map<String, dynamic> ||
+            parsed['people'] is! List ||
+            parsed['at'] is! int ||
+            parsed['id'] is! String ||
+            (parsed['people'] as List).any(
+              (person) => person is! Map || person['lines'] is! List,
+            )) {
+          throw const FormatException('Invalid saved summary');
+        }
+        if (parsed['updatedAt'] is int) {
+          // Validate before rendering; platform timestamps may be corrupt.
+          DateTime.fromMillisecondsSinceEpoch(parsed['updatedAt'] as int);
+        }
       }
+      if (mounted) setState(() => _summary = parsed as Map<String, dynamic>?);
     } catch (_) {
       if (mounted) setState(() => _failed = true);
     } finally {
@@ -53,13 +64,13 @@ class _StudySummaryPageState extends State<StudySummaryPage> {
       child: _loading
           ? const Center(child: CampusProgress.compact())
           : ListView(
-              padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
+              padding: AaPageLayout.insets(context),
               children: [
                 BrockmannText(
                   tr(
                     context,
-                    'Это подтверждения, записанные этим приложением.',
-                    'These are confirmations recorded by this app.',
+                    'Сохранённые результаты AA и Пульса. Отсутствие результата не означает пропуск занятия.',
+                    'Saved results from AA and Pulse. Missing results are not absences.',
                   ),
                   role: BrockmannType.caption,
                   color: context.brockmann.secondary,
@@ -85,6 +96,22 @@ class _StudySummaryPageState extends State<StudySummaryPage> {
                     role: BrockmannType.value,
                     weight: 400,
                   ),
+                  if (_summary!['updatedAt'] is int) ...[
+                    const SizedBox(height: 8),
+                    BrockmannText(
+                      trf(
+                        context,
+                        'Результаты сохранены: {time}',
+                        'Results saved at {time}',
+                        {
+                          'time':
+                              '${MaterialLocalizations.of(context).formatShortDate(DateTime.fromMillisecondsSinceEpoch(_summary!['updatedAt'] as int))} ${TimeOfDay.fromDateTime(DateTime.fromMillisecondsSinceEpoch(_summary!['updatedAt'] as int)).format(context)}',
+                        },
+                      ),
+                      role: BrockmannType.caption,
+                      color: context.brockmann.secondary,
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   for (final person in _summary!['people'] as List)
                     Padding(

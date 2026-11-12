@@ -129,7 +129,10 @@ class _ServerTodayPageState extends State<ServerTodayPage> {
         )
         .toList();
     final header = <Widget>[
-      if (_busy) const CampusProgress.compact(),
+      SizedBox(
+        height: 20,
+        child: _busy ? const CampusProgress.compact() : null,
+      ),
       if (_error != null) ServerMessage(message: _error!),
       if (_error != null && _data != null)
         ServerMessage(
@@ -140,7 +143,7 @@ class _ServerTodayPageState extends State<ServerTodayPage> {
             'Showing earlier results.',
           ),
         ),
-      if (_error != null)
+      if (_error != null || _data?['schedule_error'] != null)
         Align(
           alignment: Alignment.centerLeft,
           child: CampusButton.text(
@@ -184,6 +187,19 @@ class _ServerTodayPageState extends State<ServerTodayPage> {
               context,
               'На сегодня занятия не найдены.',
               'No classes were found for today.',
+            ),
+          ),
+        if (summaries.isEmpty && lessons.isNotEmpty)
+          AaEmptyState(
+            title: tr(
+              context,
+              'Нет аккаунтов для итогов',
+              'No accounts to summarize',
+            ),
+            detail: tr(
+              context,
+              'Доступные аккаунты этой группы появятся здесь.',
+              'Accounts available for this group will appear here.',
             ),
           ),
         if (summaries.isNotEmpty && lessons.isNotEmpty) ...[

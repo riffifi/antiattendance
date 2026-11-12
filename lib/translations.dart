@@ -1,6 +1,69 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  "Offline schedules": (
+    "Emplois du temps hors ligne",
+    "Horários offline",
+    "离线课表",
+  ),
+  "Data & storage": ("Données et stockage", "Dados e armazenamento", "数据与存储"),
+  "Review and clear saved weeks": (
+    "Consulter et effacer les semaines enregistrées",
+    "Consultar e limpar semanas guardadas",
+    "查看和清除已保存的周课表",
+  ),
+  "Could not update saved schedules. Try again.": (
+    "Impossible de modifier les emplois du temps enregistrés. Réessayez.",
+    "Não foi possível atualizar os horários guardados. Tente novamente.",
+    "无法更新已保存的课表。请重试。",
+  ),
+  "Saved weeks can be used offline for up to 14 days. Open the schedule online to refresh it.":
+      (
+        "Les semaines enregistrées restent accessibles hors ligne pendant 14 jours. Ouvrez l’emploi du temps en ligne pour l’actualiser.",
+        "As semanas guardadas ficam disponíveis offline durante 14 dias. Abra o horário com ligação à internet para o atualizar.",
+        "已保存的周课表可离线使用最多 14 天。联网打开课表即可刷新。",
+      ),
+  "Saved weeks: {count}": (
+    "Semaines enregistrées : {count}",
+    "Semanas guardadas: {count}",
+    "已保存周数：{count}",
+  ),
+  "Clear saved schedules": (
+    "Effacer les emplois du temps",
+    "Limpar horários guardados",
+    "清除已保存的课表",
+  ),
+  "Accounts, passes and settings stay in place. Saved schedules for all groups are removed only from this device.":
+      (
+        "Vos comptes, pass et réglages sont conservés. Seuls les emplois du temps enregistrés de tous les groupes sont supprimés de cet appareil.",
+        "As contas, passes e definições mantêm-se. Os horários guardados de todas as turmas são removidos apenas deste dispositivo.",
+        "账户、通行证和设置将保留。仅从此设备移除所有班级已保存的课表。",
+      ),
+  "Results saved at": (
+    "Résultats enregistrés le",
+    "Resultados guardados em",
+    "结果保存于",
+  ),
+  "Results saved at {time}": (
+    "Résultats enregistrés le {time}",
+    "Resultados guardados em {time}",
+    "结果保存于 {time}",
+  ),
+  "Saved results from AA and Pulse. Missing results are not absences.": (
+    "Résultats enregistrés d’AA et Pulse. Un résultat manquant ne signifie pas une absence.",
+    "Resultados guardados de AA e Pulse. A falta de resultado não significa ausência.",
+    "来自 AA 和 Pulse 的已保存结果。缺少结果并不代表缺勤。",
+  ),
+  "No accounts to summarize": (
+    "Aucun compte à récapituler",
+    "Sem contas para resumir",
+    "暂无可汇总的账户",
+  ),
+  "Accounts available for this group will appear here.": (
+    "Les comptes disponibles pour ce groupe apparaîtront ici.",
+    "As contas disponíveis para esta turma aparecerão aqui.",
+    "此班级可用的账户将显示在这里。",
+  ),
   "Showing earlier results.": (
     "Résultats précédents affichés.",
     "A mostrar resultados anteriores.",

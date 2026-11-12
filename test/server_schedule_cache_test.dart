@@ -113,6 +113,39 @@ void main() {
     },
   );
 
+  test(
+    'clearing saved schedules drains queued saves without touching credentials',
+    () async {
+      final cache = ServerScheduleCache();
+      await const FlutterSecureStorage().write(
+        key: 'credential',
+        value: 'protected',
+      );
+      final first = cache.save('alice', 0, timetable());
+      final second = cache.save('bob', 1, timetable());
+      final clear = cache.clearAll();
+      await Future.wait([first, second, clear]);
+      expect(await cache.countWeeks(), 0);
+      expect(await cache.load('alice', 0), isNull);
+      expect(
+        await const FlutterSecureStorage().read(key: 'credential'),
+        'protected',
+      );
+      await cache.save('new-view', 0, timetable());
+      expect(await cache.countWeeks(), 1);
+      await const FlutterSecureStorage().write(
+        key: 'schedule_cache_scopes_v1',
+        value: '["credential"]',
+      );
+      await cache.clearAll();
+      expect(await cache.countWeeks(), 0);
+      expect(
+        await const FlutterSecureStorage().read(key: 'credential'),
+        'protected',
+      );
+    },
+  );
+
   test('Moscow week keys remain stable across UTC midnight', () async {
     var now = DateTime.utc(2026, 11, 15, 22);
     final cache = ServerScheduleCache(now: () => now);

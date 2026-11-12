@@ -50,6 +50,15 @@ internal object StudySummaryScheduler {
                 .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY).build())
     }
 
+    @Synchronized fun reset(context: Context) {
+        val store = prefs(context)
+        val enabled = store.getBoolean("enabled", false)
+        val revision = store.getLong("revision", 0L) + 1L
+        configure(context, false, null)
+        store.edit().clear().putBoolean("enabled", enabled).putLong("revision", revision).apply()
+        NotificationManagerCompat.from(context).cancel(7402)
+    }
+
     @Synchronized fun schedule(context: Context) {
         val prefs = prefs(context)
         if (!prefs.getBoolean("enabled", false)) return
@@ -88,6 +97,12 @@ internal object StudySummaryScheduler {
             val classes = person.getJSONArray("lines")
             for (c in 0 until classes.length()) lines.add(classes.getString(c))
             lines.add("")
+        }
+        val updatedAt = task.optLong("updatedAt", 0L)
+        if (updatedAt > 0L) {
+            val savedAt = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT)
+                .format(java.util.Date(updatedAt))
+            lines.add("${task.optString("snapshotLabel", "Results saved at")}: $savedAt")
         }
         val title = task.getString("title")
         if (Build.VERSION.SDK_INT >= 26) context.getSystemService(NotificationManager::class.java)

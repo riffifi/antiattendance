@@ -114,11 +114,18 @@ class MainActivity : FlutterActivity() {
         summaryChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "antiattendance/study_summary")
         summaryChannel?.setMethodCallHandler { call, result ->
             when (call.method) {
+                "revision" -> result.success(StudySummaryScheduler.prefs(this).getLong("revision", 0L))
+                "reset" -> { StudySummaryScheduler.reset(this); result.success(null) }
                 "enable" -> {
                     StudySummaryScheduler.configure(this, call.argument<Boolean>("enabled") == true, null)
                     result.success(null)
                 }
                 "configure" -> {
+                    val revision = (call.argument<Number>("revision") ?: 0L).toLong()
+                    if (revision != StudySummaryScheduler.prefs(this).getLong("revision", 0L)) {
+                        result.success(null)
+                        return@setMethodCallHandler
+                    }
                     if (call.argument<Boolean>("enabled") == true && !StudySummaryScheduler.prefs(this).getBoolean("enabled", false)) {
                         result.success(null)
                         return@setMethodCallHandler

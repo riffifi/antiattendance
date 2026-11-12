@@ -4,7 +4,11 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/services.dart';
+
 import 'package:http/http.dart' as http;
+
+import 'server_schedule_cache.dart';
 
 /// AA ID runs next to the session server, behind its Nginx at `/id`.
 const defaultAaIdUrl = 'https://aaid.ytc-srv.org';
@@ -251,6 +255,7 @@ abstract final class AaId {
   static http.Client Function() httpClient = http.Client.new;
   static Future<void>? _loading;
   static Future<String>? _refreshing;
+  static AaIdSession? _refreshSession;
   static final _changes = StreamController<void>.broadcast();
   static Stream<void> get changes => _changes.stream;
   static bool get signedIn => session != null;
@@ -318,8 +323,7 @@ abstract final class AaId {
     )) {
       return current.accessToken;
     }
-    return _refreshing ??= _refresh(current)
-        .whenComplete(() => _refreshing = null);
+    return _refreshFor(current);
   }
 
   static Future<String> refreshAccessToken() async {
@@ -328,18 +332,39 @@ abstract final class AaId {
     if (current == null) {
       throw const AaIdException('Sign in to AA ID.', status: 401);
     }
-    return _refreshing ??= _refresh(current)
-        .whenComplete(() => _refreshing = null);
+    return _refreshFor(current);
+  }
+
+  static Future<String> _refreshFor(AaIdSession current) {
+    if (identical(_refreshSession, current) && _refreshing != null) {
+      return _refreshing!;
+    }
+    late final Future<String> work;
+    work = _refresh(current).whenComplete(() {
+      if (identical(_refreshing, work)) {
+        _refreshing = null;
+        _refreshSession = null;
+      }
+    });
+    _refreshSession = current;
+    return _refreshing = work;
   }
 
   static Future<String> _refresh(AaIdSession current) async {
     final api = client();
     try {
       final next = await api.refresh(current.refreshToken);
+      if (!identical(session, current)) {
+        throw const AaIdException(
+          'Session changed. Sign in again.',
+          status: 401,
+        );
+      }
       await _save(next);
       return next.accessToken;
     } on AaIdException catch (error) {
-      if (error.status == 401 || error.status == 403) {
+      if (identical(session, current) &&
+          (error.status == 401 || error.status == 403)) {
         await _forget();
       }
       rethrow;
@@ -354,7 +379,7 @@ abstract final class AaId {
     if (current == null) return;
     // An access token can be rejected after revocation; refreshing tells which.
     try {
-      await _refresh(current);
+      await _refreshFor(current);
     } catch (_) {
       // _refresh signs out on a definitive rejection.
     }
@@ -382,6 +407,7 @@ abstract final class AaId {
 
   static Future<void> signOut() async {
     final current = session;
+    await _forget();
     if (current != null) {
       final api = client();
       try {
@@ -392,12 +418,23 @@ abstract final class AaId {
         api.close();
       }
     }
-    await _forget();
   }
 
   static Future<void> _forget() async {
     session = null;
+    _refreshing = null;
+    _refreshSession = null;
     await _storage.delete(key: _sessionKey);
+    // Derived copies must not outlive sign-out, including scheduled notices.
+    try {
+      await const MethodChannel('antiattendance/study_summary')
+          .invokeMethod<void>('reset');
+    } catch (_) {
+      /* Unavailable on platforms without the native scheduler. */
+    }
+    try {
+      await ServerScheduleCache().clearAll();
+    } catch (_) {}
     _changes.add(null);
   }
 
@@ -407,6 +444,7 @@ abstract final class AaId {
     url = defaultAaIdUrl;
     _loading = null;
     _refreshing = null;
+    _refreshSession = null;
     httpClient = http.Client.new;
   }
 }

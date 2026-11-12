@@ -169,6 +169,41 @@ class ServerScheduleCache {
         .timeout(const Duration(seconds: 1));
   }
 
+  static bool _isCacheKey(String key) =>
+      RegExp(r'^schedule_cache_v1_[a-f0-9]{64}$').hasMatch(key);
+
+  Future<int> countWeeks() async {
+    await _writes;
+    final values = await _storage.readAll().timeout(const Duration(seconds: 2));
+    var count = 0;
+    for (final entry in values.entries.where((e) => _isCacheKey(e.key))) {
+      try {
+        final decoded = jsonDecode(entry.value);
+        if (decoded is Map) count += decoded.length;
+      } catch (_) {}
+    }
+    return count;
+  }
+
+  /// Remove only timetable keys, including orphaned copies after a bad index.
+  /// Serializing with saves prevents a queued write from restoring old copies.
+  Future<void> clearAll() {
+    final task = _writes.then((_) async {
+      final values = await _storage.readAll().timeout(
+        const Duration(seconds: 2),
+      );
+      for (final key
+          in values.keys.where(_isCacheKey).toList(growable: false)) {
+        await _storage.delete(key: key).timeout(const Duration(seconds: 1));
+      }
+      await _storage
+          .delete(key: 'schedule_cache_scopes_v1')
+          .timeout(const Duration(seconds: 1));
+    });
+    _writes = task.catchError((Object _) {});
+    return task;
+  }
+
   Future<void> clear(String scope) async {
     await _writes;
     await _storage.delete(key: _key(scope)).timeout(const Duration(seconds: 1));

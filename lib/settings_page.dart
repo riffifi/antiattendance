@@ -1,6 +1,7 @@
 import 'package:brockmann/brockmann.dart';
 
 import 'updates_page.dart';
+import 'schedule_storage_page.dart';
 import 'frontend/settings_view.dart';
 import 'frontend/page_layout.dart';
 import 'session_server_page.dart';
@@ -615,6 +616,23 @@ class _SettingsPageState extends State<SettingsPage> {
               onTap: _pinScanWidget,
             ),
           ]),
+        SettingsSection(tr(context, 'Данные', 'Data & storage'), [
+          CampusListItem(
+            navigation: true,
+            showDivider: false,
+            headline: tr(
+              context,
+              'Расписания без сети',
+              'Offline schedules',
+            ).toLowerCase(),
+            supportingText: tr(
+              context,
+              'Просмотр и очистка сохранённых недель',
+              'Review and clear saved weeks',
+            ),
+            onTap: () => _openPage(const ScheduleStoragePage()),
+          ),
+        ]),
         SettingsSection(tr(context, 'Приложение', 'App'), [
           CampusListItem(
             navigation: true,

@@ -15,6 +15,7 @@ class StudySummaryJob : JobService() {
     private var generation = 0
     override fun onStartJob(params: JobParameters): Boolean {
         val current = ++generation
+        val revision = StudySummaryScheduler.prefs(this).getLong("revision", 0L)
         if (!StudySummaryScheduler.prefs(this).getBoolean("enabled", false)) return false
         val loader = FlutterInjector.instance().flutterLoader()
         loader.startInitialization(applicationContext)
@@ -25,9 +26,16 @@ class StudySummaryJob : JobService() {
             .setMethodCallHandler { call, result ->
                 if (current != generation) { result.success(null); return@setMethodCallHandler }
                 when (call.method) {
+                    "revision" -> result.success(revision)
+                    "reset" -> {
+                        if (revision == StudySummaryScheduler.prefs(this).getLong("revision", 0L)) StudySummaryScheduler.reset(this)
+                        result.success(null)
+                    }
                     "configure" -> {
                         // A disabled setting wins even if a refresh was already in flight.
-                        if (StudySummaryScheduler.prefs(this).getBoolean("enabled", false))
+                        if (revision == StudySummaryScheduler.prefs(this).getLong("revision", 0L) &&
+                            (call.argument<Number>("revision") ?: 0L).toLong() == revision &&
+                            StudySummaryScheduler.prefs(this).getBoolean("enabled", false))
                             StudySummaryScheduler.configure(this, call.argument<Boolean>("enabled") == true, call.argument<List<*>>("tasks"))
                         result.success(null)
                     }

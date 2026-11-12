@@ -109,6 +109,77 @@ void main() {
     expect(alice['lines'], contains('Другие подтверждения: 1'));
     expect(summary['title'], 'Итоги учебного дня');
   });
+  test('server notification uses the same group-aware counts as Today', () {
+    final fetchedAt = DateTime.utc(2026, 11, 12, 12);
+    final summary = buildServerStudySummary({
+      'date': '12.11.2026',
+      'people': [
+        {'id': 'a', 'label': 'Alice', 'group_id': 1, 'session': 'valid'},
+        {'id': 'b', 'label': 'Bob', 'group_id': 2, 'session': 'expired'},
+      ],
+      'lessons': [
+        {
+          'start': '09:00',
+          'end': '10:30',
+          'subject': 'Algebra',
+          'groups': [
+            {'id': 1},
+          ],
+          'marks': {
+            'a': {'state': 'approved', 'message': 'Присутствие подтверждено'},
+          },
+        },
+        {
+          'start': '11:00',
+          'end': '12:30',
+          'subject': 'Physics',
+          'groups': [
+            {'id': 2},
+          ],
+        },
+      ],
+    }, fetchedAt: fetchedAt).single;
+    final people = summary['people'] as List;
+    expect(people[0]['counts'], '1/1');
+    expect(people[0]['lines'], ['09:00 Algebra · Confirmed']);
+    expect(people[1]['counts'], '0/1');
+    expect(people[1]['lines'], ['11:00 Physics · —']);
+    expect(people[1]['sessionExpired'], isTrue);
+    expect(summary['updatedAt'], fetchedAt.millisecondsSinceEpoch);
+    expect(
+      summary['at'],
+      DateTime.utc(2026, 11, 12, 9, 30).millisecondsSinceEpoch,
+    );
+  });
+
+  test(
+    'invalid server dates and class times cannot schedule a different day',
+    () {
+      for (final date in ['31.02.2026', '00.11.2026', 'not-a-date']) {
+        expect(
+          () => buildServerStudySummary({
+            'date': date,
+            'lessons': [
+              {'end': '18:00'},
+            ],
+          }),
+          throwsFormatException,
+        );
+      }
+      for (final end in ['25:00', '18:60', 'not-a-time']) {
+        expect(
+          () => buildServerStudySummary({
+            'date': '12.11.2026',
+            'lessons': [
+              {'end': end},
+            ],
+          }),
+          throwsFormatException,
+        );
+      }
+    },
+  );
+
   test('day boundary uses Moscow even when the device UTC date differs', () {
     expect(moscowCivilTime(DateTime.utc(2026, 10, 5, 22)).day, 6);
     expect(

@@ -98,11 +98,12 @@ internal object StudySummaryScheduler {
             for (c in 0 until classes.length()) lines.add(classes.getString(c))
             lines.add("")
         }
+        val firstResult = lines.firstOrNull()
         val updatedAt = task.optLong("updatedAt", 0L)
         if (updatedAt > 0L) {
             val savedAt = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT)
                 .format(java.util.Date(updatedAt))
-            lines.add("${task.optString("snapshotLabel", "Results saved at")}: $savedAt")
+            lines.add(0, "${task.optString("snapshotLabel", "Results saved at")}: $savedAt")
         }
         val title = task.getString("title")
         if (Build.VERSION.SDK_INT >= 26) context.getSystemService(NotificationManager::class.java)
@@ -112,7 +113,7 @@ internal object StudySummaryScheduler {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val text = lines.joinToString("\n")
         val notice = NotificationCompat.Builder(context, CHANNEL).setSmallIcon(R.drawable.ic_update_notification)
-            .setContentTitle("$title · $id").setContentText(lines.firstOrNull() ?: title)
+            .setContentTitle("$title · $id").setContentText(firstResult ?: title)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text.take(16000)))
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setContentIntent(launch)
             .setAutoCancel(true).setOnlyAlertOnce(true).build()

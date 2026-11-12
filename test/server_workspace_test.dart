@@ -239,6 +239,9 @@ void main() {
       ),
     );
     await settleNetwork(tester);
+    await tester.ensureVisible(find.text('Alex'));
+    await tester.tap(find.text('Alex'));
+    await tester.pumpAndSettle();
     expect(find.text('Confirmed'), findsOneWidget);
     expect(find.text('—'), findsOneWidget);
     expect(tester.takeException(), isNull);

@@ -1,6 +1,45 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  "Showing earlier results.": (
+    "Résultats précédents affichés.",
+    "A mostrar resultados anteriores.",
+    "当前显示之前的结果。",
+  ),
+  "{count} of {total} confirmed": (
+    "{count} sur {total} confirmés",
+    "{count} de {total} confirmadas",
+    "已确认 {count}/{total}",
+  ),
+  "Later today": ("Plus tard aujourd’hui", "Mais tarde hoje", "今天稍后"),
+  "Open a name to see classes. “—” means no result is available yet.": (
+    "Ouvrez un nom pour voir les cours. « — » indique qu’aucun résultat n’est encore disponible.",
+    "Abra um nome para ver as aulas. «—» indica que ainda não há resultado.",
+    "展开姓名以查看课程。“—”表示尚无结果。",
+  ),
+  "Search people": ("Rechercher des personnes", "Pesquisar pessoas", "搜索人员"),
+  "All · {count}": ("Tous · {count}", "Todos · {count}", "全部 · {count}"),
+  "Review · {count}": (
+    "À vérifier · {count}",
+    "Rever · {count}",
+    "待检查 · {count}",
+  ),
+  "No people found": (
+    "Aucune personne trouvée",
+    "Nenhuma pessoa encontrada",
+    "未找到人员",
+  ),
+  "All caught up": ("Tout est à jour", "Tudo em dia", "全部已检查"),
+  "Try another name or group.": (
+    "Essayez un autre nom ou groupe.",
+    "Experimente outro nome ou turma.",
+    "请尝试其他姓名或班级。",
+  ),
+  "No unconfirmed past classes or expired sessions.": (
+    "Aucun cours passé non confirmé ni session expirée.",
+    "Sem aulas passadas por confirmar nem sessões expiradas.",
+    "没有待确认的已结束课程或过期会话。",
+  ),
   "Saved schedule · {time}. Pull down to refresh.": (
     "Emploi du temps enregistré · {time}. Tirez vers le bas pour actualiser.",
     "Horário guardado · {time}. Puxe para baixo para atualizar.",

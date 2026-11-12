@@ -153,9 +153,11 @@ class CampusDisclosure extends StatefulWidget {
   const CampusDisclosure({
     super.key,
     required this.title,
+    this.subtitle,
     required this.children,
   });
   final String title;
+  final String? subtitle;
   final List<Widget> children;
   @override
   State<CampusDisclosure> createState() => _CampusDisclosureState();
@@ -193,20 +195,37 @@ class _CampusDisclosureState extends State<CampusDisclosure> {
         Semantics(
           expanded: open,
           child: BrockmannPressable(
-            label: widget.title,
+            label: [
+              widget.title,
+              widget.subtitle,
+            ].whereType<String>().join('. '),
             onPressed: _toggle,
             builder: (context, pressed) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Row(
                 children: [
                   Expanded(
-                    child: BrockmannText(
-                      widget.title,
-                      role: BrockmannType.value,
-                      weight: 400,
-                      color: pressed
-                          ? context.brockmann.accent
-                          : context.brockmann.foreground,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        BrockmannText(
+                          widget.title,
+                          role: BrockmannType.value,
+                          weight: 400,
+                          color: pressed
+                              ? context.brockmann.accent
+                              : context.brockmann.foreground,
+                        ),
+                        if (widget.subtitle != null) ...[
+                          const SizedBox(height: 6),
+                          BrockmannText(
+                            widget.subtitle!,
+                            role: BrockmannType.caption,
+                            color: context.brockmann.secondary,
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                   const SizedBox(width: 12),

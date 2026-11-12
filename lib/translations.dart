@@ -1,6 +1,12 @@
 // French, European Portuguese, and Simplified Chinese UI copy.
 // Keys are the English source strings passed to tr().
 const translations = <String, (String, String, String)>{
+  "Saved schedule · {time}. Pull down to refresh.": (
+    "Emploi du temps enregistré · {time}. Tirez vers le bas pour actualiser.",
+    "Horário guardado · {time}. Puxe para baixo para atualizar.",
+    "已保存的课表 · {time}。下拉刷新。",
+  ),
+
   "Pull to refresh": ("Tirez pour actualiser", "Puxe para atualizar", "下拉刷新"),
   "Release to refresh": (
     "Relâchez pour actualiser",

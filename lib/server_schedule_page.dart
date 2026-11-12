@@ -2,6 +2,9 @@ import 'package:brockmann/brockmann.dart';
 import 'package:flutter/material.dart';
 
 import 'campus_design.dart';
+import 'aa_id.dart';
+import 'server_sessions.dart';
+import 'server_schedule_cache.dart';
 import 'campus_maps_page.dart';
 import 'frontend/command_bar.dart';
 import 'frontend/page_layout.dart';
@@ -27,9 +30,13 @@ class ServerSchedulePage extends StatefulWidget {
     super.key,
     required this.api,
     required this.active,
+    this.cache,
+    this.now,
   });
   final AaServerApi api;
   final bool active;
+  final ServerScheduleCache? cache;
+  final DateTime Function()? now;
   @override
   State<ServerSchedulePage> createState() => ServerSchedulePageState();
 }
@@ -37,11 +44,35 @@ class ServerSchedulePage extends StatefulWidget {
 class ServerSchedulePageState extends State<ServerSchedulePage> {
   Map<String, dynamic>? _data;
   String? _error;
-  int _week = 0, _day = 0;
+  int _day = 0;
+  DateTime _currentMonday() {
+    final now = (widget.now?.call() ?? DateTime.now()).toUtc().add(
+      const Duration(hours: 3),
+    );
+    return DateTime.utc(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(Duration(days: now.weekday - 1));
+  }
+
+  late DateTime _weekMonday = _currentMonday();
+  int get _week => _weekMonday.difference(_currentMonday()).inDays ~/ 7;
+  set _week(int value) =>
+      _weekMonday = _currentMonday().add(Duration(days: value * 7));
   int? _group;
   bool _busy = false, _routeOpen = false;
   int _generation = 0;
-  int? _loadedWeek, _loadedGroup;
+  int? _loadedGroup;
+  DateTime? _loadedMonday;
+  DateTime? _cachedAt, _lastLoadedAt;
+  late final _cache = widget.cache ?? ServerScheduleCache();
+  String? get _cacheScope {
+    final user = AaId.session;
+    if (user == null) return null;
+    return '${widget.api.client.base.origin}|${user.userId}|${user.groupId}|${_group ?? widget.api.client.groupId}';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -59,15 +90,44 @@ class ServerSchedulePageState extends State<ServerSchedulePage> {
     final previousDate = previousDays.isEmpty
         ? null
         : previousDays[_day]['date'];
-    final sameContext = _loadedWeek == _week && _loadedGroup == _group;
+    final sameContext = _loadedMonday == _weekMonday && _loadedGroup == _group;
     final generation = ++_generation;
+    final scope = _cacheScope;
+    final requestedWeek = _week;
+    final requestedMonday = _weekMonday.toIso8601String().substring(0, 10);
     setState(() => _busy = true);
     try {
+      if (scope != null && (_data == null || !sameContext)) {
+        final saved = await _cache.load(
+          scope,
+          requestedWeek,
+          monday: requestedMonday,
+        );
+        if (!mounted || generation != _generation) return;
+        if (saved != null) {
+          setState(() {
+            _data = saved.data;
+            _cachedAt = _lastLoadedAt = saved.savedAt;
+            _loadedMonday = _weekMonday;
+            _loadedGroup = _group;
+            final cachedDays = serverRows(_data?['days']);
+            final today = (widget.now?.call() ?? DateTime.now())
+                .toUtc()
+                .add(const Duration(hours: 3))
+                .toIso8601String()
+                .substring(0, 10);
+            _day = cachedDays.indexWhere((d) => d['date'] == today);
+            if (_day < 0) _day = 0;
+          });
+        }
+      }
       final data = await widget.api.schedule(week: _week, group: _group);
       if (!mounted || generation != _generation) return;
       final days = serverRows(data['days']);
       setState(() {
         _data = data;
+        _cachedAt = null;
+        _lastLoadedAt = DateTime.now();
         _error = null;
         final retained = sameContext && !goToToday
             ? days.indexWhere((d) => d['date'] == previousDate)
@@ -77,20 +137,43 @@ class ServerSchedulePageState extends State<ServerSchedulePage> {
             : _week == 0 && days.any((d) => d['today'] == true)
             ? days.indexWhere((d) => d['today'] == true)
             : 0;
-        _loadedWeek = _week;
+        _loadedMonday = _weekMonday;
         _loadedGroup = _group;
         _day = _day.clamp(0, days.isEmpty ? 0 : days.length - 1);
       });
+      if (scope != null) {
+        try {
+          await _cache.save(
+            scope,
+            requestedWeek,
+            data,
+            monday: requestedMonday,
+          );
+        } catch (_) {}
+      }
     } catch (error) {
       if (mounted && generation == _generation) {
         setState(() {
           _error = serverError(context, error);
+          if (error is SessionServerException &&
+              [401, 403].contains(error.status)) {
+            _data = null;
+            _cachedAt = _lastLoadedAt = null;
+          }
+          if (_data != null) _cachedAt = _lastLoadedAt;
           // Existing lessons must keep the week/group they were loaded for.
           if (_data != null) {
-            _week = _loadedWeek ?? 0;
+            _weekMonday = _loadedMonday ?? _currentMonday();
             _group = _loadedGroup;
           }
         });
+        if (scope != null &&
+            error is SessionServerException &&
+            [401, 403].contains(error.status)) {
+          try {
+            await _cache.clear(scope);
+          } catch (_) {}
+        }
       }
     } finally {
       if (mounted && generation == _generation) setState(() => _busy = false);
@@ -198,7 +281,21 @@ class ServerSchedulePageState extends State<ServerSchedulePage> {
                   ],
                 ),
                 if (_busy) const CampusProgress.compact(),
-                if (_error != null) ServerMessage(message: _error!),
+                if (_cachedAt != null)
+                  ServerMessage(
+                    isError: false,
+                    message: trf(
+                      context,
+                      'Сохранённое расписание · {time}. Потяните вниз, чтобы обновить.',
+                      'Saved schedule · {time}. Pull down to refresh.',
+                      {
+                        'time':
+                            '${MaterialLocalizations.of(context).formatShortDate(_cachedAt!.toLocal())} ${TimeOfDay.fromDateTime(_cachedAt!.toLocal()).format(context)}',
+                      },
+                    ),
+                  ),
+                if (_error != null && _cachedAt == null)
+                  ServerMessage(message: _error!),
                 if (_data?['schedule_error'] != null)
                   ServerMessage(message: '${_data!['schedule_error']}'),
                 if (days.isNotEmpty) ...[

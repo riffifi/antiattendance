@@ -86,6 +86,7 @@ void main() {
         250,
         scrollable: bodyScroll(),
       );
+      await tester.pumpAndSettle();
       expect(find.text(label), findsOneWidget);
     }
     expect(tester.takeException(), isNull);
